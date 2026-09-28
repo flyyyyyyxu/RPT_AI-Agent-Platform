@@ -16,7 +16,7 @@ const stepInfo: Record<string, { description: string; skeleton: number; feature?
 export function AgentStepPlaceholder({ agent, stepId }: { agent: Agent; stepId: string }) {
   const info = stepInfo[stepId] ?? stepInfo.build;
   const title = lifecycleSteps.find(step => step.id === stepId)?.label ?? '设置';
-  const aside = <><Card><span className="eyebrow">版本信息</span><h3>当前线上指向</h3><p><VersionBadge version={agent.productionVersion} /> <StatusBadge status="线上" /></p><p className="meta">版本快照包含模型、Prompt、编排、工具、知识和运行策略。</p></Card><Card><span className="eyebrow">本月概览</span><h3>¥{agent.costThisMonth.toLocaleString('zh-CN')}</h3><p className="meta">演示成本 · {agent.team}</p></Card></>;
+  const aside = <><Card><span className="eyebrow">版本信息</span><h3>当前线上指向</h3><p>{agent.productionVersion ? <><VersionBadge version={agent.productionVersion} /> <StatusBadge status="线上" /></> : <span className="meta">尚未发布</span>}</p><p className="meta">版本快照包含模型、Prompt、编排、工具、知识和运行策略。</p></Card><Card><span className="eyebrow">本月概览</span><h3>¥{agent.costThisMonth.toLocaleString('zh-CN')}</h3><p className="meta">演示成本 · {agent.team}</p></Card></>;
   return <AgentShell agent={agent} stepId={stepId} aside={aside}>
     <SectionHeading eyebrow="Agent 生命周期" title={title} description={info.description} aside={<div className="flex items-center gap-2"><SkeletonBadge number={info.skeleton} /><ScopeBadge phase="MVP" /></div>} />
     {info.feature && <FeatureMark><strong>{info.feature}</strong><p>此处保留差异化能力的位置，后续填入具体操作与数据。</p></FeatureMark>}

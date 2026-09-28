@@ -7,15 +7,19 @@ export const tokens = {
     error: '#B42318', errorLight: '#FEF3F2',
   },
   font: {
-    body: '"Noto Sans SC", Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
+    // Inter 在前：英文和数字用 Inter；Inter 没有中文字形，中文自动落到 Noto Sans SC，再回退到系统字体
+    body: 'Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
     latin: 'Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
-    mono: '"JetBrains Mono", monospace',
+    mono: '"JetBrains Mono", "Noto Sans SC", monospace',
   },
   type: {
     pageSize: '24px', pageLine: '32px', pageWeight: '700', pageTracking: '-0.02em',
     sectionSize: '18px', sectionLine: '26px', sectionWeight: '600',
     bodySize: '14px', bodyLine: '22px', metaSize: '12px', metaLine: '18px',
   },
+  weight: { regular: '400', medium: '500', semibold: '600', bold: '700' },
+  border: { thin: '1px', thick: '2px' },
+  opacity: { disabled: '0.55', scrim: '30%' },
   space: { 1: '4px', 2: '8px', 3: '12px', 4: '16px', 6: '24px', 8: '32px', 12: '48px' },
   radius: { card: '12px', control: '8px', badge: '6px' },
   shadow: { card: '0 1px 2px rgba(16,24,40,.06)', hover: '0 4px 12px rgba(16,24,40,.08)' },

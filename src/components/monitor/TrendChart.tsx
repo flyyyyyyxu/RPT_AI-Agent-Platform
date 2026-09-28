@@ -1,8 +1,24 @@
-import { monitoringSeries } from '../../data/mock';
+import type { MonitorMetricKey, MonitorPoint } from '../../types/domain';
+import { formatMetric, metricLabels } from './format';
 
-export function TrendChart() {
-  const maxCalls = Math.max(...monitoringSeries.map(item => item.calls));
-  const points = monitoringSeries.map((item, index) => `${index * 100},${180 - (item.calls / maxCalls) * 140}`).join(' ');
-  const latencyPoints = monitoringSeries.map((item, index) => `${index * 100},${40 + ((item.latency - 1.2) / .4) * 120}`).join(' ');
-  return <div className="trend-chart"><div className="chart-title-row"><div><strong>近 7 日调用趋势</strong><p>调用量与 P95 延迟</p></div><div className="chart-legend"><span><i className="legend-new" />调用量</span><span><i className="legend-threshold" />P95 延迟</span></div></div><div className="chart-canvas"><svg viewBox="0 0 600 210" role="img" aria-label="近 7 日调用量从 1120 上升到 1760，P95 延迟从 1.52 秒下降到 1.24 秒"><line x1="0" y1="180" x2="600" y2="180" className="chart-axis" /><polyline points={points} className="calls-line" /><polyline points={latencyPoints} className="latency-line" />{monitoringSeries.map((item, index) => <g key={item.label}><circle cx={index * 100} cy={180 - (item.calls / maxCalls) * 140} r="5" className="calls-point" /><text x={index * 100} y="205" textAnchor={index === 0 ? 'start' : index === monitoringSeries.length - 1 ? 'end' : 'middle'}>{item.label}</text><text x={index * 100} y={168 - (item.calls / maxCalls) * 140} textAnchor="middle" className="chart-value">{item.calls}</text><text x={index * 100} y={28 + ((item.latency - 1.2) / .4) * 120} textAnchor="middle" className="latency-value">{item.latency.toFixed(2)}s</text></g>)}</svg></div></div>;
+const W = 640; const H = 248; const PAD = { left: 64, right: 36, top: 32, bottom: 36 };
+
+/** 单指标趋势图：带纵轴刻度、图例和数据标签；数值越大位置越高。 */
+export function TrendChart({ series, metric, version }: { series: MonitorPoint[]; metric: MonitorMetricKey; version: string }) {
+  const values = series.map(item => item[metric]);
+  const max = Math.max(...values); const min = Math.min(...values);
+  const span = max - min || max || 1;
+  const low = Math.max(0, min - span * 0.25); const high = max + span * 0.25;
+  const x = (index: number) => PAD.left + (index * (W - PAD.left - PAD.right)) / Math.max(1, series.length - 1);
+  const y = (value: number) => PAD.top + ((high - value) / (high - low || 1)) * (H - PAD.top - PAD.bottom);
+  const ticks = [0, 0.5, 1].map(ratio => low + (high - low) * ratio);
+  const format = formatMetric[metric];
+  const points = values.map((value, index) => `${x(index)},${y(value)}`).join(' ');
+  const first = values[0]; const last = values[values.length - 1];
+  return <div className="trend-chart"><div className="chart-legend"><span><i className="legend-new" />{metricLabels[metric]} · 线上 {version}</span></div>
+    <div className="chart-canvas"><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${metricLabels[metric]}从 ${format(first)} 变化到 ${format(last)}`}>
+      {ticks.map(tick => <g key={tick}><line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} className="chart-grid" /><text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="chart-tick">{format(tick)}</text></g>)}
+      <polyline points={points} className="series-line" />
+      {values.map((value, index) => <g key={series[index].label}><circle cx={x(index)} cy={y(value)} r="4" className="series-point" /><text x={x(index)} y={y(value) - 12} textAnchor="middle" className="chart-value">{format(value)}</text><text x={x(index)} y={H - 12} textAnchor="middle" className="chart-tick">{series[index].label}</text></g>)}
+    </svg></div></div>;
 }

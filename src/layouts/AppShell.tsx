@@ -5,6 +5,7 @@ import { useDemo } from '../app/DemoProvider';
 import { teams } from '../data/mock';
 import { Button } from '../components/actions/Buttons';
 import { DemoBadge } from '../components/badges/Badges';
+import { ErrorBoundary } from '../components/feedback/ErrorBoundary';
 
 const navigation = [
   { to: '/', label: '工作台', icon: LayoutGrid },
@@ -19,7 +20,7 @@ function Breadcrumbs() {
   const { state } = useDemo();
   const parts = pathname.split('/').filter(Boolean);
   const agent = parts[0] === 'agents' ? state.agents.find(item => item.id === parts[1]) : undefined;
-  const current = pathname === '/design-system' ? '设计规范' : agent ? ({ build: '构建', evaluation: '评测', release: '发布与实验', monitor: '监控', trace: 'Trace 与 bad case', settings: '设置' } as Record<string, string>)[parts[2] ?? 'build'] : navigation.find(item => item.to === pathname)?.label ?? '工作台';
+  const current = pathname === '/design-system' ? '设计规范' : pathname === '/agents/new' ? '新建 Agent' : agent ? ({ build: '构建', evaluation: '评测', release: '发布与实验', monitor: '监控', trace: 'Trace 与 bad case', settings: '设置' } as Record<string, string>)[parts[2] ?? 'build'] : navigation.find(item => item.to === pathname)?.label ?? '工作台';
   return <nav className="breadcrumbs" aria-label="面包屑"><Link to="/">工作台</Link>{agent && <><ChevronRight aria-hidden="true" /><Link to={`/agents/${agent.id}/build`}>{agent.name}</Link></>}
     {(pathname !== '/' || agent) && <><ChevronRight aria-hidden="true" /><span aria-current="page">{current}</span></>}</nav>;
 }
@@ -40,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-body"><header className="global-topbar"><button className="icon-button mobile-menu-button" onClick={() => setMobileOpen(value => !value)} aria-label={mobileOpen ? '关闭菜单' : '打开菜单'} aria-expanded={mobileOpen}>{mobileOpen ? <X /> : <Menu />}</button><Breadcrumbs />
       <div className="topbar-actions"><label className="team-select"><span className="sr-only">切换团队</span><select value={state.team} onChange={event => setTeam(event.target.value)}>{teams.map(team => <option key={team}>{team}</option>)}</select><ChevronDown size={16} strokeWidth={1.5} aria-hidden="true" /></label>
       <Button onClick={() => { reset(); navigate('/'); }} className="reset-button"><RotateCcw size={16} strokeWidth={1.5} />重置演示</Button></div></header>
-      <main className="content"><div className="page-container"><div className="page-utility"><DemoBadge /></div>{children}</div></main></div>
+      <main className="content"><div className="page-container" key={location.pathname}><div className="page-utility"><DemoBadge /></div><ErrorBoundary resetKey={location.pathname} onReset={() => { reset(); navigate('/'); }}>{children}</ErrorBoundary></div></main></div>
     {mobileOpen && <button className="mobile-scrim" aria-label="关闭菜单" onClick={() => setMobileOpen(false)} />}
   </div>;
 }

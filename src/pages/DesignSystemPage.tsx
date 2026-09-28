@@ -13,7 +13,7 @@ const colorNames: Record<keyof typeof tokens.color, string> = {
   indigo: '靛蓝', indigoLight: '靛蓝浅底', green: '翠绿', greenText: '翠绿文字', greenLight: '翠绿浅底', error: '错误', errorLight: '错误浅底',
 };
 
-const statusValues: Status[] = ['线上', '灰度中', '待审批', '阻断', '草稿', '二期', '通过', '进行中', '警告', '失败', '错误', '待发布'];
+const statusValues: Status[] = ['线上', '灰度中', '待审批', '阻断', '草稿', '二期', '通过', '进行中', '警告', '失败', '错误', '待发布', '历史'];
 
 export function DesignSystemPage() {
   const [confirmed, setConfirmed] = useState(false);
@@ -34,12 +34,12 @@ export function DesignSystemPage() {
 
     <SectionHeading eyebrow="B5 · 操作层级" title="按钮与反馈" description="每个区域最多一个主按钮；影响线上的操作在页面内二次确认。" />
     <div className="sample-grid"><Card><h3>操作状态</h3><div className="button-samples"><Button variant="primary" onClick={simulate}>运行评测</Button><Button onClick={simulate}>查看版本</Button><Button disabled reason="评测门槛未通过">发布 v13</Button></div><p className="meta">禁用原因在按钮下方显示，也可悬停查看。</p></Card>
-      <Card><h3>影响线上的操作</h3><ConfirmAction actionLabel="回退到 v12" impact="确认后，生产流量将从当前版本切换至 v12；当前会话不受影响。" onConfirm={() => setConfirmed(true)} />{confirmed && <Feedback kind="success" title="演示操作已确认" description="样板页展示确认反馈；实际业务状态将在对应页面接入。" />}</Card></div>
+      <Card><h3>影响线上的操作</h3><ConfirmAction actionLabel="回退到 v12" confirmLabel="确认回退到 v12" impact="确认后，生产流量将从当前版本切换至 v12；当前会话不受影响。" onConfirm={() => setConfirmed(true)} />{confirmed && <Feedback kind="success" title="演示操作已确认" description="样板页展示确认反馈；实际业务状态将在对应页面接入。" />}</Card></div>
     <div className="feedback-grid"><Feedback kind="loading" title="正在加载评测结果" description="请稍候，演示结果即将显示。" /><Feedback kind="empty" title="暂无运行记录" description="运行一次评测后，结果会显示在这里。" /><Feedback kind="error" title="加载失败" description="请检查演示数据后重试。" /><Feedback kind="success" title="评测已完成" description="所有必选门槛均已通过。" /></div>{busy && <Feedback kind="loading" title="正在运行演示" description="预设结果即将返回。" />}
 
     <SectionHeading eyebrow="B3 · 数据组件" title="指标、表格与对比" description="指标颜色表示好坏；旧版本灰色、新版本靛蓝，门槛线为暖橙虚线。" />
     <div className="metric-grid"><MetricCard label="采纳率" value="42.8%" change="2.3%" direction="up" good detail="较旧版本" /><MetricCard label="P95 延迟" value="1.8s" change="0.3s" direction="up" good={false} detail="较旧版本" /><MetricCard label="过期知识命中" value="12" change="4" direction="down" good detail="较旧版本" /></div>
-    <Card><h3>版本记录表格</h3><DataTable columns={[{ key: 'version', label: '版本' }, { key: 'note', label: '变更说明' }, { key: 'rate', label: '采纳率', numeric: true }]} rows={[{ version: 'v13', note: '图片理解与推荐策略：这一段较长的变更说明用于检验截断和悬停全文', rate: '42.8%' }, { version: 'v12', note: '稳定生产版本', rate: '40.5%' }]} /></Card>
+    <Card><h3>版本记录表格</h3><DataTable columns={[{ key: 'version', label: '版本', width: 'narrow' }, { key: 'note', label: '变更说明', width: 'wide' }, { key: 'rate', label: '采纳率', numeric: true }]} rows={[{ version: 'v13', note: '图片理解与推荐策略：这一段较长的变更说明用于检验截断和悬停全文', rate: '42.8%' }, { version: 'v12', note: '稳定生产版本', rate: '40.5%' }]} /></Card>
     <CompareView leftTitle="v12" rightTitle="v13" left={<div className="compare-content"><p>采纳率 <strong>40.5%</strong></p><div className="chart-track"><div className="chart-bar bar-old" style={{ width: '72%' }} /><span className="chart-threshold" /></div><code className="diff-deleted">− 旧版推荐策略</code></div>} right={<div className="compare-content"><p>采纳率 <strong>42.8%</strong></p><div className="chart-track"><div className="chart-bar bar-new" style={{ width: '78%' }} /><span className="chart-threshold" /></div><code className="diff-added">+ 图片理解策略</code></div>} />
     <div className="chart-legend"><span><i className="legend-old" />旧版本</span><span><i className="legend-new" />新版本</span><span><i className="legend-threshold" />门槛线</span></div>
     <Card><span className="eyebrow">Trace 树样例</span><h3>运行链路 · 2.1s</h3><div className="trace-tree"><div><span>请求进入</span><span className="trace-duration">82ms</span></div><div className="trace-depth-one"><span>知识检索</span><span className="trace-duration">420ms</span></div><div className="trace-depth-two trace-error"><span><CircleAlert size={16} strokeWidth={1.5} aria-hidden="true" />过期知识命中</span><span className="trace-duration">310ms</span></div><div className="trace-depth-one"><span>输出生成</span><span className="trace-duration">1.3s</span></div></div></Card>

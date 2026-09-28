@@ -9,13 +9,17 @@ export function Button({ variant = 'secondary', reason, disabled, title, classNa
   </span>;
 }
 
-export function ConfirmAction({ actionLabel, impact, onConfirm }: { actionLabel: string; impact: string; onConfirm: () => void }) {
+/** 影响线上的操作：先展开页面内确认区，写清影响范围，再执行。不使用浏览器弹窗，也不用红色实底。 */
+export function ConfirmAction({ actionLabel, confirmLabel, impact, onConfirm, variant = 'secondary', disabled, reason, icon }: {
+  actionLabel: ReactNode; confirmLabel: string; impact: ReactNode; onConfirm: () => void;
+  variant?: 'primary' | 'secondary'; disabled?: boolean; reason?: string; icon?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   return <div className="confirm-action">
-    <Button onClick={() => setOpen(true)}>{actionLabel}</Button>
-    {open && <div className="confirmation" role="group" aria-label={`${actionLabel}二次确认`}>
-      <strong>确认{actionLabel}？</strong><p>{impact}</p>
-      <div className="inline-actions"><Button onClick={() => setOpen(false)}>取消</Button><Button onClick={() => { onConfirm(); setOpen(false); }}>确认{actionLabel}</Button></div>
+    {!open && <Button variant={variant} onClick={() => setOpen(true)} disabled={disabled} reason={reason}>{icon}{actionLabel}</Button>}
+    {open && <div className="confirmation" role="group" aria-label={`${confirmLabel}二次确认`}>
+      <strong>{confirmLabel}？</strong><p>{impact}</p>
+      <div className="inline-actions"><Button onClick={() => setOpen(false)}>取消</Button><Button variant={variant} onClick={() => { onConfirm(); setOpen(false); }}>{confirmLabel}</Button></div>
     </div>}
   </div>;
 }

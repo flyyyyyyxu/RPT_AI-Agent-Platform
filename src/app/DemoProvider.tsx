@@ -1,49 +1,107 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { initialDemoState } from '../data/mock';
-import type { Agent, AgentConfig, DemoState } from '../types/domain';
+import type { Agent, AgentConfig, AgentVersion, DemoState, ProfileId } from '../types/domain';
 import { clearDemo, readDemo, writeDemo } from './storage';
+import { canRollbackTo, getCandidate, isEditable, isEvaluated, nextVersionId, nowStamp } from './versions';
+
+interface CreateAgentInput { name: string; mode: string; profile: ProfileId; config: AgentConfig; team: string }
 
 interface DemoContextValue {
   state: DemoState;
   setTeam: (team: string) => void;
-  createAgent: (input: { name: string; description: string; template: string; config: AgentConfig }) => Agent;
-  updateConfig: (agentId: string, config: AgentConfig) => void;
-  markConfigured: (agentId: string) => void;
-  markDebugged: (agentId: string, question: string) => void;
-  markEvaluated: (agentId: string) => void;
+  createAgent: (input: CreateAgentInput) => Agent;
+  saveConfig: (agentId: string, versionId: string, config: AgentConfig) => void;
+  createDraft: (agentId: string, fromVersionId: string) => string;
+  markDebugged: (agentId: string, versionId: string, question: string) => void;
+  markEvaluated: (agentId: string, versionId: string, datasetId: string) => void;
   markMonitored: (agentId: string) => void;
-  publishAgent: (agentId: string, version: string) => void;
-  rollbackAgent: (agentId: string, version: string) => void;
+  publishCandidate: (agentId: string) => void;
+  rollbackTo: (agentId: string, versionId: string) => void;
   reset: () => void;
 }
 
 const DemoContext = createContext<DemoContextValue | null>(null);
 
+const fresh = () => structuredClone(initialDemoState);
+
 export function DemoProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<DemoState>(() => readDemo() ?? structuredClone(initialDemoState));
+  const [state, setState] = useState<DemoState>(() => readDemo() ?? fresh());
   useEffect(() => writeDemo(state), [state]);
+
+  const updateAgent = (agentId: string, updater: (agent: Agent) => Agent) =>
+    setState(previous => ({ ...previous, agents: previous.agents.map(agent => agent.id === agentId ? updater(agent) : agent) }));
+  const updateVersion = (agent: Agent, versionId: string, updater: (version: AgentVersion) => AgentVersion): Agent =>
+    ({ ...agent, versions: agent.versions.map(version => version.id === versionId ? updater(version) : version) });
+
   const setTeam = (team: string) => setState(previous => ({ ...previous, team }));
-  const createAgent: DemoContextValue['createAgent'] = ({ name, description, config }) => {
-    const id = `agent-${Date.now()}`;
-    const agent: Agent = { id, name, owner: '李一宁', team: '企业服务', level: '原型', mode: description || '在线 · 多轮', costThisMonth: 0, productionVersion: 'v0', metrics: ['回答采纳率', 'P95 延迟'], versions: [{ id: 'v1', status: '草稿', updatedAt: '2026-09-28 16:13', note: '初始配置' }, { id: 'v0', status: '线上', updatedAt: '2026-09-28 16:13', note: '尚未发布' }] };
-    setState(previous => ({ ...previous, agents: [...previous.agents, agent], runtimes: { ...previous.runtimes, [id]: { config, configured: true, debugged: false, evaluated: false, published: false, monitored: false, environments: { development: 'v1', staging: 'v0', production: 'v0' }, lastDebugQuestion: '' } } }));
+
+  const createAgent: DemoContextValue['createAgent'] = ({ name, mode, profile, config, team }) => {
+    const agent: Agent = {
+      id: `agent-${Date.now()}`, name, owner: '李一宁', team, level: '原型', mode, costThisMonth: 0,
+      productionVersion: null, stagingVersion: null, profile, monitorProfile: 'fresh', headline: [], monitored: false, lastReleaseAt: null, lastDebugQuestion: '',
+      versions: [{ id: 'v1', status: '草稿', updatedAt: nowStamp(), note: '初始配置', config, everOnline: false, configured: false, debugged: false, evaluatedDatasets: [] }],
+    };
+    setState(previous => ({ ...previous, agents: [...previous.agents, agent] }));
     return agent;
   };
-  const updateRuntime = (agentId: string, updater: (runtime: DemoState['runtimes'][string]) => DemoState['runtimes'][string]) => setState(previous => ({ ...previous, runtimes: { ...previous.runtimes, [agentId]: updater(previous.runtimes[agentId]) } }));
-  const updateConfig = (agentId: string, config: AgentConfig) => updateRuntime(agentId, runtime => ({ ...runtime, config }));
-  const markConfigured = (agentId: string) => updateRuntime(agentId, runtime => ({ ...runtime, configured: true }));
-  const markDebugged = (agentId: string, question: string) => updateRuntime(agentId, runtime => ({ ...runtime, debugged: true, lastDebugQuestion: question }));
-  const markEvaluated = (agentId: string) => updateRuntime(agentId, runtime => ({ ...runtime, evaluated: true }));
-  const markMonitored = (agentId: string) => updateRuntime(agentId, runtime => ({ ...runtime, monitored: true }));
-  const pointProduction = (agentId: string, version: string, published: boolean) => setState(previous => ({
-    ...previous,
-    agents: previous.agents.map(agent => agent.id !== agentId ? agent : { ...agent, productionVersion: version, versions: agent.versions.map(item => ({ ...item, status: item.id === version ? '线上' : item.status === '线上' ? '草稿' : item.status })) }),
-    runtimes: { ...previous.runtimes, [agentId]: { ...previous.runtimes[agentId], published, environments: { ...previous.runtimes[agentId].environments, production: version, staging: version } } },
+
+  const saveConfig: DemoContextValue['saveConfig'] = (agentId, versionId, config) => updateAgent(agentId, agent => updateVersion(agent, versionId, version => {
+    if (!isEditable(version)) return version;
+    const changed = JSON.stringify(version.config) !== JSON.stringify(config);
+    // 配置一旦变化：调试和评测结果都失效，「待发布」退回「草稿」
+    return changed
+      ? { ...version, config: structuredClone(config), configured: true, debugged: false, evaluatedDatasets: [], status: '草稿', updatedAt: nowStamp() }
+      : { ...version, configured: true };
   }));
-  const publishAgent = (agentId: string, version: string) => pointProduction(agentId, version, true);
-  const rollbackAgent = (agentId: string, version: string) => pointProduction(agentId, version, true);
-  const reset = () => { clearDemo(); setState(structuredClone(initialDemoState)); };
-  return <DemoContext.Provider value={{ state, setTeam, createAgent, updateConfig, markConfigured, markDebugged, markEvaluated, markMonitored, publishAgent, rollbackAgent, reset }}>{children}</DemoContext.Provider>;
+
+  const createDraft: DemoContextValue['createDraft'] = (agentId, fromVersionId) => {
+    const agent = state.agents.find(item => item.id === agentId);
+    if (!agent) return fromVersionId;
+    const existing = getCandidate(agent);
+    if (existing) return existing.id;
+    const source = agent.versions.find(version => version.id === fromVersionId) ?? agent.versions[0];
+    const id = nextVersionId(agent);
+    updateAgent(agentId, current => ({ ...current, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note: `基于 ${source.id} 修改`, config: structuredClone(source.config), everOnline: false, configured: false, debugged: false, evaluatedDatasets: [] }, ...current.versions] }));
+    return id;
+  };
+
+  const markDebugged: DemoContextValue['markDebugged'] = (agentId, versionId, question) => updateAgent(agentId, agent => {
+    const next = { ...agent, lastDebugQuestion: question };
+    return updateVersion(next, versionId, version => isEditable(version) && version.configured ? { ...version, debugged: true } : version);
+  });
+
+  const markEvaluated: DemoContextValue['markEvaluated'] = (agentId, versionId, datasetId) => updateAgent(agentId, agent => updateVersion(agent, versionId, version =>
+    isEditable(version) && version.configured && version.debugged && !version.evaluatedDatasets.includes(datasetId)
+      ? { ...version, evaluatedDatasets: [...version.evaluatedDatasets, datasetId] } : version));
+
+  const markMonitored = (agentId: string) => updateAgent(agentId, agent => agent.monitored ? agent : { ...agent, monitored: true });
+
+  const switchProduction = (agent: Agent, targetId: string): Agent => ({
+    ...agent,
+    productionVersion: targetId,
+    monitored: false,
+    lastReleaseAt: nowStamp(),
+    versions: agent.versions.map(version => {
+      if (version.id === targetId) return { ...version, status: '线上', everOnline: true };
+      if (version.id === agent.productionVersion) return { ...version, status: '历史' };
+      return version;
+    }),
+  });
+
+  const publishCandidate = (agentId: string) => updateAgent(agentId, agent => {
+    const candidate = getCandidate(agent);
+    if (!candidate || !candidate.configured || !candidate.debugged || !isEvaluated(candidate)) return agent;
+    return { ...switchProduction(agent, candidate.id), stagingVersion: candidate.id };
+  });
+
+  const rollbackTo = (agentId: string, versionId: string) => updateAgent(agentId, agent => {
+    const target = agent.versions.find(version => version.id === versionId);
+    return target && canRollbackTo(agent, target) ? switchProduction(agent, versionId) : agent;
+  });
+
+  const reset = () => { clearDemo(); setState(fresh()); };
+
+  return <DemoContext.Provider value={{ state, setTeam, createAgent, saveConfig, createDraft, markDebugged, markEvaluated, markMonitored, publishCandidate, rollbackTo, reset }}>{children}</DemoContext.Provider>;
 }
 
 export function useDemo() {

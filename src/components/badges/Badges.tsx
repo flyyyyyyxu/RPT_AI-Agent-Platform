@@ -1,10 +1,10 @@
-import { AlertCircle, ArrowUpRight } from 'lucide-react';
+import { AlertCircle, ExternalLink } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-export type Status = '线上' | '通过' | '灰度中' | '进行中' | '待审批' | '警告' | '阻断' | '失败' | '错误' | '草稿' | '二期' | '待发布';
+export type Status = '线上' | '通过' | '灰度中' | '进行中' | '待审批' | '警告' | '阻断' | '失败' | '错误' | '草稿' | '二期' | '待发布' | '历史';
 const tones: Record<Status, string> = {
   线上: 'success', 通过: 'success', 灰度中: 'progress', 进行中: 'progress', 待审批: 'warning', 警告: 'warning', 待发布: 'warning',
-  阻断: 'error', 失败: 'error', 错误: 'error', 草稿: 'neutral', 二期: 'phase2',
+  阻断: 'error', 失败: 'error', 错误: 'error', 草稿: 'neutral', 历史: 'history', 二期: 'phase2',
 };
 
 export function StatusBadge({ status }: { status: Status }) {
@@ -27,5 +27,5 @@ export function FeatureMark({ children }: { children: ReactNode }) {
 }
 
 export function VersionBadge({ version }: { version: string }) { return <span className="version-badge">{version}</span>; }
-export function IntegrationNote({ platform }: { platform: string }) { return <span className="integration-note"><ArrowUpRight size={16} strokeWidth={1.5} aria-hidden="true" />已接入公司{platform}平台</span>; }
+export function IntegrationNote({ platform }: { platform: string }) { return <span className="integration-note"><ExternalLink size={16} strokeWidth={1.5} aria-hidden="true" />已接入公司{platform}平台</span>; }
 export function DemoBadge() { return <span className="demo-badge">演示数据</span>; }
