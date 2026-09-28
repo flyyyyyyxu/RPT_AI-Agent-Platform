@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useDemo } from '../app/DemoProvider';
 import { SectionHeading, Card, Placeholder } from '../components/content/Content';
-import { StatusBadge, VersionBadge } from '../components/badges/Badges';
+import { AgentTable } from '../components/agents/AgentTable';
 
 export function AgentDirectory() {
   const { state } = useDemo();
   const agents = state.team === '全部团队' ? state.agents : state.agents.filter(agent => agent.team === state.team);
-  return <div><div className="page-heading"><span className="eyebrow">工作台 · Agent 目录</span><h1>选择 Agent</h1><p>查看统一的构建、评测、发布和观测工作区。</p></div>
-    <div className="agent-grid">{agents.map(agent => <Link key={agent.id} to={`/agents/${agent.id}/build`} className="agent-directory-link"><Card><div className="directory-card-top"><StatusBadge status="线上" /><ArrowRight size={20} strokeWidth={1.5} /></div><h2>{agent.name}</h2><p>{agent.mode}</p><div className="directory-card-bottom"><span>{agent.team} · {agent.owner}</span><span>线上 <VersionBadge version={agent.productionVersion} /></span></div></Card></Link>)}</div>
+  return <div><div className="directory-heading"><div className="page-heading"><span className="eyebrow">工作台 · Agent 目录</span><h1>Agent 目录</h1><p>统一进入构建、评测、发布和监控工作区。</p></div><Link className="button button-primary" to="/agents/new"><Plus size={16} />新建 Agent</Link></div>
+    <Card className="agent-table-card"><AgentTable agents={agents} /></Card>
   </div>;
 }
 

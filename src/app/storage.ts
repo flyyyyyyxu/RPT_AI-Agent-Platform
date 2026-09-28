@@ -7,7 +7,7 @@ export function readDemo(): DemoState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || !('agents' in parsed) || !Array.isArray(parsed.agents) || !('team' in parsed) || typeof parsed.team !== 'string') return null;
+    if (!parsed || typeof parsed !== 'object' || !('agents' in parsed) || !Array.isArray(parsed.agents) || !('team' in parsed) || typeof parsed.team !== 'string' || !('runtimes' in parsed) || typeof parsed.runtimes !== 'object') return null;
     return parsed as DemoState;
   } catch { return null; }
 }

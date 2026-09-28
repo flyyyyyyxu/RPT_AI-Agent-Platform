@@ -4,6 +4,11 @@ import { DemoProvider, useDemo } from './app/DemoProvider';
 import { AppShell } from './layouts/AppShell';
 import { AgentDirectory, PlatformPlaceholder } from './pages/PlatformPlaceholder';
 import { AgentStepPlaceholder } from './pages/AgentStepPlaceholder';
+import { BuildPage } from './pages/BuildPage';
+import { CreateAgentPage } from './pages/CreateAgentPage';
+import { EvaluationPage } from './pages/EvaluationPage';
+import { MonitorPage } from './pages/MonitorPage';
+import { ReleasePage } from './pages/ReleasePage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { Feedback } from './components/feedback/Feedback';
 
@@ -14,12 +19,17 @@ function AgentRoute() {
   if (!agent) return <Feedback kind="error" title="未找到 Agent" description="请返回工作台重新选择。" />;
   if (!stepId) return <Navigate to={`/agents/${agent.id}/build`} replace />;
   if (stepId !== 'settings' && !lifecycleSteps.some(step => step.id === stepId)) return <Navigate to={`/agents/${agent.id}/build`} replace />;
+  if (stepId === 'build') return <BuildPage key={agent.id} agent={agent} />;
+  if (stepId === 'evaluation') return <EvaluationPage key={agent.id} agent={agent} />;
+  if (stepId === 'release') return <ReleasePage key={agent.id} agent={agent} />;
+  if (stepId === 'monitor') return <MonitorPage key={agent.id} agent={agent} />;
   return <AgentStepPlaceholder key={agent.id} agent={agent} stepId={stepId} />;
 }
 
 export function App() {
   return <DemoProvider><AppShell><Routes>
     <Route path="/" element={<AgentDirectory />} />
+    <Route path="/agents/new" element={<CreateAgentPage />} />
     <Route path="/agents/:agentId" element={<AgentRoute />} />
     <Route path="/agents/:agentId/:stepId" element={<AgentRoute />} />
     <Route path="/library" element={<PlatformPlaceholder title="能力组件库" description="沉淀可复用的 Agent 能力组件。" />} />
