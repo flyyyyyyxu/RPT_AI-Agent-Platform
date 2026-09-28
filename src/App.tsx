@@ -10,6 +10,9 @@ import { EvaluationPage } from './pages/EvaluationPage';
 import { MonitorPage } from './pages/MonitorPage';
 import { ReleasePage } from './pages/ReleasePage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
+import { LibraryPage } from './pages/LibraryPage';
+import { TracePage } from './pages/TracePage';
+import { AgentSettingsPage } from './pages/AgentSettingsPage';
 import { Feedback } from './components/feedback/Feedback';
 
 function AgentRoute() {
@@ -23,6 +26,8 @@ function AgentRoute() {
   if (stepId === 'evaluation') return <EvaluationPage key={agent.id} agent={agent} />;
   if (stepId === 'release') return <ReleasePage key={agent.id} agent={agent} />;
   if (stepId === 'monitor') return <MonitorPage key={agent.id} agent={agent} />;
+  if (stepId === 'trace') return <TracePage key={agent.id} agent={agent} />;
+  if (stepId === 'settings') return <AgentSettingsPage key={agent.id} agent={agent} />;
   return <AgentStepPlaceholder key={agent.id} agent={agent} stepId={stepId} />;
 }
 
@@ -32,7 +37,7 @@ export function App() {
     <Route path="/agents/new" element={<CreateAgentPage />} />
     <Route path="/agents/:agentId" element={<AgentRoute />} />
     <Route path="/agents/:agentId/:stepId" element={<AgentRoute />} />
-    <Route path="/library" element={<PlatformPlaceholder title="能力组件库" description="沉淀可复用的 Agent 能力组件。" />} />
+    <Route path="/library" element={<LibraryPage />} />
     <Route path="/evaluation" element={<PlatformPlaceholder title="评测中心" description="统一管理评测资产与准入标准。" />} />
     <Route path="/operations" element={<PlatformPlaceholder title="运维与成本" description="汇总运行保障、观测与成本信息。" />} />
     <Route path="/settings" element={<PlatformPlaceholder title="设置" description="管理平台级演示配置。" />} />

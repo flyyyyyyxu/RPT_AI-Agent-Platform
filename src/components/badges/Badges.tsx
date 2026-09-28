@@ -1,10 +1,10 @@
 import { AlertCircle, ExternalLink } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-export type Status = '线上' | '通过' | '灰度中' | '进行中' | '待审批' | '警告' | '阻断' | '失败' | '错误' | '草稿' | '二期' | '待发布' | '历史';
+export type Status = '线上' | '通过' | '灰度中' | '进行中' | '待审批' | '警告' | '阻断' | '失败' | '错误' | '草稿' | '二期' | '待发布' | '历史' | '影子运行' | '已审批' | '未完成';
 const tones: Record<Status, string> = {
   线上: 'success', 通过: 'success', 灰度中: 'progress', 进行中: 'progress', 待审批: 'warning', 警告: 'warning', 待发布: 'warning',
-  阻断: 'error', 失败: 'error', 错误: 'error', 草稿: 'neutral', 历史: 'history', 二期: 'phase2',
+  影子运行: 'progress', 已审批: 'success', 未完成: 'neutral', 阻断: 'error', 失败: 'error', 错误: 'error', 草稿: 'neutral', 历史: 'history', 二期: 'phase2',
 };
 
 export function StatusBadge({ status }: { status: Status }) {

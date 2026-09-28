@@ -2,6 +2,8 @@ import type { Agent, AgentVersion } from '../types/domain';
 
 /** 候选版本：唯一可编辑、可评测、可发布的版本（草稿或待发布）。 */
 export const getCandidate = (agent: Agent) => agent.versions.find(version => version.status === '草稿' || version.status === '待发布') ?? null;
+/** 进行中的实验：比例灰度或影子运行的版本（同一时间最多一个）。 */
+export const getExperiment = (agent: Agent) => agent.versions.find(version => version.status === '灰度中' || version.status === '影子运行') ?? null;
 export const getProduction = (agent: Agent) => agent.versions.find(version => version.id === agent.productionVersion) ?? null;
 export const getVersion = (agent: Agent, id: string | null | undefined) => agent.versions.find(version => version.id === id) ?? null;
 export const isEditable = (version: AgentVersion) => version.status === '草稿' || version.status === '待发布';

@@ -12,12 +12,14 @@ import { TrendChart } from '../components/monitor/TrendChart';
 import { formatMetric, isGood, metricLabels } from '../components/monitor/format';
 import { monitorProfiles } from '../data/mock';
 import { AgentShell } from '../layouts/AgentShell';
+import { useSkeletonView } from '../components/skeleton/Skeleton';
 import type { Agent, MonitorMetricKey } from '../types/domain';
 
 const metricKeys: MonitorMetricKey[] = ['calls', 'p95', 'errorRate', 'tokens'];
 
 export function MonitorPage({ agent }: { agent: Agent }) {
   const { markMonitored } = useDemo();
+  const skeletonView = useSkeletonView();
   const [metric, setMetric] = useState<MonitorMetricKey>('calls');
   const production = agent.productionVersion;
   const [justChanged] = useState(!agent.monitored);
@@ -52,6 +54,6 @@ export function MonitorPage({ agent }: { agent: Agent }) {
       <div className="chart-tabs" role="tablist" aria-label="趋势指标">{metricKeys.map(key => <button key={key} role="tab" aria-selected={metric === key} className={metric === key ? 'active' : ''} onClick={() => setMetric(key)}>{metricLabels[key]}</button>)}</div></div>
       <TrendChart series={series} metric={metric} version={production} /></Card>
     <SectionHeading eyebrow="调用日志" title="最近请求" description="每条请求都带版本号，便于按版本排查。" />
-    <Card><CallLogTable logs={profile.logs} versionFor={index => agent.monitorProfile === 'fresh' || index < 3 ? production : older} /></Card>
+    <Card><CallLogTable logs={profile.logs} versionFor={index => agent.monitorProfile === 'fresh' || index < 3 ? production : older} traceHref={skeletonView ? trace => `/agents/${agent.id}/trace?trace=${trace}` : undefined} /></Card>
   </AgentShell>;
 }

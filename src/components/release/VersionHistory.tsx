@@ -7,6 +7,7 @@ import { StatusBadge, VersionBadge } from '../badges/Badges';
 function rowHint(agent: Agent, version: AgentVersion) {
   if (version.id === agent.productionVersion) return '当前线上';
   if (version.status === '灰度中') return `灰度中 · ${version.traffic ?? 0}% 流量，不能作为回退目标`;
+  if (version.status === '影子运行') return '影子运行中，不接用户流量';
   if (version.status === '草稿' || version.status === '待发布') return '候选版本，未上线过，需通过发布上线';
   return '不可回退';
 }

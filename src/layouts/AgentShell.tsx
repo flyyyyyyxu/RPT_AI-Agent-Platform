@@ -5,12 +5,15 @@ import { lifecycleSteps } from '../data/mock';
 import type { Agent } from '../types/domain';
 import { StatusBadge, VersionBadge } from '../components/badges/Badges';
 import { useSelectedVersion } from '../app/useSelectedVersion';
+import { useDemo } from '../app/DemoProvider';
+import { SkeletonBadge } from '../components/badges/Badges';
 import { getCandidate, lifecycleCompletion, type StepProgress } from '../app/versions';
 
 export function AgentShell({ agent, stepId, children, aside }: { agent: Agent; stepId: string; children: ReactNode; aside: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const skeletonView = useDemo().state.viewMode === 'skeleton';
+  const steps = lifecycleSteps.filter(step => skeletonView || step.id !== 'trace');
   const { selected, select, search } = useSelectedVersion(agent);
-  const stepIndex = lifecycleSteps.findIndex(step => step.id === stepId);
   const completed = lifecycleCompletion(agent);
   const candidate = getCandidate(agent);
   const iteration = candidate ? `本次迭代：${candidate.id}（${candidate.status}）` : agent.productionVersion ? `当前没有候选版本，线上 ${agent.productionVersion} 已完成发布` : '尚未发布';
@@ -19,9 +22,9 @@ export function AgentShell({ agent, stepId, children, aside }: { agent: Agent; s
       <div className="agent-heading-actions"><label className="version-select"><span>查看版本</span><select value={selected.id} onChange={event => select(event.target.value)}>{agent.versions.map(item => <option key={item.id} value={item.id}>{item.id} · {item.status}{item.traffic ? ` ${item.traffic}%` : ''}</option>)}</select></label><StatusBadge status={selected.status} />
         <span className="production-pointer">线上指向 → {agent.productionVersion ? <VersionBadge version={agent.productionVersion} /> : <span className="meta">未发布</span>}</span>
         <Link className="icon-button agent-settings" to={`/agents/${agent.id}/settings${search}`} title="Agent 设置" aria-label="Agent 设置"><Settings size={20} strokeWidth={1.5} /></Link></div></div>
-      <nav className="lifecycle-nav" aria-label="Agent 生命周期">{lifecycleSteps.map((step, index) => {
-        const progress: StepProgress = index === stepIndex ? '当前' : completed[step.id] ? '已完成' : '未开始';
-        return <NavLink key={step.id} to={`/agents/${agent.id}/${step.id}${search}`} className={({ isActive }) => `lifecycle-item ${isActive ? 'current' : ''}`} aria-current={step.id === stepId ? 'step' : undefined}><span className={`step-index step-${progress}`}>{index + 1}</span><span className="step-copy"><strong>{step.label}</strong><small>{progress}{index === stepIndex && completed[step.id] ? ' · 已完成' : ''}</small></span></NavLink>;
+      <nav className="lifecycle-nav" aria-label="Agent 生命周期">{steps.map((step, index) => {
+        const progress: StepProgress = step.id === stepId ? '当前' : completed[step.id] ? '已完成' : '未开始';
+        return <NavLink key={step.id} to={`/agents/${agent.id}/${step.id}${search}`} className={({ isActive }) => `lifecycle-item ${isActive ? 'current' : ''}`} aria-current={step.id === stepId ? 'step' : undefined}><span className={`step-index step-${progress}`}>{index + 1}</span><span className="step-copy"><strong>{step.label}{step.id === 'trace' && <SkeletonBadge number={8} />}</strong><small>{progress}{step.id === stepId && completed[step.id] ? ' · 已完成' : ''}</small></span></NavLink>;
       })}</nav></div>
     <div className="workspace-toolbar"><span className="meta">{iteration} · 正在查看 {selected.id}：{selected.note}</span><button className="button button-secondary aside-toggle" onClick={() => setDrawerOpen(value => !value)} aria-expanded={drawerOpen}>{drawerOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}辅助信息</button></div>
     <div className="workspace-columns"><section className="workspace-main">{children}</section><aside className={`workspace-aside ${drawerOpen ? 'drawer-open' : ''}`} aria-label="辅助信息"><div className="drawer-heading"><strong>辅助信息</strong><button className="icon-button" onClick={() => setDrawerOpen(false)} aria-label="关闭辅助信息"><PanelRightClose size={20} /></button></div>{aside}</aside></div>

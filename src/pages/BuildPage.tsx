@@ -9,6 +9,8 @@ import { ScopeBadge, StatusBadge } from '../components/badges/Badges';
 import { ConfigSection } from '../components/build/ConfigSection';
 import { DebugPreview } from '../components/build/DebugPreview';
 import { WorkflowStepList } from '../components/build/WorkflowStepList';
+import { DependencyLock, VersionDiff } from '../components/build/VersionSnapshot';
+import { Phase2Row, SkeletonHeading } from '../components/skeleton/Skeleton';
 import { Card, SectionHeading } from '../components/content/Content';
 import { knowledgeOptions, modelOptions, profiles, toolOptions } from '../data/mock';
 import { AgentShell } from '../layouts/AgentShell';
@@ -55,5 +57,9 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
         <Button variant="primary" disabled={!dirty && version.configured} reason={!dirty && version.configured ? '配置未修改' : undefined} onClick={() => saveConfig(agent.id, version.id, form)}>{!dirty && version.configured ? <Check size={16} /> : <Save size={16} />}{!dirty && version.configured ? '已保存' : '保存配置'}</Button>
       </div>}
     </Card>
+    <SkeletonHeading skeleton={[1]} title={`版本快照 ${version.id}`} description="变更与版本管理：每个版本锁定模型、Prompt、工具和知识的具体版本，可逐项 diff。" />
+    <DependencyLock agent={agent} version={version} />
+    <VersionDiff agent={agent} version={version} />
+    <Phase2Row items={[{ skeleton: [1, 2], title: '依赖变化自动触发回归', description: '模型、知识或工具上游发版后，自动用受影响 Agent 的评测集跑回归并通知负责人。' }]} />
   </AgentShell>;
 }
