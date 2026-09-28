@@ -1,1 +1,7 @@
-# RPT_AI-Agent-Platform
+# Agent 基建平台 · 前端框架原型
+
+本阶段提供全局导航、Agent 生命周期外壳、设计规范样板页，以及 4 个 Agent 的演示数据。具体业务页面仍为占位内容。
+
+在本目录运行 `npm install`、`npm run build`。构建完成后，直接打开 `dist/index.html`；页面通过 Hash 路由切换，刷新不会请求服务端。`npm run dev` 可用于本地开发。
+
+页面数据为 mock。团队选择保存在本机浏览器存储中；「重置演示」恢复初始数据。Google Fonts 无法访问时会使用系统字体。
