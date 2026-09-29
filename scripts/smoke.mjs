@@ -155,7 +155,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
 /* ---------------- 回归检查 ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
-  // 基础数据里穿搭灵感 v13 正在灰度 10%：灰度期间版本历史不能回退
+  // 基础数据里社区穿搭灵感 Agent v13 正在灰度 10%：灰度期间版本历史不能回退
   await go(page, '/agents/a/release', 500);
   check('回归：灰度期间版本历史不能回退', await page.getByRole('button', { name: '回退到 v11' }).count() === 0);
   // 回退中途离开页面，回退仍然生效
@@ -199,14 +199,23 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
 {
   const { page, context, errors } = await newPage(browser);
   const navText = (await page.locator('.sidebar-links').innerText()).replace(/\s+/g, ' ');
-  check('导航：工作台 / 资产中心 / 监控与成本 / 治理 / 模板广场（二期）', ['工作台', '资产中心', '监控与成本', '治理', '模板广场'].every(label => navText.includes(label)) && !navText.includes('评测中心'), navText);
+  check('导航：工作台 / 资产中心 / 监控与成本 / 治理 / 模板广场（二期）', ['工作台', '资产中心', '监控与成本', '治理', '模板广场'].every(label => navText.includes(label)) && !navText.includes('评测中心') && !navText.includes('平台共享'), navText);
+  check('导航：资产中心下常驻五个二级目录', (await page.locator('.nav-subgroup .nav-sub-item').allInnerTexts()).join('|') === '知识库|工具|评测集|模型|Prompt 模板');
   check('导航：模板广场置灰不可点', await page.locator('.nav-item-phase2[aria-disabled=true]').count() === 1);
   await go(page, '/library', 400);
-  check('旧入口：能力组件库跳到资产中心', page.url().endsWith('#/assets'), page.url());
+  check('旧入口：能力组件库跳到资产中心 · 知识库', page.url().endsWith('#/assets/knowledge'), page.url());
+  check('知识库：目录按团队 → 知识库 → 版本展开', await page.locator('.kb-tree .tree-team').count() === 4 && await page.locator('.kb-tree .tree-version').count() >= 2);
+  await page.locator('.kb-tree .tree-kb', { hasText: '售后知识' }).click(); await page.waitForTimeout(200);
+  await page.locator('.kb-tree .tree-version', { hasText: 'v34' }).click(); await page.waitForTimeout(200);
+  check('知识库：点目录里的版本切换右侧内容', (await page.locator('.kb-main .capability h3').first().innerText()).startsWith('v34') && (await page.locator('.tree-version.selected').innerText()).includes('线上在用'));
+  await page.locator('.kb-search input').fill('制度'); await page.waitForTimeout(200);
+  check('知识库：目录搜索', await page.locator('.kb-tree .tree-kb').count() === 1);
   await go(page, '/evaluation', 400);
-  check('旧入口：评测中心跳到资产中心 · 评测集', page.url().endsWith('#/assets?tab=evalsets') && await page.locator('.evalset-table tbody tr').count() >= 8, page.url());
+  check('旧入口：评测中心跳到资产中心 · 评测集', page.url().endsWith('#/assets/evalsets') && await page.locator('.evalset-table tbody tr').count() >= 8, page.url());
+  await go(page, '/assets?tab=models', 300);
+  check('旧入口：?tab= 地址跳到对应二级目录', page.url().endsWith('#/assets/models'), page.url());
   for (const [tab, label] of [['tools', '工具版本'], ['models', '模型目录'], ['prompts', '模板目录']]) {
-    await go(page, `/assets?tab=${tab}`, 300);
+    await go(page, `/assets/${tab}`, 300);
     check(`资产中心：${label}`, await page.locator('.capability h3', { hasText: label }).count() === 1);
   }
   await go(page, '/operations', 400);
@@ -218,7 +227,28 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   check('旧入口：平台设置跳到治理', page.url().endsWith('#/governance'), page.url());
   await go(page, '/agents/a/observe', 400);
   check('Agent：观测默认进入监控', page.url().endsWith('#/agents/a/monitor') && await page.locator('.lifecycle-item.current strong').innerText() === '观测', page.url());
+  await go(page, '/', 400);
+  check('工作台：目录表格列为 Agent / 线上版本 / 进行中 / 运行健康 / 业务核心指标 / 本月成本', (await page.locator('.agent-table thead th').allInnerTexts()).slice(0, 6).join('|') === 'Agent|线上版本|进行中|运行健康|业务核心指标 · 近 7 日|本月成本');
+  check('工作台：三个剧本 Agent 使用完整名称', (await page.locator('.agent-name-link strong').allInnerTexts()).join('|').includes('社区穿搭灵感 Agent|生态守护 Agent|电商售后答疑 Agent'));
   check('平台页：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 剧本与自由浏览：从 Agent 目录进入不打开剧本 ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  await startPlaybook(page, 'A');
+  check('剧本：开始后显示浮层', await page.locator('.playbook-panel, .playbook-pill').count() === 1);
+  check('剧本：浮层里有退出提示', (await page.locator('.playbook-panel .pb-hint').innerText()).includes('重置演示'));
+  await go(page, '/', 400);
+  await page.locator('.agent-name-link', { hasText: '社区穿搭灵感 Agent' }).click(); await page.waitForTimeout(600);
+  check('剧本：从 Agent 目录进入后暂停，不显示浮层', await page.locator('.playbook-panel, .playbook-pill').count() === 0 && (await agentState(page, 'a')).playbook?.paused === true);
+  check('剧本：暂停时不锁定发布策略', await (async () => { await go(page, '/agents/a/release', 500); return !(await page.locator('body').innerText()).includes('剧本 A 进行中，此操作已锁定'); })());
+  await go(page, '/', 400);
+  check('剧本：工作台卡片显示已暂停', (await page.locator('.playbook-card.active').innerText()).includes('已暂停'));
+  await page.getByRole('button', { name: '继续剧本 A' }).click(); await page.waitForTimeout(600);
+  check('剧本：继续剧本后浮层恢复', await page.locator('.playbook-panel').count() === 1 && !(await agentState(page, 'a')).playbook?.paused);
+  check('剧本：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 

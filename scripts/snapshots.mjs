@@ -10,7 +10,7 @@ const outDir = resolve(root, 'scripts/.snapshots', mode === 'compare' ? 'current
 const baseDir = resolve(root, 'scripts/.snapshots/baseline');
 
 const pages = [
-  '/', '/agents/new', '/assets', '/assets?tab=tools', '/assets?tab=evalsets', '/assets?tab=models', '/assets?tab=prompts', '/operations', '/governance', '/design-system',
+  '/', '/agents/new', '/assets/knowledge', '/assets/tools', '/assets/evalsets', '/assets/models', '/assets/prompts', '/operations', '/governance', '/design-system',
   '/agents/general/build', '/agents/general/evaluation', '/agents/general/release', '/agents/general/monitor', '/agents/general/trace', '/agents/general/settings',
   '/agents/a/build', '/agents/a/release', '/agents/a/trace',
   '/agents/b/build', '/agents/b/evaluation', '/agents/b/release',
@@ -23,10 +23,10 @@ const flows = {
   'build-debugged': async page => { await go(page, '/agents/general/build'); await page.getByRole('button', { name: '保存配置' }).click(); if (page.viewportSize().width < 1280) { await page.locator('.aside-toggle').click(); await page.waitForTimeout(300); } await page.getByRole('button', { name: '运行调试' }).click(); await page.waitForTimeout(1400); await page.locator('.debug-step button').first().click(); },
   'eval-batch': async page => { await go(page, '/agents/b/evaluation'); await page.getByRole('button', { name: '使用示例数据集' }).click(); await page.getByRole('button', { name: '开始跑批' }).click(); await page.waitForTimeout(1800); },
   'release-rollback-confirm': async page => { await go(page, '/agents/general/release'); await page.getByRole('button', { name: '回退到 v2' }).first().click(); },
-  // 基础数据里穿搭灵感 v13 正在灰度，直接演示回退结果
+  // 基础数据里社区穿搭灵感 Agent v13 正在灰度，直接演示回退结果
   'a-gray-rolled-back': async page => { await go(page, '/agents/a/release'); await page.getByRole('button', { name: '回退到 v12' }).first().click(); await page.getByRole('button', { name: '确认回退到 v12' }).click(); await page.waitForTimeout(2600); },
   'playbook-b-blocked': async page => { await startPlaybook(page, 'B'); await collapse(page); await page.locator('[data-demo=dep-upgrade] button').click(); await page.waitForTimeout(600); if (page.viewportSize().width < 1280) { await page.locator('.aside-toggle').click(); await page.waitForTimeout(300); } await page.locator('[data-demo=debug-run] button').click(); await page.waitForTimeout(1400); await go(page, '/agents/b/evaluation'); await page.locator('[data-demo=eval-run] button').click(); await page.waitForTimeout(1800); },
-  'playbook-c-kb-draft': async page => { await startPlaybook(page, 'C'); await collapse(page); await go(page, '/assets'); await page.locator('[data-demo=kb-new-version] button').click(); await page.waitForTimeout(300); await page.getByRole('button', { name: '加入本版本' }).click(); },
+  'playbook-c-kb-draft': async page => { await startPlaybook(page, 'C'); await collapse(page); await go(page, '/assets/knowledge'); await page.locator('[data-demo=kb-new-version] button').click(); await page.waitForTimeout(300); await page.getByRole('button', { name: '加入本版本' }).click(); },
   'playbook-c-badcase': async page => { await startPlaybook(page, 'C'); await collapse(page); await page.locator('[data-demo="stage-bc-4431"] button', { hasText: '知识' }).click(); await page.locator('[data-demo="add-eval-bc-4431"] button').click(); await page.waitForTimeout(300); },
   'playbook-exit-confirm': async page => { await startPlaybook(page, 'A'); await page.getByRole('button', { name: '退出剧本' }).click(); },
 };

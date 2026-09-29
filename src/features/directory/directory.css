@@ -9,7 +9,7 @@
 .agent-table th { background: var(--color-page); color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); font-weight: var(--weight-semibold); }
 .agent-table tr:last-child td { border-bottom: 0; }
 .agent-table .numeric { text-align: right; }
-.agent-table td > span:not(.level-badge):not(.version-badge), .agent-name-link { display: block; }
+.agent-table td > span:not(.level-badge):not(.version-badge):not(.status-badge):not(.health), .agent-name-link { display: block; }
 .agent-table td small, .agent-name-link small { display: block; color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
 .agent-name-link strong { color: var(--color-text); }
 .agent-name-link:hover strong { color: var(--color-primary); }
@@ -20,20 +20,32 @@
   .directory-heading .button-primary { width: 100%; }
   .directory-heading .button-primary { width: 100%; }
 }
-/* 工作台表格：不再设固定最小宽度；窄于 1280 时改为卡片式行 */
-.agent-table th.col-level, .agent-table th.col-version { width: calc(var(--space-12) * 2); }
-.agent-table th.col-cost { width: calc(var(--space-12) * 2); }
-.agent-table th.col-action { width: var(--space-12); }
+/* 工作台表格：列宽按比例固定，避免浏览器自动分配造成大段空白；窄于 1280 时改为卡片式行 */
+.agent-table { table-layout: fixed; }
+.agent-table .col-name { width: 24%; }
+.agent-table .col-version { width: 9%; }
+.agent-table .col-progress { width: 15%; }
+.agent-table .col-health { width: 13%; }
+.agent-table .col-metrics { width: 22%; }
+.agent-table .col-cost { width: 11%; }
+.agent-table .col-action { width: var(--space-12); }
+.agent-table th:first-child, .agent-table td:first-child { padding-left: var(--space-4); }
+.agent-name-link strong { display: inline-flex; align-items: center; gap: var(--space-2); }
+.agent-table .status-badge { white-space: nowrap; }
+.health { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
+.health.ok { color: var(--color-greenText); }
+.health.warn { color: var(--color-orangeText); }
+.health.muted { color: var(--color-muted); }
 .agent-table td { padding-block: var(--space-2); }
 .version-cell { display: grid; gap: var(--space-1); justify-items: start; }
-.headline-metrics { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+.headline-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2) var(--space-4); }
 .headline-metrics span { display: grid; }
 .headline-metrics small { color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
 .headline-metrics b { font-weight: var(--weight-semibold); color: var(--color-text); }
 @media (max-width: 1279px) {
   .agent-table, .agent-table tbody, .agent-table tr, .agent-table td { display: block; width: 100%; }
   .agent-table thead { display: none; }
-  .agent-table tr { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .6fr) minmax(0, .9fr) minmax(0, 1.6fr) minmax(0, .8fr); gap: var(--space-3) var(--space-4); padding: var(--space-4) var(--space-12) var(--space-4) var(--space-4); border-bottom: var(--border-thin) solid var(--color-border); }
+  .agent-table tr { position: relative; display: grid; grid-template-columns: minmax(0, .6fr) minmax(0, 1fr) minmax(0, .9fr) minmax(0, 1.5fr) minmax(0, .8fr); gap: var(--space-3) var(--space-4); padding: var(--space-4) var(--space-12) var(--space-4) var(--space-4); border-bottom: var(--border-thin) solid var(--color-border); }
   .agent-table tr:last-child { border-bottom: 0; }
   .agent-table td { height: auto; padding: 0; border: 0; }
   .agent-table td[data-label]::before { content: attr(data-label); display: block; color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); margin-bottom: var(--space-1); }

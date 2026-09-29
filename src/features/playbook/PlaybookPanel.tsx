@@ -13,11 +13,12 @@ import './playbook.css';
  * 剧本浮层的显示状态：
  * - 用户点 ✕ 收起后保持胶囊（存进演示状态，换页、刷新后不变）
  * - 没收起时，只在当前步骤所在的页面（或剧本已完成时）展开，其它页面显示胶囊
+ * - 从 Agent 目录进入某个 Agent 后剧本暂停（自由浏览）：浮层和胶囊都不显示，工作台卡片上点「继续剧本」恢复
  */
 export function usePlaybookPanel() {
   const { state } = useDemo();
   const location = useLocation();
-  const pb = state.playbook;
+  const pb = state.playbook && !state.playbook.paused ? state.playbook : null;
   const playbook = pb ? playbookOf(pb.id) : null;
   const index = pb?.step ?? 0;
   const step = playbook?.steps[index];
@@ -129,6 +130,7 @@ export function PlaybookPanel() {
         <Button onClick={() => go(index + 1)} disabled={Boolean(step.done) && !done} reason={step.done && !done ? '完成页面上的操作后自动进入下一步' : undefined}>{index === total - 1 ? '完成剧本' : '下一步'}<ChevronRight size={icon.small} /></Button></div>
     </div>}
     {exitConfirm}
+    {!exiting && <p className="pb-hint">想退出剧本：点「退出剧本」，或点右上角「重置演示」后从 Agent 目录进入，即可自由浏览。</p>}
     <div className="pb-foot"><span><DemoTag label="演示数据" />页面上所有数字均为演示数据</span>{!exiting && <button type="button" className="link-button" onClick={() => setExiting(true)}>退出剧本</button>}</div>
   </aside>;
 }

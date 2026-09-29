@@ -19,7 +19,7 @@ export const phases = ['构建', '调试', '评测', '发布', '上线后'] as c
 export type Phase = '起因' | typeof phases[number];
 export interface PlaybookStep {
   title: string; body: string; next: string; phase: Phase;
-  /** 'release' 这类 Agent 页面，或 '/assets' 这类平台页面 */
+  /** 'release' 这类 Agent 页面，或 '/assets/knowledge' 这类平台页面 */
   page: string; target?: string;
   done?: (ctx: PlaybookCtx) => boolean;
   helper?: { label: string; run: (api: PlaybookApi, ctx: PlaybookCtx) => void };
@@ -41,14 +41,14 @@ const PB_KB = /政策库 2026-10 版/;
 const PC_KB = /售后知识 v35/;
 const PB_FIXED = (ctx: PlaybookCtx) => { const v = version(ctx, 'v8'); return Boolean(v && onKnowledge(ctx, 'v8', PB_KB) && !v.config.prompt.includes(pbOldClause) && v.configured); };
 
-export const pageNames: Record<string, string> = { build: '构建页', evaluation: '评测页', release: '发布与实验页', monitor: '观测 · 监控页', trace: '观测 · Trace 页', settings: '设置页', '/assets': '资产中心' };
+export const pageNames: Record<string, string> = { build: '构建页', evaluation: '评测页', release: '发布与实验页', monitor: '观测 · 监控页', trace: '观测 · Trace 页', settings: '设置页', '/assets/knowledge': '资产中心 · 知识库' };
 export const pagePath = (playbook: Playbook, page: string) => page.startsWith('/') ? page : `/agents/${playbook.agentId}/${page}`;
 
 const DEBUG_NEXT = '点「运行调试」。调试台在页面右侧；窄屏先点「展开辅助信息」。';
 
 export const playbooks: Playbook[] = [
   {
-    id: 'a', agentId: 'a', letter: 'A', theme: '快', title: '穿搭灵感', locks: ['strategy'],
+    id: 'a', agentId: 'a', letter: 'A', theme: '快', title: '社区穿搭灵感 Agent', locks: ['strategy'],
     summary: '每周上新推荐策略：新建 v13 → 调试、评测 → 灰度 10% → 延迟超门槛，一键回退 → Trace 定位。',
     outcome: 'v13 在隔离评测里达标，灰度后按业务指标发现高并发下延迟超门槛；回退到 v12 用时 1 分 48 秒，Trace 直接定位到新增步骤。',
     steps: [
@@ -96,7 +96,7 @@ export const playbooks: Playbook[] = [
     ],
   },
   {
-    id: 'b', agentId: 'b', letter: 'B', theme: '准', title: '生态守护', locks: ['plain-draft', 'strategy'],
+    id: 'b', agentId: 'b', letter: 'B', theme: '准', title: '生态守护 Agent', locks: ['plain-draft', 'strategy'],
     summary: '政策库更新：升级依赖建 v8 → 调试、评测 → 门槛拦下红线漏判 → 修正重测 → 影子验证 → 审批全量。',
     outcome: '红线漏判在上线前被强制门槛拦下；修正后影子运行与抽检标注一致率 97.8%，全部检查通过后全量发布，上线后在观测页持续观察。',
     steps: [
@@ -148,7 +148,7 @@ export const playbooks: Playbook[] = [
     ],
   },
   {
-    id: 'c', agentId: 'c', letter: 'C', theme: '稳', title: '售后答疑', locks: ['plain-draft', 'strategy', 'kb-discard'],
+    id: 'c', agentId: 'c', letter: 'C', theme: '稳', title: '电商售后答疑 Agent', locks: ['plain-draft', 'strategy', 'kb-discard'],
     summary: '用户投诉答错退货规则：从 bad case 追到过期知识 → 更新知识版本、建 v22 → 调试、回归评测 → 按会话灰度。',
     outcome: '问题归因到知识条目缺少失效时间；更新知识版本并回归后按会话灰度，转人工率 12.1% → 9.6%。',
     steps: [
@@ -166,11 +166,11 @@ export const playbooks: Playbook[] = [
         body: '加入后生成「bad case 回归集」，之后每个候选版本上线前都会用它回归。',
         next: '点「加入评测集」。',
         done: ctx => Boolean(ctx.ops.badcases['bc-4431']?.inEvalSet) },
-      { phase: '构建', title: '新建知识版本', page: '/assets', target: 'kb-new-version',
+      { phase: '构建', title: '新建知识版本', page: '/assets/knowledge', target: 'kb-new-version',
         body: '去资产中心更新售后知识：基于 v34 新建 v35，而不是直接改线上正在用的 v34。',
         next: '确认选中「售后知识」，点「基于 v34 新建版本 v35」。',
         done: ctx => ctx.state.kbDraft?.kbId === 'aftersale' || knowledgeBasesFor(ctx.state).some(kb => kb.id === 'aftersale' && kb.versions.some(v => v.id === 'v35')) },
-      { phase: '构建', title: '设置生效 / 失效时间', page: '/assets', target: 'kb-draft',
+      { phase: '构建', title: '设置生效 / 失效时间', page: '/assets/knowledge', target: 'kb-draft',
         body: `给旧条目「七天无理由退货」设置失效时间 ${pcOldEntryExpiry}；把知识运营提交的「十五天无理由退货」加入本版本，生效时间 2026-09-01 00:00。`,
         next: '按上面填写后点「发布 v35」，或点浮层里的「代我填写」再发布。',
         done: ctx => knowledgeBasesFor(ctx.state).some(kb => kb.id === 'aftersale' && kb.versions.some(v => v.id === 'v35')),
@@ -202,7 +202,7 @@ export const playbooks: Playbook[] = [
         next: '点「提交审批」，再点「模拟审批通过」。',
         done: ctx => ctx.ops.approvedVersion === 'v22' },
       { phase: '发布', title: '按会话灰度发布', page: 'release', target: 'publish',
-        body: '策略为比例灰度 10%。售后答疑是会话模式：按会话 ID 分桶并开启会话粘性，多轮对话不会中途换版本。',
+        body: '策略为比例灰度 10%。电商售后答疑 Agent 是会话模式：按会话 ID 分桶并开启会话粘性，多轮对话不会中途换版本。',
         next: '点「发布 v22（比例灰度 10%）」，再点确认。',
         done: ctx => { const v = version(ctx, 'v22'); return Boolean(v && (v.status === '灰度中' || v.status === '线上')); } },
       { phase: '上线后', title: '转人工率下降', page: 'release', target: 'ab',
@@ -217,7 +217,7 @@ export const playbookOf = (id: PlaybookId) => playbooks.find(item => item.id ===
 /** 剧本进行中时，某个入口是否被锁定；返回禁用原因。只锁剧本自己的 Agent（资产中心这类平台页传 null）。 */
 export function usePlaybookLock(lock: PlaybookLock, agentId: string | null): string | undefined {
   const { state } = useDemo();
-  if (!state.playbook) return undefined;
+  if (!state.playbook || state.playbook.paused) return undefined;
   const playbook = playbookOf(state.playbook.id);
   if (!playbook.locks.includes(lock) || (agentId !== null && agentId !== playbook.agentId)) return undefined;
   return `剧本 ${playbook.letter} 进行中，此操作已锁定；请按「演示步骤」提示操作，退出剧本后可用`;

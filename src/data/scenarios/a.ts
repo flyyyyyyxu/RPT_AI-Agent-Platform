@@ -1,4 +1,4 @@
-/** 剧本 A 穿搭灵感 · 快：新建 v13 → 调试 → 评测 → 灰度 10% → 延迟超门槛告警 → 回退 → Trace 定位。所有数字均为演示数据。 */
+/** 剧本 A 社区穿搭灵感 Agent · 快：新建 v13 → 调试 → 评测 → 灰度 10% → 延迟超门槛告警 → 回退 → Trace 定位。所有数字均为演示数据。 */
 import type { AbProfile, Agent, AlertDef, TraceRecord } from '../../types/domain';
 import { outfitConfig, snap } from '../base/configs';
 import { okGuard } from '../base/trace';

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Boxes, ChevronLeft, ChevronRight, Gauge, LayoutGrid, Menu, RotateCcw, ShieldCheck, Store, X } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
+import { assetSections } from '../../data';
 import { Button } from '../../shared/components/Buttons';
 import { DemoBadge, ScopeBadge } from '../../shared/components/Badges';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
@@ -12,11 +13,11 @@ import { icon } from '../../shared/styles/tokens';
 /**
  * 一级导航按两个轴组织：
  *   工作台：进入单个 Agent 的生产闭环（纵轴）
- *   平台共享：跨 Agent 的资产、监控与成本、治理（横轴）
+ *   资产中心 / 监控与成本 / 治理：跨 Agent 的平台共享能力（横轴）；资产中心下常驻展开五个二级目录
  */
 const workbench = { to: '/', label: '工作台', icon: LayoutGrid };
+const assets = { to: '/assets/knowledge', label: '资产中心', icon: Boxes };
 const platformNav = [
-  { to: '/assets', label: '资产中心', icon: Boxes },
   { to: '/operations', label: '监控与成本', icon: Gauge },
   { to: '/governance', label: '治理', icon: ShieldCheck },
 ];
@@ -27,8 +28,10 @@ function Breadcrumbs() {
   const { state } = useDemo();
   const parts = pathname.split('/').filter(Boolean);
   const agent = parts[0] === 'agents' ? state.agents.find(item => item.id === parts[1]) : undefined;
-  const current = pathname === '/design-system' ? '设计规范' : pathname === '/agents/new' ? '新建 Agent' : agent ? ({ build: '构建', evaluation: '评测', release: '发布与实验', monitor: '观测 · 监控', trace: '观测 · Trace 与 bad case', settings: '设置' } as Record<string, string>)[parts[2] ?? 'build'] : navigation.find(item => item.to === pathname)?.label ?? '工作台';
+  const current = pathname === '/design-system' ? '设计规范' : pathname === '/agents/new' ? '新建 Agent' : agent ? ({ build: '构建', evaluation: '评测', release: '发布与实验', monitor: '观测 · 监控', trace: '观测 · Trace 与 bad case', settings: '设置' } as Record<string, string>)[parts[2] ?? 'build']
+    : parts[0] === 'assets' ? assetSections.find(item => item.id === parts[1])?.label ?? '资产中心' : navigation.find(item => item.to === pathname)?.label ?? '工作台';
   return <nav className="breadcrumbs" aria-label="面包屑"><Link to="/">工作台</Link>{agent && <><ChevronRight aria-hidden="true" /><Link to={`/agents/${agent.id}/build`}>{agent.name}</Link></>}
+    {parts[0] === 'assets' && <><ChevronRight aria-hidden="true" /><Link to={assets.to}>资产中心</Link></>}
     {(pathname !== '/' || agent) && <><ChevronRight aria-hidden="true" /><span aria-current="page">{current}</span></>}</nav>;
 }
 
@@ -40,7 +43,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const navLink = ({ to, label, icon: Icon }: typeof workbench) => <NavLink key={to} to={to} end={to === '/'} title={collapsed ? label : undefined} onClick={() => setMobileOpen(false)} className={({ isActive }) => `nav-item ${(isActive || (to === '/' && location.pathname.startsWith('/agents'))) ? 'active' : ''}`}><Icon size={icon.large} aria-hidden="true" /><span>{label}</span></NavLink>;
-  const navItems = <>{navLink(workbench)}<span className="sidebar-group-label">平台共享 · 跨 Agent</span>{platformNav.map(navLink)}
+  const inAssets = location.pathname.startsWith('/assets');
+  const navItems = <>{navLink(workbench)}
+    <NavLink to={assets.to} title={collapsed ? assets.label : undefined} onClick={() => setMobileOpen(false)} className={() => `nav-item ${inAssets ? 'parent-active' : ''}`} aria-current={inAssets ? 'true' : undefined}><assets.icon size={icon.large} aria-hidden="true" /><span>{assets.label}</span></NavLink>
+    <div className="nav-subgroup" role="group" aria-label="资产中心">{assetSections.map(item => <NavLink key={item.id} to={`/assets/${item.id}`} onClick={() => setMobileOpen(false)} className={({ isActive }) => `nav-sub-item ${isActive ? 'active' : ''}`}>{item.label}</NavLink>)}</div>
+    {platformNav.map(navLink)}
     <div className="nav-item nav-item-phase2" title="二期建设" aria-disabled="true"><Store size={icon.large} aria-hidden="true" /><span>模板广场</span><ScopeBadge phase="二期" /></div></>;
   return <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${playbook.expanded ? 'has-playbook' : playbook.pb ? 'has-playbook-pill' : ''}`}>
     <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`} aria-label="一级导航">

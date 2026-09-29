@@ -16,7 +16,7 @@ export function AgentDirectory() {
   const names = (list: string[]) => list.length ? list.join('、') : '暂无';
   const pending = state.agents.filter(agent => opsOf(agent).approvalPending).map(agent => `${agent.name} ${opsOf(agent).approvalPending}`);
   const experiments = state.agents.flatMap(agent => { const experiment = getExperiment(agent); return experiment ? [`${agent.name} ${experiment.id}`] : []; });
-  const waiting = state.agents.flatMap(agent => agent.versions.filter(version => version.status === '待发布').map(version => `${agent.name} ${version.id}`));
+  const waiting = state.agents.flatMap(agent => agent.versions.filter(version => version.status === '待发布' && version.id !== opsOf(agent).approvalPending).map(version => `${agent.name} ${version.id}`));
   return <div><div className="directory-heading"><div className="page-heading"><span className="eyebrow">工作台</span><h1>Agent 目录</h1><p>点击任意 Agent，进入它的构建、评测、发布与实验、观测工作区。</p></div><Link className="button button-primary" to="/agents/new"><Plus size={icon.small} />新建 Agent</Link></div>
     <div className="metric-grid directory-todos" aria-label="待办">
       <MetricCard label="待审批" value={String(pending.length)} detail={names(pending)} />

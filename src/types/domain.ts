@@ -59,6 +59,7 @@ export interface Agent {
   versions: AgentVersion[];
   profile: ProfileId;
   monitorProfile: MonitorProfileId;
+  /** 业务核心指标：线上信号（近 7 日），一个看业务结果、一个看质量或风险；离线评测指标放在评测门槛里 */
   headline: HeadlineMetric[];
   /** 最近一次发布 / 回退后是否已查看监控 */
   monitored: boolean;
@@ -174,6 +175,9 @@ export interface DemoState {
   /** 已发布的知识库新版本（覆盖 mock） */
   knowledge: Record<string, KnowledgeBase>;
   kbDraft: KbDraft | null;
-  /** collapsed：演示步骤浮层被用户收起成胶囊，换页、刷新后保持 */
-  playbook: { id: PlaybookId; step: number; collapsed: boolean } | null;
+  /**
+   * collapsed：演示步骤浮层被用户收起成胶囊，换页、刷新后保持
+   * paused：从 Agent 目录进入某个 Agent 时进入自由浏览，剧本暂停（浮层、锁定都不生效），点「继续剧本」恢复
+   */
+  playbook: { id: PlaybookId; step: number; collapsed: boolean; paused?: boolean } | null;
 }

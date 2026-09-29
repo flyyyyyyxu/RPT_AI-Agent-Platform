@@ -1,12 +1,12 @@
-/** 剧本 C 售后答疑 · 稳：用户投诉 → Trace 命中过期知识 → 标注「知识」→ 更新知识版本 → 回归 → 按会话灰度。所有数字均为演示数据。 */
+/** 剧本 C 电商售后答疑 Agent · 稳：用户投诉 → Trace 命中过期知识 → 标注「知识」→ 更新知识版本 → 回归 → 按会话灰度。所有数字均为演示数据。 */
 import type { AbProfile, Agent, BadCase, KnowledgeBase, TraceRecord } from '../../types/domain';
 import { badCaseProfiles, traceProfiles } from '../base/trace';
 import { baseAgent } from './seed';
 
 export const pcAftersaleKb: KnowledgeBase = { id: 'aftersale', name: '售后知识', owner: '客户服务 · 王宁', description: '售后政策、退货规则、大促规则',
   versions: [
-    { id: 'v34', publishedAt: '2026-09-01 00:00', usedBy: ['售后答疑 v21'], note: '调整大促价保期' },
-    { id: 'v33', publishedAt: '2026-08-15 00:00', usedBy: ['售后答疑 v20'] },
+    { id: 'v34', publishedAt: '2026-09-01 00:00', usedBy: ['电商售后答疑 Agent v21'], note: '调整大促价保期' },
+    { id: 'v33', publishedAt: '2026-08-15 00:00', usedBy: ['电商售后答疑 Agent v20'] },
   ],
   entries: [
     { title: '《退货政策》2.1 七天无理由退货', versions: ['v34', 'v33'], from: '2025-03-01 00:00', to: null },

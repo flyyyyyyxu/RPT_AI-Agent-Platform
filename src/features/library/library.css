@@ -1,12 +1,6 @@
-/* 能力组件库：知识库版本、生效期、新版本草稿。 */
+/* 资产中心：知识库目录与版本、生效期、新版本草稿；评测集表格。 */
 .page-stack > .capability, .page-stack > .phase2-row, .page-stack > .card { margin-top: var(--space-4); }
-/* ① 能力组件库 */
-.kb-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 4.5), 1fr)); gap: var(--space-3); }
-.kb-card { display: grid; gap: var(--space-1); text-align: left; padding: var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); color: var(--color-text); }
-.kb-card strong { color: var(--color-secondary); font-weight: var(--weight-semibold); }
-.kb-card.selected { border-color: var(--color-coral); background: var(--color-coralLight); }
-.kb-card.selected strong { color: var(--color-text); font-weight: var(--weight-bold); }
-.kb-card small { color: var(--color-muted); }
+/* ① 资产中心 · 知识库 */
 .version-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .version-chips button { display: grid; gap: 0; text-align: left; padding: var(--space-2) var(--space-3); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); color: var(--color-text); font-family: var(--font-mono); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
 .version-chips button small { font-family: var(--font-body); }
@@ -23,13 +17,7 @@
 .time-input { width: 100%; min-height: var(--space-8); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); padding: 0 var(--space-2); font-family: var(--font-latin); font-size: var(--type-metaSize); color: var(--color-text); background: var(--color-card); }
 .time-input:focus { border-color: var(--color-coral); outline: none; }
 .kb-draft-table td { height: auto; padding-block: var(--space-2); }
-/* 资产中心：资产类型标签页、评测集表格 */
-.asset-tabs { width: fit-content; max-width: 100%; }
-.asset-tabs button { display: inline-flex; align-items: center; gap: var(--space-2); }
-.asset-count { min-width: var(--space-6); padding: 0 var(--space-1); border-radius: var(--radius-badge); background: var(--color-page); color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); font-variant-numeric: tabular-nums; }
-.asset-tabs button.active .asset-count { background: var(--color-coralLight); color: var(--color-text); }
-.page-stack > .asset-tabs + .section-heading { margin-top: var(--space-6); }
-.evalset-table .col-set { width: 22%; }
+.page-stack > .evalset-table .col-set { width: 22%; }
 .evalset-table .col-owner { width: 22%; }
 .evalset-table .col-count { width: 10%; }
 .evalset-table .col-source { width: 14%; }
@@ -38,4 +26,37 @@
 .row-link:hover { background: var(--color-page); color: var(--color-text); }
 @media (max-width: 767px) {
   .evalset-table { min-width: calc(var(--space-12) * 14); }
+}
+/* 知识库：左侧知识库目录（团队 → 知识库 → 版本），右侧详情；不覆盖全局一级导航 */
+.kb-layout { display: grid; grid-template-columns: calc(var(--space-12) * 5.5) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+.kb-tree { position: sticky; top: calc(var(--space-12) + var(--space-4) + var(--space-4)); display: grid; gap: var(--space-3); padding: var(--space-4); max-height: calc(100vh - var(--space-12) * 2); overflow-y: auto; }
+.kb-tree-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.kb-search { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-8); padding: 0 var(--space-2); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); color: var(--color-muted); }
+.kb-search:focus-within { border-color: var(--color-coral); }
+.kb-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--color-text); font-size: var(--type-metaSize); }
+.kb-tree-list, .kb-tree-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.kb-tree-list ul { margin-top: var(--space-1); }
+.tree-row { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--space-8); padding: 0 var(--space-2); border: var(--border-thin) solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-secondary); text-align: left; }
+.tree-row:hover { background: var(--color-page); }
+.tree-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-row small { color: var(--color-muted); font-size: var(--type-metaSize); white-space: nowrap; }
+.tree-team { color: var(--color-text); font-weight: var(--weight-semibold); }
+.tree-kb { padding-left: var(--space-6); }
+.tree-kb.current { color: var(--color-text); font-weight: var(--weight-semibold); }
+.tree-kb.current svg { color: var(--color-coral); }
+.tree-version { padding-left: calc(var(--space-12) + var(--space-1)); justify-content: space-between; }
+.tree-version code { font-family: var(--font-mono); font-size: var(--type-metaSize); }
+.tree-version.selected { background: var(--color-coralLight); border-color: var(--color-coral); color: var(--color-text); font-weight: var(--weight-semibold); }
+.kb-tree-empty { padding: var(--space-2); }
+.kb-main { display: grid; gap: var(--space-4); min-width: 0; }
+.kb-main > .capability, .kb-main > .phase2-row, .kb-main > .card { margin-top: 0; }
+.kb-summary-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); }
+.kb-summary-head h2 { margin: var(--space-1) 0; }
+.kb-summary-head p + p { margin-top: var(--space-1); }
+.kb-select { display: none; }
+@media (max-width: 1023px) {
+  .kb-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .kb-tree { display: none; }
+  .kb-select { display: grid; gap: var(--space-1); }
+  .kb-summary-head { flex-direction: column; }
 }

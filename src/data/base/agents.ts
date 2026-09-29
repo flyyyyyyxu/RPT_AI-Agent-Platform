@@ -12,7 +12,7 @@ export const mockAgents: Agent[] = [
   {
     ...agentBase, id: 'general', name: '内部制度问答助手', owner: '李一宁', team: '企业服务', level: '生产', mode: '在线 · 多轮 · 低风险', costThisMonth: 2860,
     productionVersion: 'v3', stagingVersion: 'v3', profile: 'general', monitorProfile: 'general', lastReleaseAt: '2026-09-26 14:20',
-    headline: [{ label: '回答采纳率', value: '87.2%' }, { label: 'P95 延迟', value: '1.24s' }],
+    headline: [{ label: '回答采纳率', value: '87.2%' }, { label: '引用准确率', value: '96.1%' }],
     versions: [
       version('v4', '草稿', '2026-09-28 15:40', '优化制度引用与结构化输出', snap(generalConfig), { configured: false, debugged: false }),
       version('v3', '线上', '2026-09-26 14:20', '补充制度检索与引用', snap(generalConfig, {
@@ -31,9 +31,9 @@ export const mockAgents: Agent[] = [
     ],
   },
   {
-    ...agentBase, id: 'a', name: '穿搭灵感', owner: '陈思远', team: '社区内容', level: '生产', mode: '在线 · 高并发', costThisMonth: 18240,
+    ...agentBase, id: 'a', name: '社区穿搭灵感 Agent', owner: '陈思远', team: '社区内容', level: '生产', mode: '在线 · 高并发', costThisMonth: 18240,
     productionVersion: 'v12', stagingVersion: 'v13', profile: 'a', monitorProfile: 'a', lastReleaseAt: '2026-09-20 16:13',
-    headline: [{ label: '采纳率', value: '42.8%' }, { label: 'P95 延迟', value: '820ms' }],
+    headline: [{ label: '采纳率', value: '42.8%' }, { label: '笔记点击率', value: '18.6%' }],
     versions: [
       version('v13', '灰度中', '2026-09-28 10:05', '图片理解与推荐策略', snap(outfitConfig, { model: 'Qwen3-235B · 公司托管' }), { traffic: 10 }),
       version('v12', '线上', '2026-09-20 16:13', '稳定生产版本', snap(outfitConfig)),
@@ -41,9 +41,9 @@ export const mockAgents: Agent[] = [
     ],
   },
   {
-    ...agentBase, id: 'b', name: '生态守护', owner: '周可', team: '内容安全', level: '生产', mode: '批量', costThisMonth: 9750,
+    ...agentBase, id: 'b', name: '生态守护 Agent', owner: '周可', team: '内容安全', level: '生产', mode: '批量', costThisMonth: 9750,
     productionVersion: 'v7', stagingVersion: 'v8', profile: 'b', monitorProfile: 'b', lastReleaseAt: '2026-09-10 09:30',
-    headline: [{ label: '红线样本通过率', value: '99.6%' }, { label: '误判率', value: '1.8%' }],
+    headline: [{ label: '抽检一致率', value: '97.8%' }, { label: '申诉改判率', value: '0.9%' }],
     versions: [
       version('v8', '待发布', '2026-09-27 18:02', '红线样本复核', snap(guardConfig)),
       version('v7', '线上', '2026-09-10 09:30', '当前政策适配', snap(guardConfig, { prompt: guardConfig.prompt.replace('\n2. 置信度低于 0.7 时标记为「需人工复核」', '').replace('3. 只输出', '2. 只输出') })),
@@ -51,7 +51,7 @@ export const mockAgents: Agent[] = [
     ],
   },
   {
-    ...agentBase, id: 'c', name: '售后答疑', owner: '王宁', team: '客户服务', level: '生产', mode: '多轮会话', costThisMonth: 6320,
+    ...agentBase, id: 'c', name: '电商售后答疑 Agent', owner: '王宁', team: '客户服务', level: '生产', mode: '多轮会话', costThisMonth: 6320,
     productionVersion: 'v21', stagingVersion: 'v21', profile: 'c', monitorProfile: 'c', lastReleaseAt: '2026-09-24 13:50',
     headline: [{ label: '解决率', value: '78.4%' }, { label: '转人工率', value: '12.1%' }],
     versions: [

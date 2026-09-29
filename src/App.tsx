@@ -8,7 +8,7 @@ import { EvaluationPage } from './features/evaluation/EvaluationPage';
 import { MonitorPage } from './features/monitor/MonitorPage';
 import { ReleasePage } from './features/release/ReleasePage';
 import { DesignSystemPage } from './features/design-system/DesignSystemPage';
-import { LibraryPage } from './features/library/LibraryPage';
+import { AssetsIndex, LibraryPage } from './features/library/LibraryPage';
 import { TracePage } from './features/trace/TracePage';
 import { AgentSettingsPage } from './features/settings/AgentSettingsPage';
 import { OperationsPage } from './features/operations/OperationsPage';
@@ -39,12 +39,13 @@ export function App() {
     <Route path="/agents/new" element={<CreateAgentPage />} />
     <Route path="/agents/:agentId" element={<AgentRoute />} />
     <Route path="/agents/:agentId/:stepId" element={<AgentRoute />} />
-    <Route path="/assets" element={<LibraryPage />} />
+    <Route path="/assets" element={<AssetsIndex />} />
+    <Route path="/assets/:tab" element={<LibraryPage />} />
     <Route path="/operations" element={<OperationsPage />} />
     <Route path="/governance" element={<GovernancePage />} />
-    {/* 旧入口：能力组件库 → 资产中心；评测中心 → 资产中心的评测集；平台设置 → 治理 */}
-    <Route path="/library" element={<Navigate to="/assets" replace />} />
-    <Route path="/evaluation" element={<Navigate to="/assets?tab=evalsets" replace />} />
+    {/* 旧入口：能力组件库 → 资产中心 · 知识库；评测中心 → 资产中心 · 评测集；平台设置 → 治理 */}
+    <Route path="/library" element={<Navigate to="/assets/knowledge" replace />} />
+    <Route path="/evaluation" element={<Navigate to="/assets/evalsets" replace />} />
     <Route path="/settings" element={<Navigate to="/governance" replace />} />
     <Route path="/design-system" element={<DesignSystemPage />} />
     <Route path="*" element={<Navigate to="/" replace />} />

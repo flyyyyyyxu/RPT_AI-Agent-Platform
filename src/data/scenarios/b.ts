@@ -1,4 +1,4 @@
-/** 剧本 B 生态守护 · 准：政策库 10 月版 → 隔离评测被门槛拦下 → Trace 找到旧条款 → 修正 → 影子 AB → 审批发布。所有数字均为演示数据。 */
+/** 剧本 B 生态守护 Agent · 准：政策库 10 月版 → 隔离评测被门槛拦下 → Trace 找到旧条款 → 修正 → 影子 AB → 审批发布。所有数字均为演示数据。 */
 import type { AbProfile, Agent, KnowledgeBase, TraceRecord } from '../../types/domain';
 import { guardConfig, snap, version } from '../base/configs';
 import { datasetProfiles, gateProfiles } from '../base/evaluation';
@@ -10,8 +10,8 @@ const pbPrompt = `${guardConfig.prompt}\n\n示例：\n「加 V 看完整教程�
 export const pbPolicyKb: KnowledgeBase = { id: 'policy', name: '政策库', owner: '内容安全 · 周可', description: '社区规范与审核政策条款',
   versions: [
     { id: '2026-10 版', publishedAt: '2026-09-28 18:00', usedBy: [], note: '站外引流条款由 4.3 调整为 4.5，新增谐音、二维码导流情形；10 月 1 日生效' },
-    { id: '2026-09 版', publishedAt: '2026-09-01 00:00', usedBy: ['生态守护 v7'], note: '修订站外引流判定条款 4.3' },
-    { id: '2026-08 版', publishedAt: '2026-08-01 00:00', usedBy: ['生态守护 v6'] },
+    { id: '2026-09 版', publishedAt: '2026-09-01 00:00', usedBy: ['生态守护 Agent v7'], note: '修订站外引流判定条款 4.3' },
+    { id: '2026-08 版', publishedAt: '2026-08-01 00:00', usedBy: ['生态守护 Agent v6'] },
   ],
   entries: [
     { title: '社区规范 3.2.1 虚假医疗宣传', versions: ['2026-10 版', '2026-09 版', '2026-08 版'], from: '2025-06-01 00:00', to: null },
