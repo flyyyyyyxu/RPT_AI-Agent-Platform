@@ -24,6 +24,7 @@ import { usePlaybookLock } from '../playbook/playbooks';
 import { AgentShell } from '../shell/AgentShell';
 import type { Agent, AgentOps } from '../../types/domain';
 import './release.css';
+import { icon } from '../../shared/styles/tokens';
 
 const ROLLBACK_ELAPSED = '1 分 48 秒';
 /** 正在执行、会改动演示数据的操作（按 Agent）：离开页面再回来时仍能看到，并防止重复提交。 */
@@ -107,8 +108,8 @@ export function ReleasePage({ agent }: { agent: Agent }) {
     if (!experiment || experiment.status !== '灰度中') return;
     const next = rampSteps.find(step => step > (experiment.traffic ?? 0)) ?? 100;
     rampUp(agent.id); setSwitchResult(null);
-    log(agent.owner, next >= 100 ? `全量放量：线上指向 ${from} → ${experiment.id}` : `放量 ${experiment.id} 到 ${next}%`);
-    setMessage(next >= 100 ? { title: `${experiment.id} 已全量`, description: `线上指向 ${from} → ${experiment.id}；${from} 保留为历史版本，可随时回退。` } : { title: `${experiment.id} 已放量到 ${next}%`, description: `${next}% 用户分桶命中 ${experiment.id}${ops.sticky ? '，已开启会话粘性的会话保持原版本直到结束' : ''}。` });
+    log(agent.owner, next >= 100 ? `全量发布：线上指向 ${from} → ${experiment.id}` : `放量 ${experiment.id} 到 ${next}%`);
+    setMessage(next >= 100 ? { title: `${experiment.id} 已全量发布`, description: `线上指向 ${from} → ${experiment.id}；${from} 保留为历史版本，可随时回退。` } : { title: `${experiment.id} 已放量到 ${next}%`, description: `${next}% 用户分桶命中 ${experiment.id}${ops.sticky ? '，已开启会话粘性的会话保持原版本直到结束' : ''}。` });
   };
 
   /** 回退 = 把线上指向切回旧版本：分阶段展示，完成后显示耗时。 */
@@ -135,15 +136,15 @@ export function ReleasePage({ agent }: { agent: Agent }) {
   const rollbackAction = !from ? null : experiment
     ? experiment.status === '影子运行'
       ? <><ConfirmAction actionLabel={`停止影子运行`} confirmLabel={`确认停止 ${experiment.id} 影子运行`} impact={`影子运行不影响用户，停止后 ${experiment.id} 退回「待发布」。`} onConfirm={rollbackGray} /><ConfirmAction variant="primary" actionLabel={`转为比例灰度 ${ops.canaryPercent}%`} confirmLabel={`确认转为比例灰度 ${ops.canaryPercent}%`} impact={`${ops.canaryPercent}% 真实用户将开始使用 ${experiment.id}，其余继续使用 ${from}。`} onConfirm={() => { shadowToCanary(agent.id); log(agent.owner, `${experiment.id} 由影子运行转为比例灰度 ${ops.canaryPercent}%`); }} /></>
-      : <ConfirmAction icon={<RotateCcw size={16} />} actionLabel={`回退到 ${from}`} confirmLabel={`确认回退到 ${from}`}
+      : <ConfirmAction icon={<RotateCcw size={icon.small} />} actionLabel={`回退到 ${from}`} confirmLabel={`确认回退到 ${from}`}
         impact={<>影响范围：当前 <b>{experiment.traffic}%</b> 灰度流量（命中 {experiment.id} 的用户分桶）将全部切回 {from}；{ops.sticky ? '开启了会话粘性，进行中的会话在下一轮请求时切换；' : ''}{experiment.id} 退回「待发布」，需重新审批。{from} 的版本快照（含 {getVersion(agent, from)?.config.knowledge}）不变，其余 {100 - (experiment.traffic ?? 0)}% 用户无感知。</>} onConfirm={rollbackGray} />
     : rollbackTarget
-      ? <ConfirmAction icon={<RotateCcw size={16} />} actionLabel={`回退到 ${rollbackTarget.id}`} confirmLabel={`确认回退到 ${rollbackTarget.id}`}
+      ? <ConfirmAction icon={<RotateCcw size={icon.small} />} actionLabel={`回退到 ${rollbackTarget.id}`} confirmLabel={`确认回退到 ${rollbackTarget.id}`}
         impact={<>影响范围：全部生产流量。线上指向从 {from} 切换到 {rollbackTarget.id}（模型、Prompt、工具和 {rollbackTarget.config.knowledge} 一起回到旧快照）；{from} 保留为历史版本，可随时再切回。</>} onConfirm={() => rollbackVersion(rollbackTarget.id)} />
       : <span className="meta">没有曾上线的历史版本，暂不可回退。</span>;
 
   const publishLabel = !candidate && shadow ? `全量发布 ${shadow.id}` : !candidate ? '发布到生产' : !skeletonView ? `发布 ${candidate.id} 到生产` : strategy === 'shadow' ? `开始影子运行 ${candidate.id}` : `发布 ${candidate.id}（${strategyText}）`;
-  const publishAction = !publishing && <ConfirmAction variant="primary" icon={<Rocket size={16} />}
+  const publishAction = !publishing && <ConfirmAction variant="primary" icon={<Rocket size={icon.small} />}
     actionLabel={publishLabel} confirmLabel={`确认${publishLabel}`} disabled={Boolean(reason)} reason={reason}
     impact={!candidate && shadow ? `线上指向将从 ${from} 切换到 ${shadow.id}，影子运行结束，之后的新请求全部使用 ${shadow.id}。出现问题可回退到 ${from}。`
       : !skeletonView || strategy === 'direct'
@@ -156,7 +157,7 @@ export function ReleasePage({ agent }: { agent: Agent }) {
     <p className="meta">线上指向：{agent.productionVersion ?? '未发布'}{agent.lastReleaseAt ? ` · 最近变更 ${agent.lastReleaseAt}` : ''}</p></Card>
     <SkeletonOnly><Card><div className="sub-heading"><span className="eyebrow">生产就绪</span><CapabilityBadges skeleton={[3]} /></div><h3>{target ? `${checks.filter(item => item.done).length} / ${checks.length} 项已完成` : experiment ? `${experiment.id} ${experiment.status}` : '暂无待发布版本'}</h3>
       <p className="meta">{target ? missing.length ? `待完成：${missing.map(item => item.label).join('、')}` : `可以按「${strategyText}」发布` : '发布、放量、回退都只改变线上指向。'}</p></Card></SkeletonOnly>
-    {agent.productionVersion && <Link className="button button-primary full-button" to={`/agents/${agent.id}/monitor`}><Activity size={16} />查看 {agent.productionVersion} 生产监控</Link>}</>;
+    {agent.productionVersion && <Link className="button button-secondary full-button" to={`/agents/${agent.id}/monitor`}><Activity size={icon.small} />查看 {agent.productionVersion} 生产监控</Link>}</>;
 
   const feedback = <>{busy && !publishing && !switching && <Feedback kind="loading" title={busy} description="上一个操作仍在执行，完成后页面会自动更新。" />}
     {publishing && <Feedback kind="loading" title={`正在发布 ${candidate?.id}`} description="正在切换预发和生产环境的版本指向…" />}

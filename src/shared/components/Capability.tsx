@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Layers, Sparkles } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
 import { ScopeBadge, SkeletonBadge } from './Badges';
+import { icon } from '../styles/tokens';
 
 /** 四个主角：外部产品普遍薄弱的差异化能力。 */
 export const heroNames: Record<1 | 2 | 3 | 4, string> = {
@@ -19,7 +20,7 @@ export function useSkeletonView() { return useDemo().state.viewMode === 'skeleto
 export function SkeletonOnly({ children }: { children: ReactNode }) { return useSkeletonView() ? <>{children}</> : null; }
 
 export function HeroTag({ n, compact = false }: { n: HeroId; compact?: boolean }) {
-  return <span className="hero-tag" title={`差异化能力 · 主角 ${n}：${heroNames[n]}`}><Sparkles size={16} strokeWidth={1.5} aria-hidden="true" />差异化 · 主角 {n}{compact ? '' : ` ${heroNames[n]}`}</span>;
+  return <span className="hero-tag" title={`差异化能力 · 主角 ${n}：${heroNames[n]}`}><Sparkles size={icon.small} aria-hidden="true" />差异化 · 主角 {n}{compact ? '' : ` ${heroNames[n]}`}</span>;
 }
 
 export function CapabilityBadges({ skeleton, phase = 'MVP' }: { skeleton: number[]; phase?: 'MVP' | '二期' }) {
@@ -62,5 +63,5 @@ export function Phase2Row({ items }: { items: { skeleton: number[]; title: strin
 /** 生产骨架区块标题（基础视图下隐藏）。 */
 export function SkeletonHeading({ skeleton, title, description }: { skeleton: number[]; title: string; description: string }) {
   if (!useSkeletonView()) return null;
-  return <div className="section-heading skeleton-heading"><div><span className="eyebrow"><Layers size={16} strokeWidth={1.5} aria-hidden="true" />生产骨架</span><h2>{title}</h2><p>{description}</p></div><span className="capability-badges">{skeleton.map(number => <SkeletonBadge key={number} number={number} />)}</span></div>;
+  return <div className="section-heading skeleton-heading"><div><span className="eyebrow"><Layers size={icon.small} aria-hidden="true" />生产骨架</span><h2>{title}</h2><p>{description}</p></div><span className="capability-badges">{skeleton.map(number => <SkeletonBadge key={number} number={number} />)}</span></div>;
 }

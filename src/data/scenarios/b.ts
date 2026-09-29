@@ -58,7 +58,7 @@ export const pbEvalTrace = (fixed: boolean): TraceRecord => ({ id: fixed ? 'ev_v
     { kind: '输出', name: '写回评测结果', ms: 9, depth: 0, detail: fixed ? '与标注一致 ✓' : '与标注不一致：应判违规-站外引流' },
   ] });
 const pbAb: AbProfile = {
-  experimentId: 'SHADOW-20260929-guard-v8', days: 1, sample: '影子双跑 12.4 万条内容，对照标注平台抽检 3,000 条',
+  experimentId: 'SHADOW-20260929-guard-v8', days: 1, sample: '影子运行 12.4 万条内容，对照标注平台抽检 3,000 条',
   metrics: [
     { label: '与抽检标注一致率', oldValue: 96.1, newValue: 97.8, unit: '%', ci: [1.1, 2.3], higherIsBetter: true, decimals: 1 },
     { label: '红线类别召回率', oldValue: 98.9, newValue: 100, unit: '%', ci: [0.6, 1.6], higherIsBetter: true, decimals: 1 },

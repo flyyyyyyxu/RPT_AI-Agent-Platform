@@ -5,7 +5,7 @@
 .playbook-section { margin-bottom: var(--space-4); }
 .playbook-section > .section-heading { margin-top: 0; }
 .playbook-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 6), 1fr)); gap: var(--space-4); }
-.playbook-card { display: grid; gap: var(--space-3); align-content: start; border-left: var(--layout-featureBar) solid var(--color-indigo); }
+.playbook-card { display: grid; gap: var(--space-3); align-content: start; }
 .playbook-card.active { box-shadow: var(--shadow-hover); border-color: var(--color-indigo); }
 .playbook-card-head { display: flex; align-items: center; gap: var(--space-3); }
 .playbook-card-head h3 { margin: 0; font-size: var(--type-sectionSize); line-height: var(--type-sectionLine); }
@@ -14,14 +14,14 @@
 .playbook-flow li { counter-increment: flow; font-size: var(--type-metaSize); line-height: var(--type-metaLine); padding: 0 var(--space-2); border-radius: var(--radius-badge); background: var(--color-page); color: var(--color-secondary); }
 .playbook-flow li::before { content: counter(flow) ' '; color: var(--color-muted); font-family: var(--font-latin); }
 .playbook-heroes { display: flex; flex-wrap: wrap; gap: var(--space-1); }
-.playbook-panel { position: fixed; right: var(--space-6); bottom: var(--space-6); z-index: 40; width: min(calc(100vw - var(--space-8)), calc(var(--layout-asideMin) - var(--space-4))); max-height: calc(100vh - var(--space-12) * 2); overflow-y: auto; display: grid; gap: var(--space-3); padding: var(--space-4); background: var(--color-card); border: var(--border-thin) solid var(--color-indigo); border-top: var(--layout-featureBar) solid var(--color-indigo); border-radius: var(--radius-card); box-shadow: var(--shadow-hover), var(--shadow-card); animation: pb-in var(--motion-slow) var(--motion-ease); }
+.playbook-panel { position: fixed; right: var(--space-6); bottom: var(--space-6); z-index: 40; width: min(calc(100vw - var(--space-8)), calc(var(--layout-asideMin) - var(--space-4))); max-height: calc(100vh - var(--space-12) * 2); overflow-y: auto; display: grid; gap: var(--space-3); padding: var(--space-4); background: var(--color-card); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-hover), var(--shadow-card); animation: pb-in var(--motion-slow) var(--motion-ease); }
 @keyframes pb-in { from { opacity: 0; transform: translateY(var(--motion-distance)); } to { opacity: 1; transform: none; } }
 .pb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
 .pb-head strong { display: block; }
 .pb-head-actions { display: flex; gap: var(--space-1); }
 .pb-dots { display: flex; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .pb-dots li { flex: 1; height: var(--space-1); border-radius: var(--radius-badge); background: var(--color-border); }
-.pb-dots li.done { background: var(--color-indigo); opacity: 0.55; }
+.pb-dots li.done { background: var(--color-indigo); opacity: var(--opacity-disabled); }
 .pb-dots li.current { background: var(--color-indigo); }
 .pb-body { display: grid; gap: var(--space-3); }
 .pb-body h3 { margin: 0; font-size: var(--type-sectionSize); line-height: var(--type-sectionLine); }
@@ -41,14 +41,13 @@
 @keyframes demo-pulse { 0%, 100% { outline-color: var(--color-coral); } 50% { outline-color: var(--color-coralLight); } }
 @media (max-width: 767px) {
   .playbook-panel, .playbook-pill { right: var(--space-4); left: var(--space-4); bottom: var(--space-4); width: auto; }
-  .playbook-panel { max-height: 55vh; }
 }
 .playbook-panel.dock-left { right: auto; left: calc(var(--current-sidebar) + var(--space-6)); }
 .playbook-card { display: flex; flex-direction: column; }
 .playbook-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding-top: var(--space-3); border-top: var(--border-thin) solid var(--color-border); margin-top: auto; }
 .pb-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); align-items: flex-start; }
 @media (max-width: 767px) {
-  .playbook-panel { max-height: 50vh; gap: var(--space-2); padding: var(--space-3); }
+  .playbook-panel { max-height: var(--layout-mobilePanel); gap: var(--space-2); padding: var(--space-3); }
   .pb-desc, .pb-foot { display: none; }
   .pb-body { gap: var(--space-2); }
 }

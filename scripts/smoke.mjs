@@ -43,7 +43,7 @@ const browser = await launch();
   await gotoStep(page); await page.locator('[data-demo=eval-run] button').click(); await page.waitForTimeout(3000);
   await expectStep(page, '红线漏判 2 条');
   await next(page); await expectStep(page, '发布按钮被禁用');
-  check('B：发布被门槛阻断', (await page.locator('.publish-bar .button-reason').allInnerTexts()).join('').includes('评测门槛已通过'));
+  check('B：发布被门槛阻断', (await page.locator('.publish-bar .button-reason').allInnerTexts()).join('').includes('上线门槛已通过'));
   await next(page); await expectStep(page, 'Trace：引用了旧条款');
   await next(page); await expectStep(page, '修正 Prompt 示例');
   await page.locator('.playbook-panel button', { hasText: '代我修正' }).click(); await page.waitForTimeout(600);

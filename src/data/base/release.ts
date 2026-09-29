@@ -24,7 +24,7 @@ export const abProfiles: Record<BaseProfileId, AbProfile> = {
     conclusion: '采纳率提升、追问率下降均显著；转人工率差异不显著；延迟小幅上升。可以继续放量。',
   },
   b: {
-    experimentId: 'SHADOW-20260928-guard-v8', days: 2, sample: '影子双跑 27.6 万条内容，不影响线上判定',
+    experimentId: 'SHADOW-20260928-guard-v8', days: 2, sample: '影子运行 27.6 万条内容，不影响线上判定',
     metrics: [
       { label: '虚假医疗类召回率', oldValue: 96.1, newValue: 97.2, unit: '%', ci: [0.5, 1.7], higherIsBetter: true, decimals: 1 },
       { label: '站外引流类召回率', oldValue: 94.8, newValue: 93.6, unit: '%', ci: [-1.9, -0.5], higherIsBetter: true, decimals: 1 },

@@ -18,6 +18,8 @@ export async function launch() {
 /** 每个用例一个全新的浏览器上下文：本地存储为空，演示数据是初始状态；关闭动画，截图稳定。 */
 export async function newPage(browser, width = 1440, height = 900) {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', locale: 'zh-CN' });
+  // 拦截 Google Fonts：网络不稳时截图会一直等字体加载；统一用回退字体，截图也更稳定
+  await context.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(String(error)));

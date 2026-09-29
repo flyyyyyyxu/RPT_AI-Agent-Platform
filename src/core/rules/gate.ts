@@ -27,13 +27,13 @@ export function readinessChecks(agent: Agent, ops: AgentOps, candidate: AgentVer
   const gate = evaluateGate(agent, ops, candidate);
   const g = ops.settings.guardrails;
   const enabledGuards = [g.format && '格式校验', g.citation && '引用校验', g.promise && '承诺类话术拦截', g.safety && '内容安全'].filter(Boolean) as string[];
-  const settingsLink = { to: `/agents/${agent.id}/settings`, label: '去设置' };
+  const settingsLink = { to: `/agents/${agent.id}/settings`, label: '前往设置' };
   const gateDetail = !candidate ? '没有候选版本'
     : !gate.evaluated ? '候选版本尚未在隔离环境完成评测'
     : gate.passed ? `${gate.rules.length} 项指标、${gate.redlines.length} 条红线样本全部通过`
     : `${gate.failedRules.map(rule => rule.metric).join('、')}${gate.failedRedlines.length ? `、${gate.failedRedlines.length} 条红线样本` : ''}未达标${ops.forceBlock ? '（已开启强制阻断）' : '（未开启强制阻断，仅提醒）'}`;
   return [
-    { key: 'gate', label: '评测门槛已通过', done: gate.passed || (gate.evaluated && !ops.forceBlock), warn: gate.evaluated && !gate.passed && !ops.forceBlock, detail: gateDetail, link: { to: `/agents/${agent.id}/evaluation`, label: '查看评测' } },
+    { key: 'gate', label: '上线门槛已通过', done: gate.passed || (gate.evaluated && !ops.forceBlock), warn: gate.evaluated && !gate.passed && !ops.forceBlock, detail: gateDetail, link: { to: `/agents/${agent.id}/evaluation`, label: '查看评测' } },
     { key: 'guardrails', label: '已配置护栏', done: g.safety && enabledGuards.length >= 2, detail: enabledGuards.length ? `已开启：${enabledGuards.join('、')}${g.safety ? '' : '；内容安全必须开启'}` : '尚未开启任何护栏规则', link: settingsLink },
     { key: 'owner', label: '已设置负责人', done: Boolean(agent.owner), detail: agent.owner ? `负责人 ${agent.owner} · ${agent.team}值班组` : '未设置负责人' },
     { key: 'alerts', label: '已配置告警', done: ops.settings.alerts, detail: ops.settings.alerts ? '错误率、P95 延迟、预算告警已接入公司监控' : '未配置告警规则，上线后异常无人感知', link: settingsLink },

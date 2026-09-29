@@ -8,6 +8,7 @@ import { DemoTag } from '../../shared/components/Badges';
 import { Card, SectionHeading } from '../../shared/components/Content';
 import { HeroTag } from '../../shared/components/Capability';
 import { useStartPlaybook } from './useStartPlaybook';
+import { icon } from '../../shared/styles/tokens';
 
 /** 工作台上的剧本入口。 */
 export function PlaybookCards() {
@@ -25,8 +26,8 @@ export function PlaybookCards() {
         <ol className="playbook-flow">{playbook.flow.map(item => <li key={item}>{item}</li>)}</ol>
         <div className="playbook-heroes">{playbook.heroes.map(n => <HeroTag key={n} n={n} compact />)}</div>
         <div className="playbook-card-foot"><span className="meta">{playbook.steps.length} 步{active ? ` · 进行到第 ${Math.min(active.step + 1, playbook.steps.length)} 步` : ''}</span>
-          <span className="inline-actions">{active && active.step < playbook.steps.length && <Button onClick={() => resume(playbook, active.step)}><ChevronRight size={16} />继续</Button>}
-            <ConfirmAction icon={active ? <RotateCcw size={16} /> : <Play size={16} />} actionLabel={active ? '重新开始' : `开始剧本 ${playbook.letter}`} confirmLabel={`确认${active ? '重新开始' : '开始'}剧本 ${playbook.letter}`}
+          <span className="inline-actions">{active && active.step < playbook.steps.length && <Button onClick={() => resume(playbook, active.step)}><ChevronRight size={icon.small} />继续剧本 {playbook.letter}</Button>}
+            <ConfirmAction icon={active ? <RotateCcw size={icon.small} /> : <Play size={icon.small} />} actionLabel={active ? '重新开始' : `开始剧本 ${playbook.letter}`} confirmLabel={`确认${active ? '重新开始' : '开始'}剧本 ${playbook.letter}`}
               impact={`「${playbook.title}」的演示数据会换成剧本 ${playbook.letter} 的初始数据，这个 Agent 当前的演示进度会被覆盖；其它 Agent 不受影响。`} onConfirm={() => start(playbook.id)} /></span></div>
       </Card>;
     })}</div>

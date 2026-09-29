@@ -49,13 +49,12 @@ export function tracesFor(agent: Agent): TraceRecord[] {
     if (state === 'unfixed') return evaluated ? [pbEvalTrace(false), ...production] : production;
     return evaluated ? [pbEvalTrace(true), pbEvalTrace(false), ...production] : [pbEvalTrace(false), ...production];
   }
-  const own = scenario(agent)?.traces ?? traceProfiles[baseOf(agent.profile)];
-  return own.length ? own : traceProfiles.general;
+  // 没有演示数据的 Agent（如空白模板新建）返回空列表，页面显示空状态，不借用其它 Agent 的记录
+  return scenario(agent)?.traces ?? traceProfiles[baseOf(agent.profile)];
 }
 
 export function badcasesFor(agent: Agent): BadCase[] {
-  const own = scenario(agent)?.badcases ?? badCaseProfiles[baseOf(agent.profile)];
-  return own.length ? own : badCaseProfiles.general;
+  return scenario(agent)?.badcases ?? badCaseProfiles[baseOf(agent.profile)];
 }
 
 /* ---------------- 知识库 ---------------- */

@@ -3,12 +3,13 @@ import { diffWords } from '../../core/rules/diff';
 import type { EvalDataset } from '../../types/domain';
 import { Card } from '../../shared/components/Content';
 import { VersionBadge } from '../../shared/components/Badges';
+import { icon } from '../../shared/styles/tokens';
 
 const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
 
 function Delta({ value }: { value: number }) {
-  if (Math.abs(value) < 0.05) return <span className="score-delta neutral"><Minus size={16} />持平</span>;
-  return <span className={`score-delta ${value > 0 ? 'positive' : 'negative'}`}>{value > 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}{Math.abs(value).toFixed(1)}</span>;
+  if (Math.abs(value) < 0.05) return <span className="score-delta neutral"><Minus size={icon.small} />持平</span>;
+  return <span className={`score-delta ${value > 0 ? 'positive' : 'negative'}`}>{value > 0 ? <ArrowUp size={icon.small} /> : <ArrowDown size={icon.small} />}{Math.abs(value).toFixed(1)}</span>;
 }
 
 export function VersionComparison({ dataset, oldVersion, newVersion }: { dataset: EvalDataset; oldVersion: string | null; newVersion: string }) {

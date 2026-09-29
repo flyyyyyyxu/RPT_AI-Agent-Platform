@@ -61,7 +61,7 @@
 .traffic-bar { display: flex; height: var(--space-8); border-radius: var(--radius-control); overflow: hidden; border: var(--border-thin) solid var(--color-border); }
 .traffic-bar span { display: flex; align-items: center; justify-content: center; font-family: var(--font-latin); font-size: var(--type-metaSize); font-weight: var(--weight-semibold); white-space: nowrap; transition: flex-basis var(--motion-slow) var(--motion-ease); overflow: hidden; }
 .traffic-old { background: var(--color-border); color: var(--color-text); }
-.traffic-shadow { background: var(--color-indigoLight); color: var(--color-indigo); border-left: var(--border-thin) dashed var(--color-indigo); }
+.traffic-shadow { flex: 0 0 calc(var(--space-12) * 3); background: var(--color-indigoLight); color: var(--color-indigo); border-left: var(--border-thin) dashed var(--color-indigo); }
 .pointer-cards { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); align-items: stretch; }
 .pointer-card { padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); display: grid; gap: var(--space-1); align-content: start; }
 .pointer-card.active { border-color: var(--color-green); background: var(--color-greenLight); }

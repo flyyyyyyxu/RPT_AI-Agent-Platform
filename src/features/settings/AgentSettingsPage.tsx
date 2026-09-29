@@ -7,6 +7,7 @@ import { Segmented, Switch } from '../../shared/components/controls';
 import { AgentShell } from '../shell/AgentShell';
 import type { Agent, AgentSettings, ExecMode } from '../../types/domain';
 import './settings.css';
+import { icon } from '../../shared/styles/tokens';
 
 const degradeOptions = ['返回兜底话术', '切换备用模型 Qwen3-32B', '转人工客服', '暂停批次并告警'];
 const overBudgetOptions = ['仅告警', '自动降级到备用模型', '超出后暂停调用'];
@@ -29,7 +30,7 @@ export function AgentSettingsPage({ agent }: { agent: Agent }) {
   const used = agent.costThisMonth;
   const ratio = Math.min(100, (used / Math.max(1, settings.monthlyBudget)) * 100);
   const costSplit = [{ label: '模型调用', share: 0.72 }, { label: '检索', share: 0.12 }, { label: '工具调用', share: 0.09 }, { label: '护栏检查', share: 0.07 }];
-  const savedHint = <span className="meta saved-hint"><CheckCircle2 size={16} aria-hidden="true" />修改即时生效（演示）</span>;
+  const savedHint = <span className="meta saved-hint"><CheckCircle2 size={icon.small} aria-hidden="true" />修改即时生效（演示）</span>;
 
   const aside = <><Card><span className="eyebrow">基础资料</span><h3>{agent.name}</h3><p>负责人 {agent.owner} · {agent.team}</p><p className="meta">设置按 Agent 生效，所有版本共用；版本快照里只锁定模型、Prompt、工具和知识。</p></Card>
     <SkeletonOnly><Card><div className="sub-heading"><span className="eyebrow">发布联动</span><CapabilityBadges skeleton={[3]} /></div><h3>生产就绪检查会读取这里</h3><p className="meta">「已配置护栏」要求开启内容安全和至少一条其他规则；「已配置告警」对应下方告警开关。</p></Card></SkeletonOnly></>;
@@ -46,7 +47,7 @@ export function AgentSettingsPage({ agent }: { agent: Agent }) {
         <div className="inline-fields">
           <label className="field-label">限流（QPS）<input type="number" min={1} value={settings.qps} onChange={event => patch({ qps: Math.max(1, Number(event.target.value) || 1) })} /><span className="meta field-hint">超出后排队，排队超过 2s 触发降级</span></label>
           <label className="field-label">每日调用配额<input type="number" min={0} step={1000} value={settings.dailyQuota} onChange={event => patch({ dailyQuota: Math.max(0, Number(event.target.value) || 0) })} /><span className="meta field-hint">团队配额由平台统一分配</span></label>
-          <label className="field-label">降级策略<span className="select-field"><select value={settings.degrade} onChange={event => patch({ degrade: event.target.value })}>{degradeOptions.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={16} aria-hidden="true" /></span><span className="meta field-hint">模型超时、下游故障或超配额时执行</span></label>
+          <label className="field-label">降级策略<span className="select-field"><select value={settings.degrade} onChange={event => patch({ degrade: event.target.value })}>{degradeOptions.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></span><span className="meta field-hint">模型超时、下游故障或超配额时执行</span></label>
         </div>
         <div className="range-field"><span className="field-label">低置信度转人工阈值<span className="range-value">{settings.handoffThreshold.toFixed(2)}</span></span>
           <input type="range" min={0.3} max={0.9} step={0.05} value={settings.handoffThreshold} aria-label="低置信度转人工阈值" onChange={event => patch({ handoffThreshold: Number(event.target.value) })} />
@@ -55,12 +56,12 @@ export function AgentSettingsPage({ agent }: { agent: Agent }) {
     </Capability>
     <Capability skeleton={[7, 8]} hero={4} title="告警规则" description="异常第一时间通知负责人和值班组。" actions={<IntegrationNote platform="监控" />}>
       <Switch checked={settings.alerts} onChange={value => patch({ alerts: value })} label="启用告警" />
-      <ul className="check-list">{[['错误率 > 1%（5 分钟）', '电话 + 群消息'], ['P95 延迟超过门槛 20%（10 分钟）', '群消息'], [`本月成本达到预算 ${settings.budgetAlert}%`, '邮件'], ['护栏拦截率突增 3 倍', '群消息']].map(([rule, channel]) => <li key={rule} className={`check-item ${settings.alerts ? 'done' : ''}`}><BellRing className="check-icon" size={20} aria-hidden="true" /><span><strong>{rule}</strong><small className="meta">通知：{agent.owner}、{agent.team}值班组 · {channel}</small></span><span className="meta">{settings.alerts ? '已生效' : '未启用'}</span></li>)}</ul>
+      <ul className="check-list">{[['错误率 > 1%（5 分钟）', '电话 + 群消息'], ['P95 延迟超过门槛 20%（10 分钟）', '群消息'], [`本月成本达到预算 ${settings.budgetAlert}%`, '邮件'], ['护栏拦截率突增 3 倍', '群消息']].map(([rule, channel]) => <li key={rule} className={`check-item ${settings.alerts ? 'done' : ''}`}><BellRing className="check-icon" size={icon.large} aria-hidden="true" /><span><strong>{rule}</strong><small className="meta">通知：{agent.owner}、{agent.team}值班组 · {channel}</small></span><span className="meta">{settings.alerts ? '已生效' : '未启用'}</span></li>)}</ul>
     </Capability>
 
     <SkeletonHeading skeleton={[9]} title="输出安全护栏" description="所有 Agent 的输出在返回前经过平台网关统一检查，业务不用各自实现。" />
     <Capability skeleton={[9]} title="护栏规则" description="规则在网关统一执行，对该 Agent 的所有版本生效；版本回退不会绕过护栏。" actions={savedHint}>
-      <div className="gateway-flow" aria-label="执行位置"><span>Agent 生成</span><ArrowRight size={16} aria-hidden="true" /><span className="gateway"><ShieldCheck size={16} aria-hidden="true" /> 平台网关 · 护栏统一执行</span><ArrowRight size={16} aria-hidden="true" /><span>返回用户 / 写回业务</span></div>
+      <div className="gateway-flow" aria-label="执行位置"><span>Agent 生成</span><ArrowRight size={icon.small} aria-hidden="true" /><span className="gateway"><ShieldCheck size={icon.small} aria-hidden="true" /> 平台网关 · 护栏统一执行</span><ArrowRight size={icon.small} aria-hidden="true" /><span>返回用户 / 写回业务</span></div>
       <div className="guard-list">
         {guardRules.map(rule => <div className="guard-row" key={rule.key}><div><strong>{rule.title}</strong><p>{rule.description}</p></div><Switch checked={settings.guardrails[rule.key]} onChange={value => guard(rule.key, value)} label={rule.title} hideLabel /></div>)}
         <div className="guard-row hero-row"><div><div className="guard-row-title"><strong>内容安全</strong><HeroTag n={4} compact /><IntegrationNote platform="内容安全" /></div><p>调用公司内容安全服务检测违法违规、隐私和未成年人相关风险；审核策略与社区一致，平台不重复建设。</p></div><Switch checked={settings.guardrails.safety} onChange={value => guard('safety', value)} label="内容安全" hideLabel /></div>
@@ -77,7 +78,7 @@ export function AgentSettingsPage({ agent }: { agent: Agent }) {
         <div className="inline-fields">
           <label className="field-label">月预算（元）<input type="number" min={0} step={500} value={settings.monthlyBudget} onChange={event => patch({ monthlyBudget: Math.max(0, Number(event.target.value) || 0) })} /></label>
           <label className="field-label">预算告警线（%）<input type="number" min={50} max={100} step={5} value={settings.budgetAlert} onChange={event => patch({ budgetAlert: Math.min(100, Math.max(50, Number(event.target.value) || 80)) })} /></label>
-          <label className="field-label">超预算策略<span className="select-field"><select value={settings.overBudget} onChange={event => patch({ overBudget: event.target.value })}>{overBudgetOptions.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={16} aria-hidden="true" /></span></label>
+          <label className="field-label">超预算策略<span className="select-field"><select value={settings.overBudget} onChange={event => patch({ overBudget: event.target.value })}>{overBudgetOptions.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></span></label>
         </div>
       </div>
     </Capability>

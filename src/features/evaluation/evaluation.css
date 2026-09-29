@@ -5,7 +5,10 @@
 .dataset-icon { display: grid; place-items: center; width: var(--space-12); height: var(--space-12); color: var(--color-indigo); background: var(--color-indigoLight); border-radius: var(--radius-control); }
 .dataset-list { display: grid; gap: var(--space-2); }
 .dataset-list > button { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-3); padding: var(--space-3); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); text-align: left; }
-.dataset-list > button.selected { border-color: var(--color-coral); background: var(--color-coralLight); }
+.dataset-list > button { color: var(--color-secondary); }
+.dataset-list > button strong { font-weight: var(--weight-semibold); }
+.dataset-list > button.selected { border-color: var(--color-coral); background: var(--color-coralLight); color: var(--color-text); }
+.dataset-list > button.selected strong { font-weight: var(--weight-bold); }
 .dataset-list > button > span:nth-child(2) { display: grid; }
 .dataset-list small { color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
 .dataset-cases { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }

@@ -4,7 +4,6 @@ import { DemoProvider, useDemo } from './core/store/DemoProvider';
 import { AppShell } from './features/shell/AppShell';
 import { AgentDirectory } from './features/directory/DirectoryPage';
 import { PlatformPlaceholder } from './features/placeholder/PlatformPlaceholder';
-import { AgentStepPlaceholder } from './features/placeholder/AgentStepPlaceholder';
 import { BuildPage } from './features/build/BuildPage';
 import { CreateAgentPage } from './features/create/CreateAgentPage';
 import { EvaluationPage } from './features/evaluation/EvaluationPage';
@@ -28,8 +27,7 @@ function AgentRoute() {
   if (stepId === 'release') return <ReleasePage key={agent.id} agent={agent} />;
   if (stepId === 'monitor') return <MonitorPage key={agent.id} agent={agent} />;
   if (stepId === 'trace') return <TracePage key={agent.id} agent={agent} />;
-  if (stepId === 'settings') return <AgentSettingsPage key={agent.id} agent={agent} />;
-  return <AgentStepPlaceholder key={agent.id} agent={agent} stepId={stepId} />;
+  return <AgentSettingsPage key={agent.id} agent={agent} />;
 }
 
 export function App() {

@@ -86,7 +86,7 @@ export const playbooks: Playbook[] = [
         body: '站外引流类召回率 91.8%（门槛 ≥ 95%），2 条红线样本漏判。强制阻断已开启，这一版不可能被发布出去。',
         next: '点「下一步」看发布页的反应。' },
       { title: '发布按钮被禁用', page: 'release', target: 'publish', hero: 1,
-        body: '生产就绪检查里「评测门槛已通过」未完成，发布按钮禁用并写明原因——不是提醒，是拦截。',
+        body: '生产就绪检查里「上线门槛已通过」未完成，发布按钮禁用并写明原因——不是提醒，是拦截。',
         next: '点「下一步」去 Trace 找原因。' },
       { title: 'Trace：引用了旧条款', page: 'trace', target: 'trace-issue',
         body: '隔离评测的 Trace 显示：检索召回了 10 月版条款 4.5，但 Prompt 示例把条款写死成 9 月版的 4.3，模型沿用旧条款，把谐音导流判成「不违规」。',

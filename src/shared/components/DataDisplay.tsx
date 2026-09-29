@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Card } from './Content';
+import { icon } from '../styles/tokens';
 
 /** 颜色表示好坏，不表示涨跌：good=true 用翠绿，good=false 用错误红；箭头表示方向。 */
 export function MetricCard({ label, value, change, direction, good, detail }: { label: string; value: string; change?: string; direction?: 'up' | 'down'; good?: boolean; detail: string }) {
   return <Card className="metric-card"><span className="meta">{label}</span><strong className="metric-value">{value}</strong>
     {change && direction ? <div className={`metric-change ${good ? 'positive' : 'negative'}`}>
-      {direction === 'up' ? <ArrowUp size={16} strokeWidth={1.5} aria-hidden="true" /> : <ArrowDown size={16} strokeWidth={1.5} aria-hidden="true" />}
+      {direction === 'up' ? <ArrowUp size={icon.small} aria-hidden="true" /> : <ArrowDown size={icon.small} aria-hidden="true" />}
       <span className="sr-only">{direction === 'up' ? '上升' : '下降'}</span>{change}<span className="metric-detail">{detail}</span>
     </div> : <div className="metric-change metric-change-empty"><span className="metric-detail">{detail}</span></div>}
   </Card>;

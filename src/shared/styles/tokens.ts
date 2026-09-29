@@ -23,11 +23,14 @@ export const tokens = {
   space: { 1: '4px', 2: '8px', 3: '12px', 4: '16px', 6: '24px', 8: '32px', 12: '48px' },
   radius: { card: '12px', control: '8px', badge: '6px' },
   shadow: { card: '0 1px 2px rgba(16,24,40,.06)', hover: '0 4px 12px rgba(16,24,40,.08)' },
-  layout: { max: '1440px', sidebar: '224px', sidebarCollapsed: '64px', asideMin: '400px', asideMax: '480px', tableRow: '48px', featureBar: '3px' },
+  layout: { max: '1440px', sidebar: '224px', sidebarCollapsed: '64px', asideMin: '400px', asideMax: '480px', tableRow: '48px', featureBar: '3px', mobilePanel: '50vh' },
   breakpoint: { mobile: 768, wide: 1280 },
   motion: { fast: '150ms', slow: '200ms', ease: 'ease-out', distance: '4px' },
   icon: { small: '16px', large: '20px', stroke: '1.5' },
 } as const;
+
+/** Lucide 图标尺寸（数值版，供 size 属性使用）；线宽由 base.css 的 --icon-stroke 统一设置。 */
+export const icon = { small: parseFloat(tokens.icon.small), large: parseFloat(tokens.icon.large) } as const;
 
 export function installTokens() {
   const root = document.documentElement;

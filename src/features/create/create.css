@@ -8,9 +8,10 @@
 .field-span { grid-column: 1 / -1; }
 .scenario-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
 .scenario-card { min-width: 0; min-height: calc(var(--space-12) + var(--space-12)); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-card); background: var(--color-card); color: var(--color-secondary); text-align: left; }
-.scenario-card strong { color: var(--color-text); }
+.scenario-card strong { color: var(--color-text); font-weight: var(--weight-semibold); }
 .scenario-card span { font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
-.scenario-card.selected { border-color: var(--color-coral); background: var(--color-coralLight); box-shadow: var(--shadow-card); }
+.scenario-card.selected { border-color: var(--color-coral); background: var(--color-coralLight); box-shadow: var(--shadow-card); color: var(--color-text); }
+.scenario-card.selected strong { font-weight: var(--weight-bold); }
 .scenario-card.selected svg { color: var(--color-coral); }
 .form-actions { display: flex; justify-content: flex-end; margin-top: var(--space-6); }
 .form-grid + .form-actions, .scenario-grid + .form-actions { margin-top: var(--space-6); }

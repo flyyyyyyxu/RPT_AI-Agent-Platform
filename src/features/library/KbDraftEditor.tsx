@@ -8,6 +8,7 @@ import { usePlaybookLock } from '../playbook/playbooks';
 import { demoNow } from '../../core/rules/clock';
 import { StatusBadge, type Status } from '../../shared/components/Badges';
 import { Capability } from '../../shared/components/Capability';
+import { icon } from '../../shared/styles/tokens';
 
 export const entryTone: Record<string, Status> = { 生效中: '通过', 已失效: '历史', 待生效: '待发布' };
 
@@ -29,8 +30,8 @@ export function KbDraftEditor({ draft, onPublished }: { draft: KbDraft; onPublis
         <td><StatusBadge status={entryTone[entryStatus(entry)]} /> <span className="meta">{entryStatus(entry)}</span></td></tr>)}</tbody></table></div>
     {pending.length > 0 && <div><div className="sub-heading"><h4>待入库条目</h4><span className="meta">由知识运营提交，加入后可调整生效时间</span></div>
       <div className="redline-list">{pending.map(item => <div className="redline-item" key={item.title}><div><strong>{item.title}</strong><small className="meta">{item.submittedBy} · 建议 {item.from} 生效</small></div>
-        <Button onClick={() => setKbDraft({ ...draft, entries: [...draft.entries, { title: item.title, from: item.from, to: item.to, isNew: true }] })}><Plus size={16} />加入本版本</Button></div>)}</div></div>}
+        <Button onClick={() => setKbDraft({ ...draft, entries: [...draft.entries, { title: item.title, from: item.from, to: item.to, isNew: true }] })}><Plus size={icon.small} />加入本版本</Button></div>)}</div></div>}
     <div className="gate-footer"><span className="meta">状态按演示时钟 {demoNow()} 计算（演示数据）</span>
-      <span className="inline-actions"><Button onClick={() => setKbDraft(null)} disabled={Boolean(discardLock)} reason={discardLock}>放弃草稿</Button><span data-demo="kb-publish"><Button variant="primary" disabled={Boolean(reason)} reason={reason} onClick={() => { publishKbDraft(); onPublished(draft.nextVersion); }}><Send size={16} />发布 {draft.nextVersion}</Button></span></span></div>
+      <span className="inline-actions"><Button onClick={() => setKbDraft(null)} disabled={Boolean(discardLock)} reason={discardLock}>放弃草稿</Button><span data-demo="kb-publish"><Button variant="primary" disabled={Boolean(reason)} reason={reason} onClick={() => { publishKbDraft(); onPublished(draft.nextVersion); }}><Send size={icon.small} />发布 {draft.nextVersion}</Button></span></span></div>
   </Capability>;
 }

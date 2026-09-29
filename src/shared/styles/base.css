@@ -1,4 +1,5 @@
-/* 基础样式：重置、字体层级、焦点、减少动态效果、通用工具类。只引用 tokens.ts 里的设计变量。 */
+/* 基础样式：重置、字体层级、焦点、减少动态效果、通用工具类。只引用 tokens.ts 里的设计变量。
+   例外：媒体查询里不能用 CSS 变量，断点写成 767px / 1279px，对应 tokens.breakpoint 的 768 / 1280。 */
 @tailwind utilities;
 :root { color-scheme: light; font-family: var(--font-body); font-size: var(--type-bodySize); line-height: var(--type-bodyLine); color: var(--color-text); background: var(--color-page); font-variant-numeric: tabular-nums; }
 * { box-sizing: border-box; }

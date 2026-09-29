@@ -1,16 +1,18 @@
 import type { MonitorMetricKey } from '../../types/domain';
 
+const oneDecimal = (value: number) => value.toLocaleString('zh-CN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** 十万以上用「万 / 亿」并统一保留一位小数；十万以下显示带千分位的整数，避免 10,200 被缩成 1.0万。 */
 export function compact(value: number) {
-  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
-  if (value >= 1e4) return `${(value / 1e3).toFixed(1)}K`;
-  return value.toLocaleString('zh-CN');
+  if (value >= 1e8) return `${oneDecimal(value / 1e8)}亿`;
+  if (value >= 1e5) return `${oneDecimal(value / 1e4)}万`;
+  return Math.round(value).toLocaleString('zh-CN');
 }
 
 export const formatMetric: Record<MonitorMetricKey, (value: number) => string> = {
   calls: compact,
   p95: value => value < 1000 ? `${Math.round(value)}ms` : `${(value / 1000).toFixed(2)}s`,
-  errorRate: value => `${value.toFixed(2)}%`,
+  errorRate: value => `${value.toFixed(1)}%`,
   tokens: compact,
 };
 

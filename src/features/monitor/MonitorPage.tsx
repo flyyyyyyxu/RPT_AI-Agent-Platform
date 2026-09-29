@@ -16,6 +16,7 @@ import { useSkeletonView } from '../../shared/components/Capability';
 import { AlertBanners } from '../../shared/components/AlertBanners';
 import type { Agent, MonitorMetricKey } from '../../types/domain';
 import './monitor.css';
+import { icon } from '../../shared/styles/tokens';
 
 const metricKeys: MonitorMetricKey[] = ['calls', 'p95', 'errorRate', 'tokens'];
 
@@ -30,7 +31,7 @@ export function MonitorPage({ agent }: { agent: Agent }) {
   if (!production) {
     return <AgentShell agent={agent} stepId="monitor" aside={<Card><span className="eyebrow">生产环境</span><h3>尚未发布</h3><p>发布后这里会显示调用量、延迟、错误率和 Token 用量。</p></Card>}>
       <SectionHeading eyebrow="基础能力 · 监控" title="生产运行概览" description="只统计生产环境的线上指向版本。" aside={<ScopeBadge phase="MVP" />} />
-      <Feedback kind="empty" title="还没有生产数据" description="该 Agent 尚未发布，没有线上流量。" action={<Link className="button button-secondary feedback-action" to={`/agents/${agent.id}/release`}><Rocket size={16} />去发布</Link>} />
+      <Feedback kind="empty" title="还没有生产数据" description="该 Agent 尚未发布，没有线上流量。" action={<Link className="button button-secondary feedback-action" to={`/agents/${agent.id}/release`}><Rocket size={icon.small} />前往发布</Link>} />
     </AgentShell>;
   }
 
@@ -44,7 +45,7 @@ export function MonitorPage({ agent }: { agent: Agent }) {
   };
   const older = previousOnline(agent)?.id ?? production;
   const aside = <><Card><span className="eyebrow">生产环境</span><h3>线上指向 <VersionBadge version={production} /></h3><p>最近变更：{agent.lastReleaseAt ?? '—'}</p><p className="meta">调用日志和指标都按版本号归属，发布或回退后新请求会记到新版本上。</p></Card>
-    <Link className="button button-secondary full-button" to={`/agents/${agent.id}/release`}><History size={16} />查看版本历史与回退</Link></>;
+    <Link className="button button-secondary full-button" to={`/agents/${agent.id}/release`}><History size={icon.small} />查看版本历史与回退</Link></>;
 
   return <AgentShell agent={agent} stepId="monitor" aside={aside}><SectionHeading eyebrow="基础能力 · 监控" title="生产运行概览" description={`${profile.period} · 线上指向 ${production} 的调用、延迟、错误和 Token 消耗。`} aside={<ScopeBadge phase="MVP" />} />
     {justChanged && agent.lastReleaseAt && <Feedback kind="success" title={`线上指向已切换到 ${production}`} description={`变更时间 ${agent.lastReleaseAt}。以下为演示数据，新请求已记录到 ${production}。`} />}
