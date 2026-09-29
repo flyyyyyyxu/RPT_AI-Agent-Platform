@@ -35,6 +35,8 @@ export interface AgentVersion {
   /** 是否曾经作为生产版本上线过：只有这类版本可以作为回退目标 */
   everOnline: boolean;
   traffic?: number;
+  /** 开始比例灰度 / 影子运行的时间：上线后才产生的告警、Trace 按它计时 */
+  experimentAt?: string;
   /** 以下三项只对候选版本（草稿 / 待发布）有意义 */
   configured: boolean;
   debugged: boolean;
@@ -130,10 +132,12 @@ export interface TraceStep {
   /** 该版本新增的步骤 */
   isNew?: boolean;
 }
-export interface TraceRecord { id: string; time: string; summary: string; version: string; status: '成功' | '异常'; steps: TraceStep[]; env?: '生产' | '隔离评测'; note?: string }
+/** afterRelease：这条记录在该版本开始灰度后第几分钟产生；版本还没上线时不显示，time 按实际灰度时间计算 */
+export interface TraceRecord { id: string; time: string; summary: string; version: string; status: '成功' | '异常'; steps: TraceStep[]; env?: '生产' | '隔离评测'; note?: string; afterRelease?: number }
 export interface BadCase { id: string; source: '用户反馈' | '申诉' | '抽检'; time: string; summary: string; detail: string; traceId: string; version: string; /** 加入评测集后生成的样本 */ evalCase?: EvalCase }
 
-export interface AlertDef { id: string; title: string; detail: string; time: string; version: string; notify: string; resolvedNote: string }
+/** afterRelease：告警在该版本开始灰度后第几分钟触发；版本还没上线时不显示 */
+export interface AlertDef { id: string; title: string; detail: string; time: string; version: string; notify: string; resolvedNote: string; afterRelease?: number }
 
 export interface KnowledgeEntry { title: string; versions: string[]; from: string; to: string | null }
 export interface KnowledgeVersion { id: string; publishedAt: string; usedBy: string[]; note?: string }

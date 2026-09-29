@@ -1,6 +1,5 @@
 /** 构建与评测：新建 Agent、保存配置、新建草稿、调试、评测、依赖升级、代改配置。 */
 import type { Agent, AgentConfig, ProfileId } from '../../../types/domain';
-import { debugPresets } from '../../data-access/scenarioData';
 import { nowStamp } from '../../rules/clock';
 import { getCandidate, isEditable, nextVersionId } from '../../rules/versions';
 import { updateVersion, type StoreKit } from '../kit';
@@ -47,7 +46,7 @@ export function versionActions({ state, setState, updateAgent }: StoreKit) {
     isEditable(version) && version.configured && version.debugged && !version.evaluatedDatasets.includes(datasetId)
       ? { ...version, evaluatedDatasets: [...version.evaluatedDatasets, datasetId] } : version));
 
-  /** 依赖升级：基于某个快照创建候选版本，替换为最新依赖；平台自动完成冒烟调试（演示）。 */
+  /** 依赖升级：基于某个快照创建候选版本并替换为最新依赖（已保存，仍需调试和评测）。 */
   const createUpgradedDraft = (agentId: string, fromVersionId: string, patch: Partial<AgentConfig>, note: string) => {
     const agent = state.agents.find(item => item.id === agentId);
     if (!agent) return fromVersionId;
@@ -55,14 +54,13 @@ export function versionActions({ state, setState, updateAgent }: StoreKit) {
     if (existing) return existing.id;
     const source = agent.versions.find(version => version.id === fromVersionId) ?? agent.versions[0];
     const id = nextVersionId(agent);
-    // 平台自动用第一条预设问题跑一次冒烟调试，调试台会显示这次结果
-    updateAgent(agentId, current => ({ ...current, lastDebugQuestion: debugPresets(current)[0].question, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note, config: { ...structuredClone(source.config), ...patch }, everOnline: false, configured: true, debugged: true, evaluatedDatasets: [] }, ...current.versions] }));
+    updateAgent(agentId, current => ({ ...current, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note, config: { ...structuredClone(source.config), ...patch }, everOnline: false, configured: true, debugged: false, evaluatedDatasets: [] }, ...current.versions] }));
     return id;
   };
 
-  /** 直接写入修正后的配置：保存并完成冒烟调试，评测结果失效需要重跑。 */
-  const applyFix = (agentId: string, versionId: string, config: AgentConfig) => updateAgent(agentId, agent => updateVersion({ ...agent, lastDebugQuestion: debugPresets(agent)[0].question }, versionId, version =>
-    isEditable(version) ? { ...version, config: structuredClone(config), status: '草稿', configured: true, debugged: true, evaluatedDatasets: [], updatedAt: nowStamp() } : version));
+  /** 直接写入修改后的配置（剧本「代我修改」）：等同于保存，调试和评测需要重新运行。 */
+  const applyFix = (agentId: string, versionId: string, config: AgentConfig) => updateAgent(agentId, agent => updateVersion(agent, versionId, version =>
+    isEditable(version) ? { ...version, config: structuredClone(config), status: '草稿', configured: true, debugged: false, evaluatedDatasets: [], updatedAt: nowStamp() } : version));
 
   return { createAgent, saveConfig, createDraft, markDebugged, markEvaluated, createUpgradedDraft, applyFix };
 }

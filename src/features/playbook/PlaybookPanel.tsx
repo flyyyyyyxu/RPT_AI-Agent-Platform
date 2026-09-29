@@ -101,7 +101,7 @@ export function PlaybookPanel() {
     const where = !finished && !onPage && step ? `前往${pageNames[step.page] ?? '对应页面'}` : '展开';
     return <button type="button" className="playbook-pill" onClick={openPanel} aria-label={`演示步骤：${where}`}>
       <ListChecks size={icon.small} aria-hidden="true" />
-      <span className="pill-text">剧本 {playbook.letter} · {finished ? '已完成' : `${index + 1} / ${total}：${step?.title ?? ''}`}</span>
+      <span className="pill-text">剧本 {playbook.letter} · {finished ? '已完成' : `${index + 1} / ${total} ${step?.phase ?? ''}：${step?.title ?? ''}`}</span>
       <span className="pill-action">{where}{!finished && !onPage ? <ChevronRight size={icon.small} aria-hidden="true" /> : <ChevronUp size={icon.small} aria-hidden="true" />}</span>
     </button>;
   }
@@ -119,7 +119,7 @@ export function PlaybookPanel() {
       <p>{playbook.outcome}</p>
       <div className="pb-nav"><Button onClick={() => navigate('/')}>返回工作台</Button><Button onClick={() => start(playbook.id)}><RotateCcw size={icon.small} />重新开始</Button></div>
     </div> : step && <div className="pb-body">
-      <span className="pb-count">第 {index + 1} / {total} 步 · {pageNames[step.page] ?? ''}</span>
+      <span className="pb-count">第 {index + 1} / {total} 步 · {step.phase} · {pageNames[step.page] ?? ''}</span>
       <h3>{step.title}</h3>
       <p className="pb-desc">{step.body}</p>
       <div className="pb-next"><MousePointerClick size={icon.small} aria-hidden="true" /><div><span className="meta">下一步点哪里</span><p>{step.next}</p></div></div>

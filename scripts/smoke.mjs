@@ -1,4 +1,4 @@
-// 冒烟检查：三条演示剧本从头走到尾 + 已修复问题的回归检查。
+// 冒烟检查：三条演示剧本从新建候选版本走到上线后 + 已修复问题的回归检查。
 //   node scripts/smoke.mjs        全部失败项会列出来，退出码为 1
 import { agentState, go, launch, newPage, startPlaybook } from './lib.mjs';
 
@@ -13,12 +13,33 @@ const expectStep = async (page, title) => { const actual = await panelTitle(page
 
 const browser = await launch();
 
-/* ---------------- 剧本 A ---------------- */
+const debug = async page => { await gotoStep(page); await page.locator('[data-demo=debug-run] button').click(); await page.waitForTimeout(2600); };
+const evaluate = async page => { await gotoStep(page); await page.locator('[data-demo=eval-run] button').click(); await page.waitForTimeout(3000); };
+const approve = async page => { await gotoStep(page); await page.getByRole('button', { name: '提交审批' }).click(); await page.waitForTimeout(300); await page.getByRole('button', { name: '模拟审批通过' }).click(); await page.waitForTimeout(2400); };
+
+/* ---------------- 剧本 A：新建 v13 → 调试 → 评测 → 审批 → 灰度 → AB → 告警 → 回退 → Trace ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
   await startPlaybook(page, 'A');
-  await expectStep(page, 'v13 正在灰度 10%');
-  await next(page); await expectStep(page, 'AB 报告');
+  await expectStep(page, '新建候选版本 v13');
+  check('A：开始时没有 v13', !(await agentState(page, 'a')).versions.some(v => v.id === 'v13'));
+  check('A：发布页开始时没有告警', await (async () => { await go(page, '/agents/a/release', 500); const n = await page.locator('[data-demo=alert]').count(); await gotoStep(page); return n === 0; })());
+  await page.locator('[data-demo=new-draft] button').click(); await page.waitForTimeout(1800);
+  await expectStep(page, '加入图文笔记检索');
+  await page.locator('.playbook-panel button', { hasText: '代我修改' }).click(); await page.waitForTimeout(1800);
+  await expectStep(page, '调试 v13');
+  await debug(page);
+  await expectStep(page, '隔离环境评测');
+  await evaluate(page);
+  await expectStep(page, '生产就绪检查 + 审批');
+  await approve(page);
+  await expectStep(page, '比例灰度 10%');
+  await confirmIn(page, '.publish-bar'); await page.waitForTimeout(2600);
+  await expectStep(page, 'AB 报告');
+  const alertTime = (await page.locator('[data-demo=alert]').innerText()).match(/触发于 (\S+ \S+)/)?.[1] ?? '';
+  const released = (await agentState(page, 'a')).versions.find(v => v.id === 'v13');
+  check('A：灰度后出现告警，时间晚于发布', alertTime > '2026-09-29 12:00', alertTime);
+  check('A：v13 灰度 10%', released.status === '灰度中' && released.traffic === 10);
   await next(page); await expectStep(page, '监控告警已触发');
   await next(page); await expectStep(page, '一键回退到 v12');
   await page.getByRole('button', { name: '回退到 v12' }).first().click();
@@ -26,47 +47,56 @@ const browser = await launch();
   await page.waitForTimeout(3600);
   await expectStep(page, '1 分 48 秒完成回退');
   check('A：回退结果显示耗时', (await page.locator('.switch-result').innerText()).includes('1 分 48 秒'));
+  check('A：回退后告警显示已恢复', (await page.locator('[data-demo=alert]').innerText()).includes('告警已恢复'));
   await next(page); await expectStep(page, 'Trace 定位');
+  await gotoStep(page);
   check('A：Trace 高亮新增步骤', await page.locator('[data-demo="trace-issue"]').count() === 1);
   await next(page); await expectStep(page, '剧本 A 完成');
   check('A：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 
-/* ---------------- 剧本 B ---------------- */
+/* ---------------- 剧本 B：升级依赖建 v8 → 调试 → 评测阻断 → 修正 → 调试 → 评测通过 → 影子 → 审批全量 → 监控 ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
   await startPlaybook(page, 'B');
   await expectStep(page, '政策库发布 2026-10 版');
   check('B：普通「新建草稿」在剧本中被锁定', await page.getByRole('button', { name: '基于 v7 新建草稿 v8' }).isDisabled());
   await page.locator('[data-demo=dep-upgrade] button').click(); await page.waitForTimeout(1800);
-  await expectStep(page, '不发布，直接跑评测');
-  await gotoStep(page); await page.locator('[data-demo=eval-run] button').click(); await page.waitForTimeout(3000);
-  await expectStep(page, '红线漏判 2 条');
-  await next(page); await expectStep(page, '发布按钮被禁用');
+  await expectStep(page, '调试 v8');
+  check('B：升级依赖后需要手动调试', !(await agentState(page, 'b')).versions.find(v => v.id === 'v8').evaluated && await page.locator('[data-demo=debug-run] button').isEnabled());
+  await debug(page);
+  await expectStep(page, '隔离评测：门槛阻断');
+  await evaluate(page);
+  await expectStep(page, '发布按钮被禁用');
+  check('B：评测页显示门槛阻断', (await page.locator('[data-demo=gate-summary]').innerText()).includes('发布已阻断'));
+  await gotoStep(page);
   check('B：发布被门槛阻断', (await page.locator('.publish-bar .button-reason').allInnerTexts()).join('').includes('上线门槛已通过'));
   await next(page); await expectStep(page, 'Trace：引用了旧条款');
   await next(page); await expectStep(page, '修正 Prompt 示例');
   await page.locator('.playbook-panel button', { hasText: '代我修正' }).click(); await page.waitForTimeout(600);
   const prompt = await page.locator('.prompt-editor').inputValue();
   check('B：代我修正后表单显示新配置、且没有未保存提示', prompt.includes('社区规范 4.5') && !prompt.includes('社区规范 4.3') && await page.locator('.form-status .warning-text').count() === 0);
-  await page.waitForTimeout(1200); await expectStep(page, '重新评测：通过');
-  await gotoStep(page); await page.locator('[data-demo=eval-run] button').click(); await page.waitForTimeout(3000);
+  await page.waitForTimeout(1200); await expectStep(page, '重新调试');
+  await debug(page);
+  await expectStep(page, '重新评测：通过');
+  await evaluate(page);
   await expectStep(page, '影子运行 v8');
   await gotoStep(page); await confirmIn(page, '.publish-bar'); await page.waitForTimeout(2600);
   await expectStep(page, '影子 AB');
-  await next(page); await expectStep(page, '生产就绪检查 + 审批');
-  await page.getByRole('button', { name: '提交审批' }).click(); await page.waitForTimeout(300);
-  await page.getByRole('button', { name: '模拟审批通过' }).click(); await page.waitForTimeout(2400);
-  await expectStep(page, '全量发布 v8');
+  await next(page); await expectStep(page, '审批后全量发布');
+  await approve(page);
   await confirmIn(page, '.publish-bar'); await page.waitForTimeout(2600);
-  await expectStep(page, '剧本 B 完成');
+  await expectStep(page, '监控线上 v8');
   check('B：线上指向 v8', (await agentState(page, 'b')).production === 'v8');
+  await gotoStep(page);
+  check('B：监控页显示线上指向已切换到 v8', (await page.locator('.feedback-success').allInnerTexts()).join('').includes('v8'));
+  await next(page); await expectStep(page, '剧本 B 完成');
   check('B：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 
-/* ---------------- 剧本 C ---------------- */
+/* ---------------- 剧本 C：bad case → 知识 v35 → 建 v22 → 调试 → 回归评测 → 审批 → 会话灰度 → AB ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
   await startPlaybook(page, 'C');
@@ -84,14 +114,14 @@ const browser = await launch();
   await page.locator('[data-demo=kb-publish] button').click(); await page.waitForTimeout(1800);
   await expectStep(page, '创建候选版本 v22');
   await gotoStep(page); await page.locator('[data-demo=dep-upgrade] button').click(); await page.waitForTimeout(1800);
+  await expectStep(page, '调试 v22');
+  await debug(page);
   await expectStep(page, '回归评测');
   await gotoStep(page);
   check('C：bad case 回归集排在第一位', (await page.locator('.dataset-list button strong').allInnerTexts())[0] === 'bad case 回归集');
-  await page.locator('[data-demo=eval-run] button').click(); await page.waitForTimeout(3000);
-  await expectStep(page, '提交审批');
-  await gotoStep(page);
-  await page.getByRole('button', { name: '提交审批' }).click(); await page.waitForTimeout(300);
-  await page.getByRole('button', { name: '模拟审批通过' }).click(); await page.waitForTimeout(2400);
+  await evaluate(page);
+  await expectStep(page, '生产就绪检查 + 审批');
+  await approve(page);
   await expectStep(page, '按会话灰度发布');
   await confirmIn(page, '.publish-bar'); await page.waitForTimeout(2600);
   await expectStep(page, '转人工率下降');
@@ -101,11 +131,34 @@ const browser = await launch();
   await context.close();
 }
 
+/* ---------------- 三条剧本结构一致 ---------------- */
+{
+  const { page, context } = await newPage(browser);
+  for (const letter of ['A', 'B', 'C']) {
+    await startPlaybook(page, letter);
+    const phases = [];
+    for (let i = 0; i < 20; i++) {
+      const text = (await page.locator('.playbook-panel .pb-count, .playbook-pill .pill-text').allInnerTexts())[0] ?? '';
+      const phase = text.match(/步 · (\S+) ·/)?.[1] ?? text.match(/\d+ \/ \d+ (\S+)：/)?.[1];
+      if (!phase) break;
+      if (phases.at(-1) !== phase) phases.push(phase);
+      const nextButton = page.locator('.playbook-panel .pb-nav button', { hasText: /下一步|完成剧本/ });
+      if (!(await nextButton.count()) || await nextButton.isDisabled()) break;
+      await nextButton.click(); await page.waitForTimeout(300);
+    }
+    // 只看有「下一步」可点的前几步，确认都从构建或起因开始
+    check(`剧本 ${letter}：第一阶段是构建或起因`, ['构建', '起因'].includes(phases[0]), phases.join(' → '));
+  }
+  await context.close();
+}
+
 /* ---------------- 回归检查 ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
+  // 基础数据里穿搭灵感 v13 正在灰度 10%：灰度期间版本历史不能回退
+  await go(page, '/agents/a/release', 500);
+  check('回归：灰度期间版本历史不能回退', await page.getByRole('button', { name: '回退到 v11' }).count() === 0);
   // 回退中途离开页面，回退仍然生效
-  await startPlaybook(page, 'A');
   await page.getByRole('button', { name: '回退到 v12' }).first().click();
   await page.getByRole('button', { name: '确认回退到 v12' }).click();
   await page.waitForTimeout(300); await go(page, '/agents/a/trace', 2500);
@@ -114,11 +167,8 @@ const browser = await launch();
   check('回归：操作时间使用演示时钟', a.ops.approvals[0].time.startsWith('2026-09-29 12:0'), a.ops.approvals[0].time);
   check('回归：生命周期显示监控 / Trace 可查看', (await page.locator('.lifecycle-item small').allInnerTexts()).join('|') === '已完成|已完成|未开始|可查看|当前 · 可查看');
 
-  // 灰度期间版本历史不能回退
-  await startPlaybook(page, 'A'); await go(page, '/agents/a/release', 500);
-  check('回归：灰度期间版本历史不能回退', await page.getByRole('button', { name: '回退到 v11' }).count() === 0);
-
   // 退出剧本并恢复原始数据
+  await startPlaybook(page, 'A');
   await page.getByRole('button', { name: '退出剧本' }).click();
   await page.getByRole('button', { name: '恢复原始数据' }).click(); await page.waitForTimeout(400);
   const restored = await agentState(page, 'a');

@@ -5,7 +5,7 @@ import {
   abProfiles, approverFor, badCaseProfiles, baseOf, batchPresets, gateProfiles, knowledgeBases, pbDatasets, pbEvalTrace, pbGate, pbOldClause,
   pbPolicyKb, pcAftersaleKb, pendingEntries, debugProfiles, datasetProfiles, scenarioOverrides, traceProfiles, upstreamChanges,
 } from '../../data';
-import { demoNow } from '../rules/clock';
+import { addMinutes, demoNow } from '../rules/clock';
 import type { AbProfile, Agent, AgentOps, AgentVersion, AlertDef, BadCase, DemoState, EvalDataset, GateProfile, KnowledgeBase, KnowledgeEntry, TraceRecord } from '../../types/domain';
 
 const scenario = (agent: Agent) => agent.profile === 'pa' || agent.profile === 'pb' || agent.profile === 'pc' ? scenarioOverrides[agent.profile] : null;
@@ -34,7 +34,16 @@ export function datasetsFor(agent: Agent, version: AgentVersion | null, ops: Age
 export const batchFor = (agent: Agent) => batchPresets[baseOf(agent.profile)];
 export const abFor = (agent: Agent): AbProfile => scenario(agent)?.ab ?? abProfiles[baseOf(agent.profile)] ?? abProfiles.general;
 export const approverOf = (agent: Agent) => approverFor[baseOf(agent.profile)];
-export const alertsFor = (agent: Agent): AlertDef[] => scenario(agent)?.alerts ?? [];
+/** 上线后才产生的记录：按版本实际开始灰度的时间计时；版本还没灰度过时不出现。 */
+function afterRelease<T extends { version: string; time: string; afterRelease?: number }>(agent: Agent, items: T[]): T[] {
+  return items.flatMap(item => {
+    if (item.afterRelease === undefined) return [item];
+    const at = agent.versions.find(version => version.id === item.version)?.experimentAt;
+    return at ? [{ ...item, time: addMinutes(at, item.afterRelease) }] : [];
+  });
+}
+
+export const alertsFor = (agent: Agent): AlertDef[] => afterRelease(agent, scenario(agent)?.alerts ?? []);
 
 export function tracesFor(agent: Agent): TraceRecord[] {
   if (agent.profile === 'pb') {
@@ -50,7 +59,7 @@ export function tracesFor(agent: Agent): TraceRecord[] {
     return evaluated ? [pbEvalTrace(true), pbEvalTrace(false), ...production] : [pbEvalTrace(false), ...production];
   }
   // 没有演示数据的 Agent（如空白模板新建）返回空列表，页面显示空状态，不借用其它 Agent 的记录
-  return scenario(agent)?.traces ?? traceProfiles[baseOf(agent.profile)];
+  return afterRelease(agent, scenario(agent)?.traces ?? traceProfiles[baseOf(agent.profile)]);
 }
 
 export function badcasesFor(agent: Agent): BadCase[] {

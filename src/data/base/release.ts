@@ -58,7 +58,7 @@ export const approvalsFor: Record<ProfileId, { approvals: ApprovalRecord[]; pend
   b: { approvals: [{ time: '2026-09-27 18:10', who: '周可', action: '提交 v8 影子运行审批' }], pending: 'v8', approved: null, strategy: 'shadow' },
   c: { approvals: [{ time: '2026-09-24 13:31', who: '赵敏（客服运营负责人）', action: '审批通过 v21 直接发布' }], pending: null, approved: null, strategy: 'canary' },
   blank: { approvals: [], pending: null, approved: null, strategy: 'direct' },
-  pa: { approvals: [{ time: '2026-09-29 09:52', who: '刘畅（社区内容负责人）', action: '审批通过 v13（比例灰度 10%）' }, { time: '2026-09-29 09:40', who: '陈思远', action: '提交 v13（比例灰度 10%）审批' }], pending: null, approved: 'v13', strategy: 'canary' },
+  pa: { approvals: [{ time: '2026-09-20 15:58', who: '刘畅（社区内容负责人）', action: '审批通过 v12（比例灰度 10%）' }], pending: null, approved: null, strategy: 'canary' },
   pb: { approvals: [{ time: '2026-09-10 09:12', who: '孙悦（内容安全负责人）', action: '审批通过 v7（直接发布）' }], pending: null, approved: null, strategy: 'shadow' },
   pc: { approvals: [{ time: '2026-09-24 13:31', who: '赵敏（客服运营负责人）', action: '审批通过 v21（直接发布）' }], pending: null, approved: null, strategy: 'canary' },
 };

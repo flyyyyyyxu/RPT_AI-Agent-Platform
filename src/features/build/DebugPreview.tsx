@@ -22,7 +22,7 @@ export function DebugPreview({ presets, initialQuestion, disabledReason, snapsho
   return <div className="card debug-preview"><div className="debug-heading"><div><span className="eyebrow">实时调试</span><h2>预览回答</h2></div>{result && <StatusBadge status="通过" />}</div>
     <label className="field-label">输入问题<textarea rows={3} value={question} onChange={event => setQuestion(event.target.value)} /></label>
     <div className="preset-questions"><span className="meta">预设问题</span>{presets.map(item => <button type="button" key={item.question} className={question === item.question ? 'selected' : ''} onClick={() => setQuestion(item.question)}>{item.question}</button>)}</div>
-    <Button variant="primary" disabled={running || Boolean(reason)} reason={reason} onClick={run}>{running ? <><RotateCcw size={icon.small} className="spin" />正在生成</> : <><Play size={icon.small} />运行调试</>}</Button>
+    <span data-demo="debug-run"><Button variant="primary" disabled={running || Boolean(reason)} reason={reason} onClick={run}>{running ? <><RotateCcw size={icon.small} className="spin" />正在生成</> : <><Play size={icon.small} />运行调试</>}</Button></span>
     {snapshotNote && <p className="meta">{snapshotNote}</p>}
     {running && <div className="debug-loading"><span /><p>正在按步骤执行…</p></div>}
     {result && !running && <>

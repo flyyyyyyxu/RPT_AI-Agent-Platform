@@ -25,7 +25,7 @@ export function AbReport({ agent, experiment }: { agent: Agent; experiment: Agen
   const shadow = experiment?.status === '影子运行';
   return <Capability demo="ab" title={shadow ? '影子运行对比报告' : 'AB 实验报告'} description="新旧版本在同一时段、按版本号归因的业务指标对比。颜色表示好坏，不表示涨跌。">
     {!experiment || !production ? <Feedback kind="empty" title="当前没有进行中的实验" description="以「比例灰度」或「影子运行」发布候选版本后，这里显示新旧版本的业务指标对比。" /> : <>
-      <div className="ab-meta"><IntegrationNote platform="实验" /><span className="meta">数据来自公司实验平台 · 实验 {ab.experimentId} · 已运行 {ab.days} 天 · {ab.sample}</span><DemoTag label="以下数字均为演示数据" /></div>
+      <div className="ab-meta"><IntegrationNote platform="实验" /><span className="meta">数据来自公司实验平台 · 实验 {ab.experimentId} · 已运行 {ab.days} 天（演示快进） · {ab.sample}</span><DemoTag label="以下数字均为演示数据" /></div>
       <div className="chart-legend"><span><i className="legend-old" />旧版本 {production}</span><span><i className="legend-new" />新版本 {experiment.id}</span></div>
       <div className="ab-grid">{ab.metrics.map(metric => {
         const delta = metric.newValue - metric.oldValue;

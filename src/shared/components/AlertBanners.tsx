@@ -12,6 +12,8 @@ export function AlertBanners({ agent }: { agent: Agent }) {
   return <div className="alert-stack" data-demo="alert">{alerts.map(alert => {
     const version = agent.versions.find(item => item.id === alert.version);
     const active = Boolean(version && (version.status === '灰度中' || version.status === '影子运行' || version.id === agent.productionVersion));
+    // 版本从没灰度 / 上线过，就不存在「已恢复」的告警
+    if (!active && !version?.experimentAt) return null;
     return active
       ? <div key={alert.id} className="alert-banner error" role="alert"><BellRing size={icon.large} aria-hidden="true" /><div>
           <div className="alert-title"><strong>告警 · {alert.title}</strong><VersionBadge version={alert.version} /><DemoTag /></div>

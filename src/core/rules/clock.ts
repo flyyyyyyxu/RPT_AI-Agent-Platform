@@ -13,6 +13,8 @@ let clock = parseStamp(DEMO_NOW);
 export const demoNow = () => formatStamp(clock);
 /** 记录一次操作的时间：演示时钟前进 1 分钟。 */
 export function nowStamp() { clock += 60_000; return formatStamp(clock); }
+/** 某个时间之后 n 分钟（上线后才产生的告警、Trace 用它计时）。 */
+export const addMinutes = (stamp: string, minutes: number) => formatStamp(parseStamp(stamp) + minutes * 60_000);
 /** 读取存档或重置时对齐时钟：只看操作类时间（发布、审批、版本更新），不看知识条目的未来生效时间。 */
 export function syncClock(state: DemoState) {
   const stamps = [

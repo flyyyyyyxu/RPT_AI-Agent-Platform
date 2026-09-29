@@ -55,8 +55,8 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
   return <AgentShell agent={agent} stepId="build" aside={aside}><SectionHeading eyebrow="构建" title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`} description={editable ? '修改 Prompt、模型、知识、工具和执行步骤；保存后需要重新调试和评测。' : '已上线或历史版本是不可修改的快照，包含模型、Prompt、编排、工具和知识版本。'} aside={<div className="heading-badges"><StatusBadge status={version.status} /><ScopeBadge phase="MVP" /></div>} />
     {!editable && <div className="snapshot-banner"><Lock size={icon.large} /><div><strong>{version.id} 是只读快照</strong><p>{candidate ? `已有候选版本 ${candidate.id}，请在候选版本上继续修改。` : `如需修改，请基于 ${version.id} 新建草稿 ${nextVersionId(agent)}；线上指向不受影响。`}</p></div>
       {candidate ? <Link className="button button-secondary" to={`/agents/${agent.id}/build`}>前往候选版本 {candidate.id}</Link>
-        : <Button variant="primary" disabled={Boolean(draftLock)} reason={draftLock} onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={icon.small} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button>}</div>}
-    <Card className="config-card"><fieldset disabled={!editable} className="config-fieldset">
+        : <span data-demo="new-draft"><Button variant="primary" disabled={Boolean(draftLock)} reason={draftLock} onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={icon.small} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button></span>}</div>}
+    <div data-demo="config"><Card className="config-card"><fieldset disabled={!editable} className="config-fieldset">
       <div data-demo="prompt"><ConfigSection title="Prompt" description="用双花括号声明变量，例如 {{question}}。"><textarea className="prompt-editor" rows={9} value={form.prompt} readOnly={!editable} onChange={event => patch({ prompt: event.target.value })} /><div className="variable-row"><span className="meta">已识别变量</span>{variables ? variables.map(item => <code key={item}>{item}</code>) : <span className="meta">暂无变量</span>}</div></ConfigSection></div>
       <div className="config-pair"><ConfigSection title="模型" description="选择公司托管的基础模型。"><label className="select-field"><select value={form.model} onChange={event => patch({ model: event.target.value })}>{withCurrent(modelOptions, form.model).map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} /></label></ConfigSection><ConfigSection title="输出格式" description="约束最终回答的结构。"><input value={form.outputFormat} readOnly={!editable} onChange={event => patch({ outputFormat: event.target.value })} /></ConfigSection></div>
       <div className="config-pair"><ConfigSection title="知识库" description="知识版本会随配置一起写入版本快照。"><label className="select-field"><select value={form.knowledge} onChange={event => patch({ knowledge: event.target.value })}>{withCurrent(knowledgeOptions, form.knowledge).map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} /></label></ConfigSection>
@@ -68,7 +68,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
         {version.configured && version.debugged && !dirty && <Link className="button button-secondary" to={`/agents/${agent.id}/evaluation`}>下一步：运行评测</Link>}
         <Button variant="primary" disabled={!dirty && version.configured} reason={!dirty && version.configured ? '配置未修改' : undefined} onClick={() => saveConfig(agent.id, version.id, form)}>{!dirty && version.configured ? <Check size={icon.small} /> : <Save size={icon.small} />}{!dirty && version.configured ? '已保存' : '保存配置'}</Button>
       </div>}
-    </Card>
+    </Card></div>
     <SectionHeading eyebrow="版本管理" title={`版本快照 ${version.id}`} description="变更与版本管理：每个版本锁定模型、Prompt、工具和知识的具体版本，可逐项 diff。" />
     <DependencyLock agent={agent} version={version} onCreated={select} />
     <VersionDiff agent={agent} version={version} />

@@ -32,7 +32,8 @@ export function releaseActions({ state, updateAgent }: StoreKit, { opsOf, update
       const candidate = getCandidate(current);
       if (!candidate || !candidate.configured || !candidate.debugged || !isEvaluated(candidate) || getExperiment(current)) return current;
       const status = ops.strategy === 'shadow' ? '影子运行' as const : '灰度中' as const;
-      return { ...updateVersion(current, candidate.id, version => ({ ...version, status, traffic: status === '灰度中' ? ops.canaryPercent : undefined })), stagingVersion: candidate.id, lastReleaseAt: nowStamp() };
+      const at = nowStamp();
+      return { ...updateVersion(current, candidate.id, version => ({ ...version, status, traffic: status === '灰度中' ? ops.canaryPercent : undefined, experimentAt: at })), stagingVersion: candidate.id, lastReleaseAt: at };
     });
   };
 

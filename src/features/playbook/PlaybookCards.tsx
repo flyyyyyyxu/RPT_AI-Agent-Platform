@@ -14,7 +14,7 @@ export function PlaybookCards() {
   const navigate = useNavigate();
   const resume = (playbook: Playbook, step: number) => { setPlaybookStep(step); setPlaybookCollapsed(false); const target = playbook.steps[Math.min(step, playbook.steps.length - 1)]; navigate(pagePath(playbook, target.page)); };
   return <section className="playbook-section" aria-label="演示剧本">
-    <SectionHeading eyebrow="演示剧本" title="按业务场景体验一遍" description="三个团队的真实需求，各走一遍关键流程；开始后右下角会提示下一步点哪里。" />
+    <SectionHeading eyebrow="演示剧本" title="按业务场景体验一遍" description="三个团队的真实需求，都从新建候选版本开始，走完同一条流程：构建 → 调试 → 评测 → 发布 → 上线后。开始后右下角会提示下一步点哪里。" />
     <div className="playbook-grid">{playbooks.map(playbook => {
       const active = state.playbook?.id === playbook.id ? state.playbook : null;
       return <div key={playbook.id} className={`playbook-card ${active ? 'active' : ''}`}>

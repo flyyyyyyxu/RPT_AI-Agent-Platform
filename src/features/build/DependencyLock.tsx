@@ -36,6 +36,6 @@ export function DependencyLock({ agent, version, onCreated }: { agent: Agent; ve
       {canCreate && <span data-demo="dep-upgrade"><Button onClick={() => { const id = createUpgradedDraft(agent.id, version.id, upgraded, upgradeNote); onCreated?.(id); }}><GitBranchPlus size={icon.small} />基于 {version.id} 创建候选版本 {nextVersionId(agent)}（升级依赖）</Button></span>}
       {isCandidate && <Button onClick={() => applyFix(agent.id, version.id, { ...version.config, ...upgraded })}>升级到最新依赖</Button>}
       {candidate && !isCandidate && <Link className="button button-secondary" to={`/agents/${agent.id}/build`}>前往候选版本 {candidate.id}</Link>}</div>}
-    {version.note.startsWith('升级依赖') && isCandidate && <p className="shared-note"><CheckCircle2 size={icon.small} aria-hidden="true" />已按最新依赖创建；平台用第一条预设问题自动跑了一次冒烟调试（结果见调试台）。下一步：在隔离环境运行评测，无需发布。</p>}
+    {version.note.startsWith('升级依赖') && isCandidate && <p className="shared-note"><CheckCircle2 size={icon.small} aria-hidden="true" />已按最新依赖创建并保存。下一步：在调试台运行一次调试，再到评测页在隔离环境回归，无需发布。</p>}
   </Capability>;
 }
