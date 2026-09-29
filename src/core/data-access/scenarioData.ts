@@ -6,7 +6,7 @@ import {
   pbPolicyKb, pcAftersaleKb, pendingEntries, debugProfiles, datasetProfiles, scenarioOverrides, traceProfiles, upstreamChanges,
 } from '../../data';
 import { addMinutes, demoNow } from '../rules/clock';
-import type { AbProfile, Agent, AgentOps, AgentVersion, AlertDef, AssetRecord, AssetState, BadCase, DemoState, EvalDataset, EvalsetContent, GateProfile, KnowledgeBase, KnowledgeEntry, TraceRecord } from '../../types/domain';
+import type { AbProfile, Agent, AgentOps, AgentVersion, AlertDef, AssetRecord, AssetState, BadCase, DemoState, EvalDataset, EvalsetContent, GateProfile, KnowledgeBase, KnowledgeEntry, ToolContent, TraceRecord } from '../../types/domain';
 
 const scenario = (agent: Agent) => agent.profile === 'pa' || agent.profile === 'pb' || agent.profile === 'pc' ? scenarioOverrides[agent.profile] : null;
 
@@ -103,11 +103,23 @@ export const nextKbVersion = (id: string) => { const match = /^v(\d+)$/.exec(id)
 
 export interface UpstreamChange { latest: string; at: string; note: string }
 /** 依赖是否有上游更新：知识按知识库最新版本判断，工具按工具目录判断。 */
-export function upstreamFor(name: string, kbs: KnowledgeBase[]): UpstreamChange | null {
+/**
+ * 依赖的上游更新：知识库看最新发布的知识版本；工具看资产中心里最新「已发布」的版本（审核中的不算）。
+ * 传入 tools 时以资产中心为准，否则退回静态数据。
+ */
+export function upstreamFor(name: string, kbs: KnowledgeBase[], tools?: AssetRecord<ToolContent>[]): UpstreamChange | null {
   for (const kb of kbs) {
     if (!kb.versions.some(version => `${kb.name} ${version.id}` === name)) continue;
     const latest = kb.versions[0];
     return `${kb.name} ${latest.id}` === name ? null : { latest: `${kb.name} ${latest.id}`, at: latest.publishedAt, note: latest.note ?? '知识库已发布新版本' };
   }
+  const match = /^(.+) (v\d+)$/.exec(name);
+  const tool = match && tools?.find(item => item.name === match[1]);
+  if (match && tool) {
+    const latest = tool.versions.find(version => version.status === '已发布');
+    if (!latest || latest.id === match[2] || versionNumber(latest.id) < versionNumber(match[2])) return null;
+    return { latest: `${tool.name} ${latest.id}`, at: latest.at, note: latest.note };
+  }
   return upstreamChanges[name] ?? null;
 }
+const versionNumber = (id: string) => Number(/^v(\d+)$/.exec(id)?.[1] ?? 0);

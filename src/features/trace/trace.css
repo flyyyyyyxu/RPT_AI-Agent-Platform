@@ -53,3 +53,25 @@
 .env-tag { font-size: var(--type-metaSize); line-height: var(--type-metaLine); padding: 0 var(--space-2); border-radius: var(--radius-badge); border: var(--border-thin) solid var(--color-border); color: var(--color-secondary); background: var(--color-card); width: fit-content; }
 .env-tag.isolated { border-style: dashed; border-color: var(--color-indigo); color: var(--color-indigo); }
 .expired-tag { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-error); font-weight: var(--weight-semibold); }
+/* 线上干预 */
+.intervention-chip { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-badge); background: var(--color-indigoLight); color: var(--color-indigo); font-size: var(--type-metaSize); line-height: var(--type-metaLine); text-decoration: none; }
+.intervention-list { display: grid; gap: var(--space-3); }
+.intervention { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-page); }
+.intervention.active { border-color: var(--color-indigo); background: var(--color-card); }
+.intervention-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.intervention-head code { color: var(--color-secondary); }
+.intervention-state { padding: 0 var(--space-2); border-radius: var(--radius-badge); font-size: var(--type-metaSize); line-height: var(--type-metaLine); background: var(--color-page); color: var(--color-muted); border: var(--border-thin) solid var(--color-border); }
+.intervention-state.state-生效中 { background: var(--color-indigoLight); color: var(--color-indigo); border-color: transparent; }
+.intervention-state.state-已失效 { background: var(--color-greenLight); color: var(--color-greenText); border-color: transparent; }
+.intervention p { font-size: var(--type-metaSize); line-height: var(--type-metaLine); color: var(--color-text); }
+.intervention-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.intervention-foot > .meta { display: inline-flex; align-items: center; gap: var(--space-1); margin-right: auto; }
+.intervention-ended { font-size: var(--type-metaSize); line-height: var(--type-metaLine); color: var(--color-secondary); }
+.intervention-ended.auto { color: var(--color-greenText); }
+.intervention-form { display: grid; gap: var(--space-4); }
+.intervention-form textarea { width: 100%; }
+.intervention-source { display: grid; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-control); background: var(--color-page); }
+.intervention-warn { display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-control); background: var(--color-orangeLight); color: var(--color-orangeText); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.intervention-warn svg { flex: none; margin-top: var(--border-thick); }
+.intervention-form .field-hint { font-weight: var(--weight-regular); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.badcase-actions .button-wrap + .button-wrap, .badcase-actions > span + span { margin-top: var(--space-1); }

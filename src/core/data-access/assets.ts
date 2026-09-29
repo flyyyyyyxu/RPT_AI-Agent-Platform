@@ -3,7 +3,7 @@
  * 引用关系都从 Agent 版本快照里实时算，不另存一份。
  */
 import { evalsetDefaults } from '../../data';
-import type { Agent, AgentOps, AgentVersion, AssetRecord, DemoState, EvalDataset, EvalsetContent } from '../../types/domain';
+import type { Agent, AgentOps, AgentVersion, AssetRecord, DemoState, EvalDataset, EvalsetContent, ModelContent, ToolContent } from '../../types/domain';
 
 export const latestPublished = <C>(record: AssetRecord<C>) => record.versions.find(version => version.status === '已发布') ?? null;
 export const pendingVersion = <C>(record: AssetRecord<C>) => record.versions.find(version => version.status === '审核中') ?? null;
@@ -53,3 +53,38 @@ export function evalsetRows(state: DemoState, datasetsOf: (agent: Agent) => Eval
 }
 
 export type OpsOf = (agent: Agent) => AgentOps;
+
+/* ------------------------------------------------------------------ */
+/* 构建页的可选项：都来自资产中心，只列「已发布」的版本                    */
+/* ------------------------------------------------------------------ */
+
+/** 资产对某个团队是否可见：全公司 / 需审批 对所有团队可见；团队名或「本团队」只对对应团队可见 */
+const visibleTo = (visibility: string, owningTeam: string, team: string) => visibility === '全公司' || visibility === '需审批' || visibility === team || (visibility === '本团队' && owningTeam === team);
+
+export interface ToolChoice { record: AssetRecord<ToolContent>; versions: string[]; latest: string | null; pending: string | null }
+/** 工具：对该团队可见的工具，加上配置里已经在用的（哪怕后来收回了可见范围）；hidden 为仅对其他团队开放的数量 */
+export function toolChoices(state: DemoState, team: string, inUse: string[]) {
+  const usedNames = new Set(inUse.map(item => item.replace(/ v\d+$/, '')));
+  const rows: ToolChoice[] = [];
+  let hidden = 0;
+  for (const record of state.assets.tools) {
+    const published = record.versions.filter(version => version.status === '已发布').map(version => version.id);
+    if (!published.length && !usedNames.has(record.name)) continue;
+    if (!visibleTo(record.visibility, record.team, team) && !usedNames.has(record.name)) { hidden += 1; continue; }
+    rows.push({ record, versions: published, latest: published[0] ?? null, pending: pendingVersion(record)?.id ?? null });
+  }
+  return { rows, hidden };
+}
+
+export interface ModelChoice { key: string; record: AssetRecord<ModelContent> | null; weights: string | null }
+/** 模型：资产中心里有已发布权重的模型；配置里在用、但资产中心已找不到的也保留，避免下拉框丢值 */
+export function modelChoices(state: DemoState, inUse: string[]): ModelChoice[] {
+  const rows: ModelChoice[] = state.assets.models.flatMap(record => { const latest = latestPublished(record); return latest ? [{ key: record.key, record, weights: latest.id }] : []; });
+  inUse.filter(key => key !== '不启用' && !rows.some(row => row.key === key)).forEach(key => rows.push({ key, record: null, weights: null }));
+  return rows;
+}
+
+/** Prompt 模板：最新已发布版本 */
+export function promptChoices(state: DemoState) {
+  return state.assets.prompts.flatMap(record => { const latest = latestPublished(record); return latest ? [{ record, version: latest }] : []; });
+}

@@ -5,11 +5,13 @@ import { Card, SectionHeading } from '../../shared/components/Content';
 import { Capability } from '../../shared/components/Capability';
 import { Segmented, Switch } from '../../shared/components/controls';
 import { AgentShell } from '../shell/AgentShell';
+import { Link } from 'react-router-dom';
+import { getCandidate, getVersion } from '../../core/rules/versions';
 import type { Agent, AgentSettings, ExecMode } from '../../types/domain';
 import './settings.css';
 import { icon } from '../../shared/styles/tokens';
 
-const degradeOptions = ['返回兜底话术', '切换备用模型 Qwen3-32B', '转人工客服', '暂停批次并告警'];
+const degradeOptions = ['返回兜底话术', '切换备用模型', '转人工客服', '暂停批次并告警'];
 const overBudgetOptions = ['仅告警', '自动降级到备用模型', '超出后暂停调用'];
 const execModes: { value: ExecMode; label: string; description: string }[] = [
   { value: '在线', label: '在线', description: '同步请求，按 P95 延迟和 QPS 保障。' },
@@ -30,6 +32,10 @@ export function AgentSettingsPage({ agent }: { agent: Agent }) {
   const used = agent.costThisMonth;
   const ratio = Math.min(100, (used / Math.max(1, settings.monthlyBudget)) * 100);
   const costSplit = [{ label: '模型调用', share: 0.72 }, { label: '检索', share: 0.12 }, { label: '工具调用', share: 0.09 }, { label: '护栏检查', share: 0.07 }];
+  /** 降级到备用模型时用哪个模型，由版本快照决定：这里只读展示线上 / 候选版本的备用模型 */
+  const fallbackOf = (id: string | null | undefined) => { const version = id ? getVersion(agent, id) : null; return version ? { id: version.id, model: version.config.fallbackModel } : null; };
+  const fallbacks = [fallbackOf(agent.productionVersion), fallbackOf(getCandidate(agent)?.id)].filter((item): item is { id: string; model: string } => Boolean(item));
+  const missingFallback = settings.degrade === '切换备用模型' && fallbacks.some(item => item.model === '不启用');
   const savedHint = <span className="meta saved-hint"><CheckCircle2 size={icon.small} aria-hidden="true" />修改即时生效（演示）</span>;
 
   const aside = <><Card><span className="eyebrow">基础资料</span><h3>{agent.name}</h3><p>负责人 {agent.owner} · {agent.team}</p><p className="meta">设置按 Agent 生效，所有版本共用；版本快照里只锁定模型、Prompt、工具和知识。</p></Card>
@@ -47,7 +53,9 @@ export function AgentSettingsPage({ agent }: { agent: Agent }) {
         <div className="inline-fields">
           <label className="field-label">限流（QPS）<input type="number" min={1} value={settings.qps} onChange={event => patch({ qps: Math.max(1, Number(event.target.value) || 1) })} /><span className="meta field-hint">超出后排队，排队超过 2s 触发降级</span></label>
           <label className="field-label">每日调用配额<input type="number" min={0} step={1000} value={settings.dailyQuota} onChange={event => patch({ dailyQuota: Math.max(0, Number(event.target.value) || 0) })} /><span className="meta field-hint">团队配额由平台统一分配</span></label>
-          <label className="field-label">降级策略<span className="select-field"><select value={settings.degrade} onChange={event => patch({ degrade: event.target.value })}>{degradeOptions.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></span><span className="meta field-hint">模型超时、下游故障或超配额时执行</span></label>
+          <label className="field-label">降级策略<span className="select-field"><select value={settings.degrade} onChange={event => patch({ degrade: event.target.value })}>{degradeOptions.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></span><span className={`field-hint ${missingFallback ? 'warning-text' : 'meta'}`}>{settings.degrade === '切换备用模型' && fallbacks.length
+            ? <>备用模型在 <Link to={`/agents/${agent.id}/build`}>构建页</Link> 按版本配置：{fallbacks.map(item => `${item.id} → ${item.model === '不启用' ? '未配置（将返回兜底话术）' : item.model.split(' · ')[0]}`).join('；')}</>
+            : '模型超时、下游故障或超配额时执行'}</span></label>
         </div>
         <div className="range-field"><span className="field-label">低置信度转人工阈值<span className="range-value">{settings.handoffThreshold.toFixed(2)}</span></span>
           <input type="range" min={0.3} max={0.9} step={0.05} value={settings.handoffThreshold} aria-label="低置信度转人工阈值" onChange={event => patch({ handoffThreshold: Number(event.target.value) })} />

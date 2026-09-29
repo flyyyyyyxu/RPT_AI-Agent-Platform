@@ -8,8 +8,10 @@ import type { AgentConfig, AgentVersion, VersionStatus } from '../../types/domai
 export const generalConfig: AgentConfig = {
   prompt: '你是公司的内部制度问答助手。请根据检索到的制度内容回答 {{question}}。\n\n要求：\n1. 只使用有效制度作为依据\n2. 给出制度名称和条款来源\n3. 信息不足时明确说明',
   model: 'DeepSeek-V3 · 公司托管',
+  fallbackModel: 'Qwen3-32B · 公司托管',
   knowledge: '制度库 2026-09 版',
   tools: ['员工身份查询 v2'],
+  memory: { turns: 5, preferences: false },
   outputFormat: '结构化回答：结论、依据、下一步',
   steps: [
     { id: 'step-1', name: '识别员工问题', type: '模型调用', description: '提取制度主题与用户条件' },
@@ -22,8 +24,10 @@ export const generalConfig: AgentConfig = {
 export const outfitConfig: AgentConfig = {
   prompt: '你是穿搭灵感助手。根据用户场景 {{scene}} 和风格偏好 {{style}}，给出 3 套穿搭灵感，并从候选笔记 {{notes}} 中推荐同款。\n\n要求：\n1. 每套灵感包含单品、配色和适合场合\n2. 推荐笔记必须来自候选列表\n3. 语气轻松，不做功效承诺',
   model: 'Qwen3-32B · 公司托管',
+  fallbackModel: 'DeepSeek-V3 · 公司托管',
   knowledge: '穿搭风格库 2026-09',
   tools: ['笔记检索 v3', '用户画像查询 v1'],
+  memory: { turns: 3, preferences: true },
   outputFormat: 'JSON：灵感卡片 + 笔记 ID',
   steps: [
     { id: 'step-1', name: '解析场景与偏好', type: '模型调用', description: '识别场景、季节、身材与风格关键词' },
@@ -36,8 +40,10 @@ export const outfitConfig: AgentConfig = {
 export const guardConfig: AgentConfig = {
   prompt: '你是社区内容审核助手。依据政策条款判断内容 {{content}} 是否违规，输出类别与理由。\n\n要求：\n1. 理由必须引用具体政策条款编号\n2. 置信度低于 0.7 时标记为「需人工复核」\n3. 只输出 JSON，不输出其他文字',
   model: 'DeepSeek-V3 · 公司托管',
+  fallbackModel: '不启用',
   knowledge: '政策库 2026-09 版',
   tools: ['账号历史查询 v2'],
+  memory: { turns: 0, preferences: false },
   outputFormat: 'JSON：category、reason、policy_ref、confidence',
   steps: [
     { id: 'step-1', name: '召回政策条款', type: '检索', description: '按内容主题召回适用条款' },
@@ -50,8 +56,10 @@ export const guardConfig: AgentConfig = {
 export const afterSaleConfig: AgentConfig = {
   prompt: '你是电商售后客服助手。结合会话历史 {{history}} 和售后知识回答用户问题 {{question}}。\n\n要求：\n1. 只依据当前有效的售后政策\n2. 涉及退款金额和赔付时不做承诺，引导人工确认\n3. 给出可操作的入口',
   model: 'DeepSeek-V3 · 公司托管',
+  fallbackModel: '不启用',
   knowledge: '售后知识 v34',
   tools: ['订单查询 v4', '物流查询 v2'],
+  memory: { turns: 10, preferences: false },
   outputFormat: '结构化回答：结论、依据、操作入口',
   steps: [
     { id: 'step-1', name: '识别售后意图', type: '模型调用', description: '区分退换货、物流、质量问题' },
@@ -64,8 +72,10 @@ export const afterSaleConfig: AgentConfig = {
 export const blankConfig: AgentConfig = {
   prompt: '请处理用户输入：{{input}}',
   model: 'DeepSeek-V3 · 公司托管',
+  fallbackModel: '不启用',
   knowledge: '暂不接入',
   tools: [],
+  memory: { turns: 0, preferences: false },
   outputFormat: '纯文本',
   steps: [{ id: 'step-1', name: '生成回答', type: '模型调用', description: '根据 Prompt 生成结果' }],
 };

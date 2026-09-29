@@ -106,3 +106,17 @@ export const badCaseProfiles: Record<BaseProfileId, BadCase[]> = {
   blank: [],
 };
 export const problemStages = ['Prompt', '知识', '模型', '工具', '策略'] as const;
+
+/** 线上干预：从 bad case 生成时的预填内容（没有预设时按问题摘要生成） */
+export const interventionPresets: Record<string, { kind: '标准答案' | '拦截规则'; trigger: string; content: string }> = {
+  'bc-4431': { kind: '标准答案', trigger: '问题语义命中「七天无理由 / 几天可以退货」', content: '自 2026-09-01 起，平台支持十五天无理由退货（以商品详情页标注为准）。可在「订单详情 → 申请售后」中发起。' },
+  'bc-4415': { kind: '标准答案', trigger: '问题语义命中「价保 / 保价 / 降价补差」', content: '价格保护期为签收后 30 天，期间降价可在「订单详情 → 价保」申请补差。' },
+  'bc-4409': { kind: '拦截规则', trigger: '回答中出现具体补偿金额（「补偿 N 元」）', content: '拦截该回答，改为「补偿以人工核实结果为准，已为你转接人工客服」并转人工。' },
+  'bc-4398': { kind: '拦截规则', trigger: '同一会话连续 3 轮置信度低于转人工阈值', content: '第 3 轮直接转人工，不再继续自动回答。' },
+  'bc-2310': { kind: '拦截规则', trigger: '回答中出现功效承诺（「显瘦 N 斤」「一穿就瘦」）', content: '删除功效承诺表述后再返回；无法删除时返回兜底文案。' },
+  'bc-2302': { kind: '拦截规则', trigger: '推荐的笔记 ID 已下架或不可见', content: '从结果中剔除该笔记，不足 3 篇时补位热门同风格笔记。' },
+  'bc-3101': { kind: '拦截规则', trigger: '内容包含「主页有惊喜 / 看主页」等导流短语', content: '直接判定为「需人工复核」，不输出「不违规」结论。' },
+  'bc-1021': { kind: '标准答案', trigger: '问题语义命中「加班调休」', content: '加班调休规则以《考勤管理制度》2026 版第 6 条为准：工作日加班按 1:1 调休，需在 3 个月内使用。' },
+};
+/** 线上干预的有效期选项（天），最长 7 天：干预是临时止血，根治要走新版本 */
+export const interventionDays = [1, 3, 7];

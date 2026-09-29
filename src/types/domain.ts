@@ -16,13 +16,29 @@ export interface WorkflowStep {
   description: string;
 }
 
+/** 记忆：会话内保留最近几轮（0 = 不记忆），长期偏好跨会话保存（脱敏标签） */
+export interface AgentMemory { turns: number; preferences: boolean }
+
 export interface AgentConfig {
   prompt: string;
   model: string;
+  /** 备用模型：主模型超时或出错时切换（触发条件在设置页「降级策略」）；'不启用' 表示没有备用模型 */
+  fallbackModel: string;
   knowledge: string;
   tools: string[];
+  memory: AgentMemory;
   outputFormat: string;
   steps: WorkflowStep[];
+}
+
+/** 构建页的工作草稿：自动保存，不改变版本快照；「保存为候选版本」时写入 config。 */
+export interface ConfigDraft {
+  config: AgentConfig;
+  savedAt: string;
+  /** 这份草稿是否已经调试过（草稿再改动就失效） */
+  debugged: boolean;
+  /** 草稿基于的版本更新时间：版本被页面外修改（依赖升级、代改）后，旧草稿作废 */
+  base: string;
 }
 
 /** 版本 = 不可修改的快照。只有「草稿」可以编辑；线上、灰度、历史版本只读。 */
@@ -41,6 +57,8 @@ export interface AgentVersion {
   configured: boolean;
   debugged: boolean;
   evaluatedDatasets: string[];
+  /** 未写入快照的工作草稿（只有草稿 / 待发布版本会有） */
+  draft?: ConfigDraft;
 }
 
 export interface HeadlineMetric { label: string; value: string }
@@ -166,6 +184,28 @@ export interface AgentOps {
   approvals: ApprovalRecord[];
   settings: AgentSettings;
   badcases: Record<string, { stage: ProblemStage | null; inEvalSet: boolean }>;
+  /** 接入方式：登记过的调用方 */
+  callers: CallerRecord[];
+  /** 线上干预：由 bad case 生成的临时止血措施 */
+  interventions: Intervention[];
+}
+
+/** 调用方登记：谁在调用这个 Agent、按线上指向还是锁定某个版本调用 */
+export interface CallerRecord { id: string; service: string; scene: string; owner: string; qps: number; /** null = 跟随线上指向 */ pin: string | null; api: '在线 API' | '批量 API'; since: string }
+
+export type InterventionKind = '标准答案' | '拦截规则';
+/**
+ * 线上干预：必须关联 bad case；有效期最长 7 天；
+ * 修复版本回归通过（回归集覆盖该 bad case）并成为线上版本后自动失效；每次变更写审计记录。
+ */
+export interface Intervention {
+  id: string; badcaseId: string; kind: InterventionKind;
+  trigger: string; content: string;
+  createdAt: string; createdBy: string; expiresAt: string;
+  /** 创建时的线上版本：干预针对它的问题 */
+  appliesTo: string;
+  /** 结束记录：手动撤销，或修复版本回归通过并上线后由平台自动失效 */
+  ended?: { at: string; by: string; reason: string; auto: boolean };
 }
 
 /* ------------------------------------------------------------------ */
@@ -208,7 +248,7 @@ export interface AssetState {
 }
 
 export interface DemoState {
-  schema: 6;
+  schema: 7;
   agents: Agent[];
   ops: Record<string, AgentOps>;
   /** 已发布的知识库新版本（覆盖 mock），以及页面上新建的知识库 */

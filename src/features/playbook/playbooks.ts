@@ -44,7 +44,7 @@ const PB_FIXED = (ctx: PlaybookCtx) => { const v = version(ctx, 'v8'); return Bo
 export const pageNames: Record<string, string> = { build: '构建页', evaluation: '评测页', release: '发布与实验页', monitor: '观测 · 监控页', trace: '观测 · Trace 页', settings: '设置页', '/assets/knowledge': '资产中心 · 知识库' };
 export const pagePath = (playbook: Playbook, page: string) => page.startsWith('/') ? page : `/agents/${playbook.agentId}/${page}`;
 
-const DEBUG_NEXT = '点「运行调试」。调试台在页面右侧；窄屏先点「展开辅助信息」。';
+const DEBUG_NEXT = '点右侧调试台的「运行调试」。窄屏先点「展开调试台」。';
 
 export const playbooks: Playbook[] = [
   {
@@ -57,8 +57,8 @@ export const playbooks: Playbook[] = [
         next: '点「基于 v12 新建草稿 v13」。',
         done: ctx => Boolean(version(ctx, 'v13')) },
       { phase: '构建', title: '加入图文笔记检索', page: 'build', target: 'config',
-        body: '在「检索同款笔记」之后加一步「图文笔记检索」（工具 笔记检索 v4），按图片向量补充召回，模型升级到 Qwen3-235B。保存后调试和评测都要重新做。',
-        next: '勾选工具「笔记检索 v4」、添加步骤后点「保存配置」；也可以点浮层里的「代我修改」。',
+        body: '在「检索同款笔记」之后加一步「图文笔记检索」（工具 笔记检索 v4），按图片向量补充召回，主模型升级到 Qwen3-235B、备用模型设为 Qwen3-32B。草稿自动保存，可以边改边调试；确认后保存为候选版本。',
+        next: '在中栏「工具」里勾选笔记检索 v4、添加步骤后点「保存为候选版本 v13」；也可以点浮层里的「代我修改」。',
         done: ctx => { const v = version(ctx, 'v13'); return Boolean(v && v.configured && v.config.tools.includes('笔记检索 v4')); },
         helper: { label: '代我修改', run: (api, ctx) => { if (version(ctx, 'v13')) api.applyFix(ctx.agent.id, 'v13', paV13Config); } } },
       { phase: '调试', title: '调试 v13', page: 'build', target: 'debug-run',
@@ -119,8 +119,8 @@ export const playbooks: Playbook[] = [
         body: '隔离评测的 Trace 显示：检索召回了 10 月版条款 4.5，但 Prompt 示例把条款写死成 9 月版的 4.3，模型沿用旧条款，把谐音导流判成「不违规」。',
         next: '点「下一步」去构建页修正 Prompt。' },
       { phase: '构建', title: '修正 Prompt 示例', page: 'build', target: 'prompt',
-        body: `把 Prompt 示例里的「${pbOldClause}」改成「${pbNewClause}」。保存后调试和评测都要重新做。`,
-        next: '手动修改后点「保存配置」；或点浮层里的「代我修正」。',
+        body: `把左栏 Prompt 示例里的「${pbOldClause}」改成「${pbNewClause}」。改动会清空已有的评测结果，需要重新调试和评测。`,
+        next: '手动修改后点「保存为候选版本 v8」；或点浮层里的「代我修正」。',
         done: PB_FIXED,
         helper: { label: '代我修正', run: (api, ctx) => { const v = version(ctx, 'v8'); if (v) api.applyFix(ctx.agent.id, v.id, { ...v.config, prompt: v.config.prompt.split(pbOldClause).join(pbNewClause) }); } } },
       { phase: '调试', title: '重新调试', page: 'build', target: 'debug-run',

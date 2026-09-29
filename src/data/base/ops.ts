@@ -1,7 +1,7 @@
 /** 默认运营配置：把门槛、审批、设置组合成每个 Agent 的初始 AgentOps。 */
 import type { AgentOps, BaseProfileId, ProfileId } from '../../types/domain';
 import { gateProfiles } from './evaluation';
-import { approvalsFor } from './release';
+import { approvalsFor, callersFor } from './release';
 import { settingsFor } from './settings';
 
 export const baseOf = (profile: ProfileId): BaseProfileId => profile === 'pa' ? 'a' : profile === 'pb' ? 'b' : profile === 'pc' ? 'c' : profile;
@@ -21,5 +21,7 @@ export function defaultOps(profile: ProfileId): AgentOps {
     approvals: structuredClone(approval.approvals),
     settings: structuredClone(settingsFor[base]),
     badcases: {},
+    callers: structuredClone(callersFor[base]),
+    interventions: [],
   };
 }

@@ -1,77 +1,123 @@
-import { Check, ChevronDown, GitBranchPlus, Lock, Save } from 'lucide-react';
-import { useState } from 'react';
+/**
+ * 构建页：上方是版本信息与操作条，下方三栏——左 Prompt、中能力配置、右调试对话（吸顶）；
+ * 版本快照与对比（依赖锁定 + 版本 diff）放在三栏下方，默认折叠。
+ *
+ * 草稿模型：
+ *   - 表单改动 600ms 后自动保存为「工作草稿」（version.draft），不改变版本快照、不推进演示时钟；
+ *   - 调试直接调当前草稿，不需要先保存；
+ *   - 「保存为候选版本」把草稿写入快照：配置变化会清空评测结果，调试结果只在调试的正是这份草稿时保留。
+ */
+import { Check, ChevronDown, ChevronRight, GitBranchPlus, Lock, Save } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDemo } from '../../core/store/DemoProvider';
 import { useSelectedVersion } from '../../core/hooks/useSelectedVersion';
 import { getCandidate, isEditable, isEvaluated, nextVersionId } from '../../core/rules/versions';
+import { debugPresets } from '../../core/data-access/scenarioData';
 import { Button } from '../../shared/components/Buttons';
 import { ScopeBadge, StatusBadge } from '../../shared/components/Badges';
-import { ConfigSection } from './ConfigSection';
-import { DebugPreview } from './DebugPreview';
-import { WorkflowStepList } from './WorkflowStepList';
-import { DependencyLock } from './DependencyLock';
-import { VersionDiff } from './VersionDiff';
+import { SectionHeading } from '../../shared/components/Content';
 import { Phase2Row } from '../../shared/components/Capability';
-import { Card, SectionHeading } from '../../shared/components/Content';
-import { modelOptions, toolCatalog } from '../../data';
-import { debugPresets, knowledgeBasesFor } from '../../core/data-access/scenarioData';
 import { usePlaybookLock } from '../playbook/playbooks';
-
-/** 工具选项：工具目录里的在用版本和最新版本。 */
-const toolOptions = [...new Set(toolCatalog.flatMap(tool => [`${tool.name} ${tool.version}`, `${tool.name} ${tool.latest}`]))];
 import { AgentShell } from '../shell/AgentShell';
 import type { Agent, AgentConfig, AgentVersion } from '../../types/domain';
-import './build.css';
 import { icon } from '../../shared/styles/tokens';
+import { DebugChat } from './DebugChat';
+import { PromptPanel } from './PromptPanel';
+import { CapabilityPanel, memoryText } from './CapabilityPanel';
+import { DependencyAlert, DependencyLock, useDependencies } from './DependencyLock';
+import { VersionDiff } from './VersionDiff';
+import './build.css';
 
-const withCurrent = (options: string[], value: string) => options.includes(value) ? options : [value, ...options];
+const same = (a: AgentConfig, b: AgentConfig) => JSON.stringify(a) === JSON.stringify(b);
+const AUTOSAVE_MS = 600;
 
 export function BuildPage({ agent }: { agent: Agent }) {
   const { selected } = useSelectedVersion(agent);
-  // updatedAt 变化说明配置被页面外修改过（依赖升级、剧本代改），重新挂载，避免表单留着旧配置被误保存
+  // updatedAt 变化说明快照被页面外修改过（依赖升级、剧本代改、保存为候选版本），重新挂载，表单从新快照开始
   return <BuildWorkspace key={`${agent.id}-${selected.id}-${selected.updatedAt}`} agent={agent} version={selected} />;
 }
 
 function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersion }) {
-  const { state, saveConfig, createDraft, markDebugged } = useDemo();
+  const { saveConfig, saveDraft, createDraft, markDebugged } = useDemo();
   const draftLock = usePlaybookLock('plain-draft', agent.id);
-  /** 知识库选项：来自资产中心，新发布的知识版本会立即出现在这里。 */
-  const knowledgeOptions = [...knowledgeBasesFor(state).flatMap(kb => kb.versions.map(item => `${kb.name} ${item.id}`)), '暂不接入'];
   const { select } = useSelectedVersion(agent);
-  const [form, setForm] = useState<AgentConfig>(() => structuredClone(version.config));
   const editable = isEditable(version);
   const candidate = getCandidate(agent);
-  const dirty = JSON.stringify(form) !== JSON.stringify(version.config);
-  const patch = (value: Partial<AgentConfig>) => setForm(previous => ({ ...previous, ...value }));
-  const toggleTool = (tool: string) => patch({ tools: form.tools.includes(tool) ? form.tools.filter(item => item !== tool) : [...form.tools, tool] });
-  const variables = form.prompt.match(/{{[^}]+}}/g);
-  const loseProgress = dirty && (version.debugged || isEvaluated(version));
-  const debugReason = editable ? (dirty ? '请先保存配置，再调试' : !version.configured ? '请先保存配置' : undefined) : undefined;
+  const draft = editable && version.draft?.base === version.updatedAt ? version.draft : undefined;
+  const [form, setForm] = useState<AgentConfig>(() => structuredClone(draft?.config ?? version.config));
+  const [snapshotOpen, setSnapshotOpen] = useState(false);
 
-  const aside = <DebugPreview presets={debugPresets(agent)} initialQuestion={!editable || version.debugged ? agent.lastDebugQuestion : ''} disabledReason={debugReason}
-    snapshotNote={editable ? undefined : `正在调试只读快照 ${version.id}，不影响生命周期状态。`}
-    onRun={async question => { await new Promise(resolve => window.setTimeout(resolve, 950)); markDebugged(agent.id, version.id, question); }} />;
+  /* 自动保存：防抖写入工作草稿；离开页面时立即写入还没落盘的改动 */
+  const timer = useRef<number | null>(null);
+  const latest = useRef(form);
+  latest.current = form;
+  const base = version.updatedAt;
+  const flush = () => { if (timer.current === null) return; window.clearTimeout(timer.current); timer.current = null; saveDraft(agent.id, version.id, latest.current, base); };
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+  useEffect(() => () => flushRef.current(), []);
+  const change = (next: AgentConfig) => {
+    setForm(next);
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => { timer.current = null; saveDraft(agent.id, version.id, next, base); }, AUTOSAVE_MS);
+  };
+  const patch = (value: Partial<AgentConfig>) => change({ ...form, ...value });
 
-  return <AgentShell agent={agent} stepId="build" aside={aside}><SectionHeading eyebrow="构建" title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`} description={editable ? '修改 Prompt、模型、知识、工具和执行步骤；保存后需要重新调试和评测。' : '已上线或历史版本是不可修改的快照，包含模型、Prompt、编排、工具和知识版本。'} aside={<div className="heading-badges"><StatusBadge status={version.status} /><ScopeBadge phase="MVP" /></div>} />
+  const dirty = !same(form, version.config);
+  const debugged = dirty ? Boolean(draft?.debugged && same(draft.config, form)) : version.debugged;
+  const evaluated = isEvaluated(version);
+  const deps = useDependencies(version.config);
+  const save = () => { if (timer.current !== null) { window.clearTimeout(timer.current); timer.current = null; } saveConfig(agent.id, version.id, form); };
+  const openSnapshot = () => { setSnapshotOpen(true); window.setTimeout(() => document.getElementById('version-snapshot')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); };
+
+  const aside = <DebugChat presets={debugPresets(agent)} initialQuestion={debugged || !editable ? agent.lastDebugQuestion : ''}
+    target={!editable ? `只读快照 ${version.id}` : dirty ? `${version.id} 的草稿（未保存）` : `候选版本 ${version.id}`}
+    debugged={editable ? debugged : true} memoryTurns={form.memory.turns} model={form.model}
+    readOnlyNote={editable ? undefined : `调试只读快照不影响生命周期状态。`}
+    onRun={async question => { const snapshot = form; flush(); await new Promise(resolve => window.setTimeout(resolve, 950)); markDebugged(agent.id, version.id, question, editable ? snapshot : undefined); }} />;
+
+  const status = !editable ? null
+    : dirty ? <span className="warning-text">草稿已自动保存{draft ? ` · ${draft.savedAt.slice(11)}` : ''}，尚未写入 {version.id}{evaluated ? '；保存后需要重新评测' : ''}</span>
+    : version.configured ? <span className="meta">{version.id} 已保存 · {version.updatedAt}</span>
+    : <span className="meta">初始配置尚未保存为候选版本</span>;
+  const steps = editable && <span className="build-progress"><span className={!dirty && version.configured ? 'done' : ''}>① 保存</span><span className={debugged ? 'done' : ''}>② 调试</span><span className={evaluated && !dirty ? 'done' : ''}>③ 评测</span></span>;
+
+  const lead = <>
+    <SectionHeading eyebrow="构建" title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`}
+      description={editable ? '左边写角色指令，中间配能力，右边随时调试草稿；确认后保存为候选版本，再去评测。' : '已上线或历史版本是不可修改的快照，包含模型、Prompt、编排、工具和知识版本。'}
+      aside={<div className="heading-badges"><StatusBadge status={version.status} /><ScopeBadge phase="MVP" /></div>} />
     {!editable && <div className="snapshot-banner"><Lock size={icon.large} /><div><strong>{version.id} 是只读快照</strong><p>{candidate ? `已有候选版本 ${candidate.id}，请在候选版本上继续修改。` : `如需修改，请基于 ${version.id} 新建草稿 ${nextVersionId(agent)}；线上指向不受影响。`}</p></div>
       {candidate ? <Link className="button button-secondary" to={`/agents/${agent.id}/build`}>前往候选版本 {candidate.id}</Link>
         : <span data-demo="new-draft"><Button variant="primary" disabled={Boolean(draftLock)} reason={draftLock} onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={icon.small} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button></span>}</div>}
-    <div data-demo="config"><Card className="config-card"><fieldset disabled={!editable} className="config-fieldset">
-      <div data-demo="prompt"><ConfigSection title="Prompt" description="用双花括号声明变量，例如 {{question}}。"><textarea className="prompt-editor" rows={9} value={form.prompt} readOnly={!editable} onChange={event => patch({ prompt: event.target.value })} /><div className="variable-row"><span className="meta">已识别变量</span>{variables ? variables.map(item => <code key={item}>{item}</code>) : <span className="meta">暂无变量</span>}</div></ConfigSection></div>
-      <div className="config-pair"><ConfigSection title="模型" description="选择公司托管的基础模型。"><label className="select-field"><select value={form.model} onChange={event => patch({ model: event.target.value })}>{withCurrent(modelOptions, form.model).map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} /></label></ConfigSection><ConfigSection title="输出格式" description="约束最终回答的结构。"><input value={form.outputFormat} readOnly={!editable} onChange={event => patch({ outputFormat: event.target.value })} /></ConfigSection></div>
-      <div className="config-pair"><ConfigSection title="知识库" description="知识版本会随配置一起写入版本快照。"><label className="select-field"><select value={form.knowledge} onChange={event => patch({ knowledge: event.target.value })}>{withCurrent(knowledgeOptions, form.knowledge).map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} /></label></ConfigSection>
-        <ConfigSection title="工具" description="调用已登记的公司内部工具，可多选。"><div className="tool-options">{[...toolOptions, ...form.tools.filter(tool => !toolOptions.includes(tool))].map(tool => <label key={tool} className={`tool-option ${form.tools.includes(tool) ? 'selected' : ''}`}><input type="checkbox" checked={form.tools.includes(tool)} onChange={() => toggleTool(tool)} />{tool}</label>)}</div></ConfigSection></div>
-      <ConfigSection title="执行步骤" description="按顺序执行，每一步可以是模型调用、检索、工具调用或代码节点。"><WorkflowStepList steps={form.steps} readOnly={!editable} onChange={steps => patch({ steps })} /></ConfigSection>
-    </fieldset>
-      {editable && <div className="sticky-form-actions">
-        <span className="form-status">{dirty ? <span className="warning-text">有未保存的修改{loseProgress ? '，保存后需要重新调试和评测' : ''}</span> : version.configured ? <span className="meta">配置已保存 · {version.updatedAt}</span> : <span className="meta">初始配置尚未保存</span>}</span>
-        {version.configured && version.debugged && !dirty && <Link className="button button-secondary" to={`/agents/${agent.id}/evaluation`}>下一步：运行评测</Link>}
-        <Button variant="primary" disabled={!dirty && version.configured} reason={!dirty && version.configured ? '配置未修改' : undefined} onClick={() => saveConfig(agent.id, version.id, form)}>{!dirty && version.configured ? <Check size={icon.small} /> : <Save size={icon.small} />}{!dirty && version.configured ? '已保存' : '保存配置'}</Button>
-      </div>}
-    </Card></div>
-    <SectionHeading eyebrow="版本管理" title={`版本快照 ${version.id}`} description="变更与版本管理：每个版本锁定模型、Prompt、工具和知识的具体版本，可逐项 diff。" />
-    <DependencyLock agent={agent} version={version} onCreated={select} />
-    <VersionDiff agent={agent} version={version} />
-    <Phase2Row items={[{ title: '依赖变化自动触发回归', description: '模型、知识或工具上游发版后，自动用受影响 Agent 的评测集跑回归并通知负责人。' }]} />
+    <DependencyAlert agent={agent} version={version} config={editable ? form : version.config} dirty={dirty} onCreated={select} />
+    {editable && <div className="build-bar">
+      <div className="form-status">{status}{steps}</div>
+      <div className="build-bar-actions">
+        <button type="button" className="link-button" onClick={openSnapshot}>版本快照与对比</button>
+        {version.configured && debugged && !dirty && <Link className="button button-secondary" to={`/agents/${agent.id}/evaluation`}>下一步：运行评测</Link>}
+        <Button variant="primary" disabled={!dirty && version.configured} title={!dirty && version.configured ? '没有新的修改' : undefined} onClick={save}>{!dirty && version.configured ? <Check size={icon.small} /> : <Save size={icon.small} />}{!dirty && version.configured ? `已保存为 ${version.id}` : `保存为候选版本 ${version.id}`}</Button>
+      </div>
+    </div>}
+  </>;
+
+  const footer = <section className="snapshot-section" id="version-snapshot">
+    <button type="button" className="snapshot-toggle" aria-expanded={snapshotOpen} onClick={() => setSnapshotOpen(value => !value)}>
+      {snapshotOpen ? <ChevronDown size={icon.large} aria-hidden="true" /> : <ChevronRight size={icon.large} aria-hidden="true" />}
+      <span><strong>版本快照与对比 · {version.id}</strong>
+        <span className="meta">锁定 {version.config.model.split(' · ')[0]} · {version.config.knowledge} · 工具 {version.config.tools.length} 个 · {memoryText(version.config)}{deps.changed.length ? ` · ${deps.changed.length} 项依赖有上游更新` : ''}{dirty ? ' · 以已保存的快照为准，不含未保存的草稿' : ''}</span></span>
+    </button>
+    {snapshotOpen && <div className="snapshot-body">
+      <DependencyLock version={version} />
+      <VersionDiff agent={agent} version={version} />
+      <Phase2Row items={[{ title: '依赖变化自动触发回归', description: '模型、知识或工具上游发版后，自动用受影响 Agent 的评测集跑回归并通知负责人。' }]} />
+    </div>}
+  </section>;
+
+  return <AgentShell agent={agent} stepId="build" aside={aside} lead={lead} footer={footer} layout="build" asideLabel="调试台">
+    <div className="build-grid">
+      <div className="build-col" data-demo="prompt"><PromptPanel config={form} readOnly={!editable} onChange={prompt => patch({ prompt })} /></div>
+      <div className="build-col" data-demo="config"><CapabilityPanel agent={agent} config={form} readOnly={!editable} patch={patch} /></div>
+    </div>
   </AgentShell>;
 }

@@ -7,6 +7,7 @@ import { baseAgent } from './seed';
 /** 本周迭代的目标配置：新增「图文笔记检索」步骤（笔记检索 v4），「代我修改」直接写入这份配置。 */
 export const paV13Config = snap(outfitConfig, {
   model: 'Qwen3-235B · 公司托管',
+  fallbackModel: 'Qwen3-32B · 公司托管',
   tools: ['笔记检索 v3', '笔记检索 v4', '用户画像查询 v1'],
   steps: [outfitConfig.steps[0], outfitConfig.steps[1], { id: 'step-2b', name: '图文笔记检索', type: '工具调用', description: '笔记检索 v4：按图片向量补充召回同款' }, outfitConfig.steps[2], outfitConfig.steps[3]],
 });

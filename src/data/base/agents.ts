@@ -36,7 +36,7 @@ export const mockAgents: Agent[] = [
     productionVersion: 'v12', stagingVersion: 'v13', profile: 'a', monitorProfile: 'a', lastReleaseAt: '2026-09-20 16:13',
     headline: [{ label: '采纳率', value: '42.8%' }, { label: '笔记点击率', value: '18.6%' }],
     versions: [
-      version('v13', '灰度中', '2026-09-28 10:05', '图片理解与推荐策略', snap(outfitConfig, { model: 'Qwen3-235B · 公司托管' }), { traffic: 10 }),
+      version('v13', '灰度中', '2026-09-28 10:05', '图片理解与推荐策略', snap(outfitConfig, { model: 'Qwen3-235B · 公司托管', fallbackModel: 'Qwen3-32B · 公司托管' }), { traffic: 10 }),
       version('v12', '线上', '2026-09-20 16:13', '稳定生产版本', snap(outfitConfig)),
       version('v11', '历史', '2026-09-02 11:30', '初版推荐策略', snap(outfitConfig, { tools: ['笔记检索 v3'], steps: [outfitConfig.steps[0], outfitConfig.steps[1], outfitConfig.steps[3]] })),
     ],
@@ -63,7 +63,7 @@ export const mockAgents: Agent[] = [
   },
 ];
 
-export const initialDemoState: DemoState = { schema: 6, agents: mockAgents, ops: {}, knowledge: {}, assets: initialAssets, kbDraft: null, playbook: null };
+export const initialDemoState: DemoState = { schema: 7, agents: mockAgents, ops: {}, knowledge: {}, assets: initialAssets, kbDraft: null, playbook: null };
 export const teams = [...new Set(mockAgents.map(agent => agent.team))];
 /** 纵轴：单个 Agent 的生产闭环。观测包含「监控」和「Trace 与 bad case」两个标签页，bad case 回流评测集后开始下一轮。 */
 export const lifecycleSteps = [

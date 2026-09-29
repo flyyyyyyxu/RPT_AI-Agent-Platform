@@ -1,5 +1,5 @@
 /** 发布与实验：AB 报告（来自公司实验平台，界面演示）、放量节奏、审批记录。 */
-import type { AbProfile, ApprovalRecord, BaseProfileId, ProfileId, ReleaseStrategy } from '../../types/domain';
+import type { AbProfile, ApprovalRecord, BaseProfileId, CallerRecord, ProfileId, ReleaseStrategy } from '../../types/domain';
 
 /* ④ AB 实验报告（数据来自公司实验平台，仅为界面演示） */
 export const abProfiles: Record<BaseProfileId, AbProfile> = {
@@ -63,3 +63,26 @@ export const approvalsFor: Record<ProfileId, { approvals: ApprovalRecord[]; pend
   pc: { approvals: [{ time: '2026-09-24 13:31', who: '赵敏（客服运营负责人）', action: '审批通过 v21（直接发布）' }], pending: null, approved: null, strategy: 'canary' },
 };
 export const approverFor: Record<BaseProfileId, string> = { general: '王磊（企业服务负责人）', a: '刘畅（社区内容负责人）', b: '孙悦（内容安全负责人）', c: '赵敏（客服运营负责人）', blank: '王磊（企业服务负责人）' };
+
+/* 接入方式：调用地址、app_id、已登记的调用方（pin 为 null 表示跟随线上指向） */
+export const gatewayBase = 'https://agent-gateway.intra.example/v1';
+export const appIdOf = (agentId: string) => `app_${agentId}_${[...agentId].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7).toString(16).slice(-6).padStart(6, '0')}`;
+export const callersFor: Record<BaseProfileId, CallerRecord[]> = {
+  general: [
+    { id: 'cl-1', service: 'oa-assistant', scene: 'OA 右下角助手', owner: '李一宁', qps: 15, pin: null, api: '在线 API', since: '2026-08-22' },
+  ],
+  a: [
+    { id: 'cl-1', service: 'note-feed-service', scene: '发现页穿搭卡片', owner: '陈思远', qps: 1200, pin: null, api: '在线 API', since: '2026-09-02' },
+    { id: 'cl-2', service: 'search-assist', scene: '搜索结果页灵感模块', owner: '林默', qps: 260, pin: null, api: '在线 API', since: '2026-09-12' },
+    { id: 'cl-3', service: 'offline-replay', scene: '离线回放对账', owner: '陈思远', qps: 20, pin: 'v12', api: '批量 API', since: '2026-09-20' },
+  ],
+  b: [
+    { id: 'cl-1', service: 'audit-batch-pipeline', scene: '笔记与评论审核批处理', owner: '周可', qps: 260, pin: null, api: '批量 API', since: '2026-08-26' },
+    { id: 'cl-2', service: 'appeal-review-desk', scene: '申诉复核台（复核需按原判版本复现）', owner: '孙悦', qps: 20, pin: 'v7', api: '在线 API', since: '2026-09-10' },
+  ],
+  c: [
+    { id: 'cl-1', service: 'cs-im-gateway', scene: '售后 IM 会话入口', owner: '王宁', qps: 170, pin: null, api: '在线 API', since: '2026-09-09' },
+    { id: 'cl-2', service: 'cs-quality-check', scene: '客服质检回放', owner: '赵敏', qps: 10, pin: 'v21', api: '批量 API', since: '2026-09-24' },
+  ],
+  blank: [],
+};

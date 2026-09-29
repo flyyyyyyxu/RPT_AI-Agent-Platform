@@ -89,6 +89,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   await confirmIn(page, '.publish-bar'); await page.waitForTimeout(2600);
   await expectStep(page, '监控线上 v8');
   check('B：线上指向 v8', (await agentState(page, 'b')).production === 'v8');
+  check('B：锁定 v7 的调用方提示线上已是 v8', (await page.locator('.callers-table').innerText()).includes('线上已是 v8'));
   await gotoStep(page);
   check('B：监控页显示线上指向已切换到 v8', (await page.locator('.feedback-success').allInnerTexts()).join('').includes('v8'));
   await next(page); await expectStep(page, '剧本 B 完成');
@@ -178,7 +179,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   // 灰度期间不能发布新版本
   await go(page, '/agents/a/build', 400);
   await page.getByRole('button', { name: '基于 v12 新建草稿 v14' }).click(); await page.waitForTimeout(400);
-  await page.getByRole('button', { name: '保存配置' }).click(); await page.waitForTimeout(300);
+  await page.getByRole('button', { name: /保存为候选版本/ }).click(); await page.waitForTimeout(300);
   await page.getByRole('button', { name: '运行调试' }).click(); await page.waitForTimeout(1300);
   await go(page, '/agents/a/evaluation', 400);
   await page.getByRole('button', { name: '运行评测', exact: true }).click(); await page.waitForTimeout(1600);
@@ -265,6 +266,10 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
   const orderRow = page.locator('.tools-table tbody tr', { hasText: '订单查询' });
   check('工具：审核通过后最新版本 v5，在用版本仍是 v4', (await orderRow.innerText()).includes('v5 已发布') && (await orderRow.innerText()).includes('v4'));
+  await go(page, '/agents/c/build', 500);
+  check('联动：工具发布 v5 后，构建页提示依赖已变化', (await page.locator('[data-demo=dep-banner]').innerText()).includes('订单查询 v5'));
+  check('联动：构建页工具选项出现 v5', (await page.locator('.tool-row', { hasText: '订单查询' }).innerText()).includes('v5'));
+  await go(page, '/assets/tools', 400);
   // 未被引用的工具可以原地修改全部内容
   await page.locator('.asset-name', { hasText: 'OA 休假余额查询' }).click(); await inDrawer('修改').click();
   await page.locator('.edit-option', { hasText: '修改当前版本' }).click(); await inDrawer('继续').click(); await page.waitForTimeout(300);
@@ -335,6 +340,104 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   await page.getByRole('button', { name: '继续剧本 A' }).click(); await page.waitForTimeout(600);
   check('剧本：继续剧本后浮层恢复', await page.locator('.playbook-panel').count() === 1 && !(await agentState(page, 'a')).playbook?.paused);
   check('剧本：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 构建页三栏：草稿自动保存、免保存调试、优化 / 模板、记忆与备用模型、版本快照折叠 ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  const v4 = async () => page.evaluate(() => JSON.parse(localStorage.getItem('agent-platform-demo-v7')).agents.find(a => a.id === 'general').versions.find(v => v.id === 'v4'));
+  await go(page, '/agents/general/build', 600);
+  const box = async selector => (await page.locator(selector).first().boundingBox())?.x ?? -1;
+  check('构建：Prompt / 能力配置 / 调试三栏从左到右', await box('[data-demo=prompt]') < await box('[data-demo=config]') && await box('[data-demo=config]') < await box('.debug-chat'));
+  check('构建：版本快照与对比默认折叠', await page.locator('.snapshot-body').count() === 0 && (await page.locator('.snapshot-toggle').innerText()).includes('版本快照与对比'));
+  check('构建：主模型选项来自资产中心已发布模型', await page.locator('[data-group=model] select').first().locator('option').count() === 4);
+  await page.locator('.prompt-editor').fill('你是公司的内部制度问答助手。请回答 {{question}}。'); await page.waitForTimeout(900);
+  let v = await v4();
+  check('构建：修改后自动保存为草稿，版本快照不变', Boolean(v.draft) && !v.config.prompt.startsWith('你是公司的内部制度问答助手。请回答') && !v.configured);
+  await page.locator('[data-demo=debug-run] button').click(); await page.waitForTimeout(1300);
+  v = await v4();
+  check('构建：未保存也能调试，调试记在草稿上', v.draft?.debugged === true && !v.configured);
+  check('构建：调试对话显示一轮问答', await page.locator('.debug-turn .bubble-agent').count() === 1);
+  await page.getByRole('button', { name: '优化' }).click(); await page.waitForTimeout(300);
+  check('构建：优化给出逐行 diff', await page.locator('[data-demo=prompt-optimize] .diff-line.add').count() >= 2);
+  await page.getByRole('button', { name: '采纳建议' }).click(); await page.waitForTimeout(900);
+  check('构建：采纳后 Prompt 更新，草稿需要重新调试', (await page.locator('.prompt-editor').inputValue()).includes('不透露') && (await v4()).draft?.debugged === false);
+  await page.locator('[data-group=memory] .config-group-head').click();
+  await page.locator('[data-group=memory] select').selectOption('10'); await page.waitForTimeout(100);
+  await page.locator('[data-demo=debug-run] button').click(); await page.waitForTimeout(1300);
+  await page.getByRole('button', { name: /保存为候选版本 v4/ }).click(); await page.waitForTimeout(600);
+  v = await v4();
+  check('构建：保存为候选版本后草稿清空，调试结果保留', !v.draft && v.configured && v.debugged && v.config.memory.turns === 10);
+  check('构建：保存后出现「下一步：运行评测」', await page.getByRole('link', { name: '下一步：运行评测' }).count() === 1);
+  await page.getByRole('button', { name: '套用模板' }).click(); await page.waitForTimeout(300);
+  await page.locator('.side-drawer').getByRole('button', { name: '替换当前 Prompt' }).click();
+  await page.locator('.side-drawer').getByRole('button', { name: '确认替换' }).click(); await page.waitForTimeout(900);
+  check('构建：套用模板把正文复制进草稿', (await page.locator('.prompt-editor').inputValue()).includes('{{role}}') && Boolean((await v4()).draft));
+  await go(page, '/agents/general/evaluation', 500);
+  check('构建：有未保存草稿时，评测页提示评测的是已保存快照', (await page.locator('body').innerText()).includes('构建页有未保存的草稿'));
+  await go(page, '/agents/general/build', 500);
+  check('构建：离开再回来草稿还在', (await page.locator('.prompt-editor').inputValue()).includes('{{role}}'));
+  await page.locator('.snapshot-toggle').click(); await page.waitForTimeout(200);
+  check('构建：展开后显示依赖锁定和版本 diff（含备用模型与记忆）', await page.locator('.dep-list').count() === 1 && (await page.locator('.diff-sections').innerText()).includes('备用：') && (await page.locator('.diff-sections').innerText()).includes('会话记忆 10 轮'));
+  await go(page, '/agents/general/settings', 400);
+  check('联动：设置页降级策略显示各版本的备用模型', (await page.locator('body').innerText()).includes('v3 → Qwen3-32B'));
+  check('构建：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 发布页 · 接入方式 ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  await go(page, '/agents/b/release', 600);
+  const access = page.locator('[data-demo=access]');
+  check('接入：显示 app_id 和调用地址', (await access.innerText()).includes('app_b_') && (await access.innerText()).includes('/batch-jobs'));
+  check('接入：默认按线上指向调用，示例不带 version', !(await access.locator('.code-sample pre').innerText()).includes('"version"'));
+  await access.getByRole('radio', { name: '指定版本' }).click();
+  check('接入：指定版本时示例带上锁定的版本号', (await access.locator('.code-sample pre').innerText()).includes('"version": "v7"'));
+  check('接入：调用方登记 2 个', await page.locator('.callers-table tbody tr').count() === 2);
+  await access.getByRole('button', { name: '登记调用方' }).click();
+  await page.getByLabel('服务名').fill('risk-dashboard'); await page.getByLabel('负责人').fill('周可');
+  await page.getByLabel('QPS 配额').fill('1000');
+  check('接入：超出限流不能登记', await access.getByRole('button', { name: '登记', exact: true }).isDisabled());
+  await page.getByLabel('QPS 配额').fill('10');
+  await access.getByRole('button', { name: '登记', exact: true }).click(); await page.waitForTimeout(300);
+  check('接入：登记后多一行', await page.locator('.callers-table tbody tr').count() === 3);
+  await go(page, '/governance', 400);
+  check('接入：登记写入治理 · 最近操作', (await page.locator('.audit-table').innerText()).includes('登记调用方 risk-dashboard'));
+  check('接入：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 观测 · 线上干预：由 bad case 生成、写审计、修复版本回归通过并全量后自动失效 ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  await go(page, '/agents/c/trace', 600);
+  await page.locator('[data-demo="stage-bc-4415"] button', { hasText: '知识' }).click();
+  await page.locator('[data-demo="add-eval-bc-4415"] button').click(); await page.waitForTimeout(200);
+  await page.locator('[data-demo=intervene-bc-4415] button').click(); await page.waitForTimeout(300);
+  check('干预：表单预填命中条件和标准答案', (await page.getByLabel('命中条件').inputValue()).includes('价保'));
+  await page.getByRole('button', { name: '立即生效' }).click(); await page.waitForTimeout(300);
+  check('干预：列表显示生效中，bad case 上显示干预标记', (await page.locator('[data-demo=interventions]').innerText()).includes('生效中') && await page.locator('.intervention-chip').count() === 1);
+  await go(page, '/agents/c/monitor', 400);
+  check('干预：监控页提示有干预生效中', await page.locator('[data-demo=intervention-banner]').count() === 1);
+  // 准备一个修复版本 v22：在 bad case 回归集上评测过、灰度 50%，下一次放量即全量
+  await page.evaluate(() => {
+    const key = 'agent-platform-demo-v7';
+    const state = JSON.parse(localStorage.getItem(key));
+    const agent = state.agents.find(a => a.id === 'c');
+    const base = agent.versions.find(v => v.id === 'v21');
+    agent.versions.unshift({ ...base, id: 'v22', status: '灰度中', traffic: 50, everOnline: false, note: '修复价保期', evaluatedDatasets: ['badcase'], experimentAt: '2026-09-29 12:05', updatedAt: '2026-09-29 12:04' });
+    localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload(); await go(page, '/agents/c/release', 600);
+  await page.getByRole('button', { name: '全量发布 v22' }).click(); await page.waitForTimeout(400);
+  await go(page, '/agents/c/trace', 500);
+  check('干预：修复版本回归通过并全量后自动失效', (await page.locator('[data-demo=interventions]').innerText()).includes('已失效') && await page.locator('.intervention-chip').count() === 0);
+  await go(page, '/governance', 400);
+  const audit = await page.locator('.audit-table').innerText();
+  check('干预：创建和自动失效都写入操作记录', audit.includes('创建线上干预 iv-001') && audit.includes('iv-001 自动失效'));
+  check('干预：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 

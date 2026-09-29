@@ -14,6 +14,7 @@ import { VersionHistory } from './VersionHistory';
 import { AbReport } from './AbReport';
 import { AlertBanners } from '../../shared/components/AlertBanners';
 import { ReadinessCard } from './ReadinessCard';
+import { AccessCard } from './AccessCard';
 import { StrategyCard } from './StrategyCard';
 import { SwitchResult, TrafficCard, switchStages, type SwitchState } from './TrafficCard';
 import { bucketLabel, strategyLabels } from './labels';
@@ -58,7 +59,7 @@ export function ReleasePage({ agent }: { agent: Agent }) {
   const checks = readinessChecks(agent, ops, target, { approvalOptional });
   const missing = checks.filter(item => !item.done && !item.optional);
   const baseReason = !target ? '没有候选版本，请先在构建页新建草稿'
-    : !target.configured ? '候选版本配置未保存'
+    : !target.configured ? '候选版本尚未保存（在构建页「保存为候选版本」）'
     : !target.debugged ? '候选版本尚未调试'
     : !isEvaluated(target) ? '请先运行评测' : undefined;
   /** 同一时间只允许一个实验：有灰度 / 影子运行时，不能再发布新版本或从版本历史回退。 */
@@ -170,7 +171,7 @@ export function ReleasePage({ agent }: { agent: Agent }) {
     <StrategyCard agent={agent} ops={ops} update={patchOps} locked={experiment ? `${experiment.id} 正在${experiment.status === '灰度中' ? '灰度' : '影子运行'}，结束后才能调整策略` : strategyLock} /></>;
 
   return <AgentShell agent={agent} stepId="release" aside={aside}><SectionHeading eyebrow="发布" title="环境与版本" description="发布和回退都只是改变生产环境的线上指向，版本快照本身不变。" aside={<ScopeBadge phase="MVP" />} />
-    <Card><div className="release-heading"><div><h3>环境指向</h3><p>发布入口在下方「生产就绪检查」中。</p></div></div>
+    <Card><div className="release-heading"><div><h3>环境指向</h3><p>发布入口在下方「生产就绪检查」中；调用方默认跟随生产环境的线上指向，见页面底部「接入方式」。</p></div></div>
       <EnvironmentCards agent={agent} /></Card>
 
     <SectionHeading eyebrow="发布与实验" title="受控发布、实验与回退" description="上线前逐项检查；上线后按比例放量、用业务指标说话；出问题分钟级回退。" />
@@ -184,5 +185,8 @@ export function ReleasePage({ agent }: { agent: Agent }) {
 
     <SectionHeading eyebrow="版本管理" title="版本历史" description="只有曾经上线过的版本可以回退；草稿、待发布和灰度中的版本需要走发布流程。" />
     <Card><VersionHistory agent={agent} onRollback={rollbackVersion} blockedReason={experimentBlock} /></Card>
+
+    <SectionHeading eyebrow="接入" title="接入方式" description="调用地址、app_id、按线上指向还是锁定版本调用，以及谁在调用这个 Agent。" />
+    <AccessCard agent={agent} ops={ops} />
   </AgentShell>;
 }

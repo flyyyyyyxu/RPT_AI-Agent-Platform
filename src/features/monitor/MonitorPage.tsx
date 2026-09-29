@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { History, Rocket } from 'lucide-react';
+import { History, Rocket, ShieldAlert } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
 import { previousOnline } from '../../core/rules/versions';
 import { ScopeBadge, VersionBadge } from '../../shared/components/Badges';
@@ -15,12 +15,14 @@ import { AgentShell } from '../shell/AgentShell';
 import { AlertBanners } from '../../shared/components/AlertBanners';
 import type { Agent, MonitorMetricKey } from '../../types/domain';
 import './monitor.css';
+import { activeInterventions } from '../../core/rules/interventions';
 import { icon } from '../../shared/styles/tokens';
 
 const metricKeys: MonitorMetricKey[] = ['calls', 'p95', 'errorRate', 'tokens'];
 
 export function MonitorPage({ agent }: { agent: Agent }) {
-  const { markMonitored } = useDemo();
+  const { markMonitored, opsOf } = useDemo();
+  const interventions = activeInterventions(opsOf(agent));
   const [metric, setMetric] = useState<MonitorMetricKey>('calls');
   const production = agent.productionVersion;
   const [justChanged] = useState(!agent.monitored);
@@ -48,6 +50,7 @@ export function MonitorPage({ agent }: { agent: Agent }) {
   return <AgentShell agent={agent} stepId="monitor" aside={aside}><SectionHeading eyebrow="观测 · 监控" title="生产运行概览" description={`${profile.period} · 线上指向 ${production} 的调用、延迟、错误和 Token 消耗。`} aside={<ScopeBadge phase="MVP" />} />
     {justChanged && agent.lastReleaseAt && <Feedback kind="success" title={`线上指向已切换到 ${production}`} description={`变更时间 ${agent.lastReleaseAt}。以下为演示数据，新请求已记录到 ${production}。`} />}
     <AlertBanners agent={agent} />
+    {interventions.length > 0 && <div className="alert-banner" role="status" data-demo="intervention-banner"><ShieldAlert size={icon.large} aria-hidden="true" /><div><strong>{interventions.length} 条线上干预生效中</strong><p>命中条件的请求不经过模型，直接返回标准答案或执行规则（{interventions.map(item => `${item.id} 关联 ${item.badcaseId}，至 ${item.expiresAt}`).join('；')}）。修复版本回归通过并上线后自动失效。</p></div><Link className="button button-secondary" to={`/agents/${agent.id}/trace?focus=interventions`}>查看线上干预</Link></div>}
     <div className="metric-grid monitor-metrics" data-demo="monitor">{metricKeys.map(key => {
       const change = profile.changes?.[key];
       return <MetricCard key={key} label={`${metricLabels[key]}${key === 'p95' || key === 'errorRate' ? '（最新）' : ''}`} value={formatMetric[key](totals[key])} change={change?.value} direction={change?.direction} good={change ? isGood(key, change.direction) : undefined} detail={change ? profile.compareLabel : profile.period} />;

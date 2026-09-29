@@ -1,5 +1,5 @@
 /** ⑥ bad case 工作台：来源、关联 Trace、人工标注问题环节、加入评测集。 */
-import { CheckCircle2, ListPlus, Network } from 'lucide-react';
+import { CheckCircle2, ListPlus, Network, ShieldAlert } from 'lucide-react';
 import { problemStages } from '../../data';
 import type { BadCase, ProblemStage } from '../../types/domain';
 import { Button } from '../../shared/components/Buttons';
@@ -10,10 +10,11 @@ import { icon } from '../../shared/styles/tokens';
 
 export interface BadCaseLabel { stage: ProblemStage | null; inEvalSet: boolean }
 
-export function BadCaseBoard({ cases, labelOf, setLabel, onShowTrace }: {
+export function BadCaseBoard({ cases, labelOf, setLabel, onShowTrace, interventionOf, onIntervene }: {
   cases: BadCase[]; labelOf: (id: string) => BadCaseLabel; setLabel: (id: string, patch: Partial<BadCaseLabel>) => void; onShowTrace: (traceId: string) => void;
+  /** 该 bad case 生效中的线上干预（有效期至） */ interventionOf: (id: string) => string | null; onIntervene: ((item: BadCase) => void) | null;
 }) {
-  return <Capability title="bad case 工作台" description="汇集用户反馈、申诉和抽检发现的问题；人工标注问题环节后，一键加入评测集，下次候选版本评测自动覆盖。"
+  return <Capability title="bad case 工作台" description="汇集用户反馈、申诉和抽检发现的问题；人工标注问题环节后，一键加入评测集，下次候选版本评测自动覆盖。修复上线前可以先做线上干预止血。"
     actions={<IntegrationNote platform="标注" />}>
     {!cases.length && <Feedback kind="empty" title="暂无 bad case" description="用户反馈、申诉和抽检发现的问题会汇集到这里。" />}
     <div className="badcase-list">{cases.map(item => {
@@ -26,6 +27,8 @@ export function BadCaseBoard({ cases, labelOf, setLabel, onShowTrace }: {
           <div className="stage-picker" data-demo={`stage-${item.id}`} role="radiogroup" aria-label={`${item.id} 问题环节`}>{problemStages.map(stage => <button key={stage} type="button" role="radio" aria-checked={label.stage === stage} className={label.stage === stage ? 'active' : ''} onClick={() => setLabel(item.id, { stage })}>{stage}</button>)}</div>
           {label.inEvalSet ? <span className="added-note"><CheckCircle2 size={icon.small} aria-hidden="true" />已加入「bad case 回归集」· 标注：{label.stage}</span>
             : <span data-demo={`add-eval-${item.id}`}><Button onClick={() => setLabel(item.id, { inEvalSet: true })} disabled={!label.stage} reason={!label.stage ? '请先标注问题环节' : undefined}><ListPlus size={icon.small} />加入评测集</Button></span>}
+          {interventionOf(item.id) ? <a className="intervention-chip" href="#interventions" onClick={event => { event.preventDefault(); document.getElementById('interventions')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}><ShieldAlert size={icon.small} aria-hidden="true" />线上干预生效中 · 至 {interventionOf(item.id)}</a>
+            : onIntervene && <span data-demo={`intervene-${item.id}`}><Button onClick={() => onIntervene(item)}><ShieldAlert size={icon.small} />线上干预</Button></span>}
         </div>
       </div>;
     })}</div>
