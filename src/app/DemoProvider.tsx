@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { defaultOps, initialDemoState, playbookKb, playbookSeed, rampSteps } from '../data/mock';
-import { knowledgeBasesFor } from './scenarioData';
+import { defaultOps, initialDemoState, mockAgents, playbookKb, playbookSeed, rampSteps } from '../data/mock';
+import { debugPresets, knowledgeBasesFor } from './scenarioData';
 import type { Agent, AgentConfig, AgentOps, AgentVersion, DemoState, KbDraft, PlaybookId, ProfileId, ViewMode } from '../types/domain';
 import { clearDemo, readDemo, writeDemo } from './storage';
-import { canRollbackTo, getCandidate, getExperiment, isEditable, isEvaluated, nextVersionId, nowStamp } from './versions';
+import { canRollbackTo, getCandidate, getExperiment, isEditable, isEvaluated, nextVersionId, nowStamp, syncClock } from './versions';
 
 interface CreateAgentInput { name: string; mode: string; profile: ProfileId; config: AgentConfig; team: string }
 
@@ -35,7 +35,8 @@ interface DemoContextValue {
   /* 演示剧本 */
   startPlaybook: (id: PlaybookId) => void;
   setPlaybookStep: (step: number) => void;
-  exitPlaybook: () => void;
+  /** restore=true 时把剧本 Agent 恢复成原始演示数据 */
+  exitPlaybook: (restore?: boolean) => void;
 }
 
 const DemoContext = createContext<DemoContextValue | null>(null);
@@ -43,7 +44,7 @@ const DemoContext = createContext<DemoContextValue | null>(null);
 const fresh = () => structuredClone(initialDemoState);
 
 export function DemoProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<DemoState>(() => readDemo() ?? fresh());
+  const [state, setState] = useState<DemoState>(() => { const initial = readDemo() ?? fresh(); syncClock(initial); return initial; });
   useEffect(() => writeDemo(state), [state]);
 
   const updateAgent = (agentId: string, updater: (agent: Agent) => Agent) =>
@@ -106,7 +107,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     }),
   });
 
+  /** 有进行中的灰度 / 影子运行时，不允许再发布新版本或回退：先放量完成或结束实验。 */
   const publishCandidate = (agentId: string) => updateAgent(agentId, agent => {
+    if (getExperiment(agent)) return agent;
     const candidate = getCandidate(agent);
     if (!candidate || !candidate.configured || !candidate.debugged || !isEvaluated(candidate)) return agent;
     return { ...switchProduction(agent, candidate.id), stagingVersion: candidate.id };
@@ -114,10 +117,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const rollbackTo = (agentId: string, versionId: string) => updateAgent(agentId, agent => {
     const target = agent.versions.find(version => version.id === versionId);
-    return target && canRollbackTo(agent, target) ? switchProduction(agent, versionId) : agent;
+    return target && canRollbackTo(agent, target) && !getExperiment(agent) ? switchProduction(agent, versionId) : agent;
   });
 
-  const reset = () => { clearDemo(); setState(fresh()); };
+  const reset = () => { clearDemo(); const next = fresh(); syncClock(next); setState(next); };
 
   /** 依赖升级：基于某个快照创建候选版本，替换为最新依赖；平台自动完成冒烟调试（演示）。 */
   const createUpgradedDraft: DemoContextValue['createUpgradedDraft'] = (agentId, fromVersionId, patch, note) => {
@@ -127,12 +130,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     if (existing) return existing.id;
     const source = agent.versions.find(version => version.id === fromVersionId) ?? agent.versions[0];
     const id = nextVersionId(agent);
-    updateAgent(agentId, current => ({ ...current, lastDebugQuestion: current.lastDebugQuestion, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note, config: { ...structuredClone(source.config), ...patch }, everOnline: false, configured: true, debugged: true, evaluatedDatasets: [] }, ...current.versions] }));
+    // 平台自动用第一条预设问题跑一次冒烟调试，调试台会显示这次结果
+    updateAgent(agentId, current => ({ ...current, lastDebugQuestion: debugPresets(current)[0].question, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note, config: { ...structuredClone(source.config), ...patch }, everOnline: false, configured: true, debugged: true, evaluatedDatasets: [] }, ...current.versions] }));
     return id;
   };
 
   /** 直接写入修正后的配置：保存并完成冒烟调试，评测结果失效需要重跑。 */
-  const applyFix: DemoContextValue['applyFix'] = (agentId, versionId, config) => updateAgent(agentId, agent => updateVersion(agent, versionId, version =>
+  const applyFix: DemoContextValue['applyFix'] = (agentId, versionId, config) => updateAgent(agentId, agent => updateVersion({ ...agent, lastDebugQuestion: debugPresets(agent)[0].question }, versionId, version =>
     isEditable(version) ? { ...version, config: structuredClone(config), status: '草稿', configured: true, debugged: true, evaluatedDatasets: [], updatedAt: nowStamp() } : version));
 
   /** 影子运行 / 灰度中的版本直接全量：线上指向切过去。 */
@@ -171,7 +175,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     return { ...previous, agents: previous.agents.map(agent => agent.id === seed.id ? seed : agent), ops, knowledge, kbDraft: null, viewMode: 'skeleton', team: '全部团队', playbook: { id, step: 0 } };
   });
   const setPlaybookStep = (step: number) => setState(previous => previous.playbook ? { ...previous, playbook: { ...previous.playbook, step } } : previous);
-  const exitPlaybook = () => setState(previous => ({ ...previous, playbook: null }));
+  const exitPlaybook = (restore = false) => setState(previous => {
+    if (!previous.playbook || !restore) return { ...previous, playbook: null };
+    const id = previous.playbook.id;
+    const original = structuredClone(mockAgents.find(agent => agent.id === id));
+    const ops = { ...previous.ops }; delete ops[id];
+    const knowledge = { ...previous.knowledge }; const kbId = playbookKb[id]; if (kbId) delete knowledge[kbId];
+    return { ...previous, playbook: null, agents: original ? previous.agents.map(agent => agent.id === id ? original : agent) : previous.agents, ops, knowledge, kbDraft: null };
+  });
 
   /* ---------------- 生产骨架 ---------------- */
   const setViewMode = (viewMode: ViewMode) => setState(previous => ({ ...previous, viewMode }));

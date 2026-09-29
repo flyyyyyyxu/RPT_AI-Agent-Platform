@@ -2,7 +2,8 @@
  * 三条可点击的演示剧本。每一步指向一个现有页面和页面上的目标元素（data-demo），
  * done 条件满足时浮层自动进入下一步。所有数字均为演示数据。
  */
-import { knowledgeBasesFor } from './scenarioData';
+import { knowledgeBasesFor, nextKbVersion } from './scenarioData';
+import { useDemo } from './DemoProvider';
 import { evaluateGate } from './gate';
 import { pbNewClause, pbOldClause, pcOldEntry, pcOldEntryExpiry, pendingEntries } from '../data/mock';
 import type { Agent, AgentOps, DemoState, PlaybookId } from '../types/domain';
@@ -20,17 +21,28 @@ export interface PlaybookStep {
   done?: (ctx: PlaybookCtx) => boolean;
   helper?: { label: string; run: (api: PlaybookApi, ctx: PlaybookCtx) => void };
 }
-export interface Playbook { id: PlaybookId; agentId: string; letter: string; theme: string; title: string; summary: string; outcome: string; flow: string[]; heroes: HeroId[]; steps: PlaybookStep[] }
+/**
+ * 剧本进行中锁定的入口，避免点错后剧情走偏：
+ * plain-draft：构建页「新建草稿」（剧本要求通过依赖升级创建候选版本）
+ * strategy：发布策略（剧本固定用影子运行 / 比例灰度）
+ * kb-discard：知识库草稿的「放弃草稿」
+ */
+export type PlaybookLock = 'plain-draft' | 'strategy' | 'kb-discard';
+export interface Playbook { id: PlaybookId; agentId: string; letter: string; theme: string; title: string; summary: string; outcome: string; flow: string[]; heroes: HeroId[]; locks: PlaybookLock[]; steps: PlaybookStep[] }
 
 const version = (ctx: PlaybookCtx, id: string) => ctx.agent.versions.find(item => item.id === id) ?? null;
 const gatePassed = (ctx: PlaybookCtx, id: string) => { const v = version(ctx, id); return Boolean(v && evaluateGate(ctx.agent, ctx.ops, v).passed); };
+/** 候选版本存在且已切换到剧本要求的知识版本 */
+const onKnowledge = (ctx: PlaybookCtx, id: string, pattern: RegExp) => Boolean(version(ctx, id) && pattern.test(version(ctx, id)!.config.knowledge));
+const PB_KB = /政策库 2026-10 版/;
+const PC_KB = /售后知识 v35/;
 
 export const pageNames: Record<string, string> = { build: '构建页', evaluation: '评测页', release: '发布与实验页', monitor: '监控页', trace: 'Trace 与 bad case 页', settings: '设置页', '/library': '能力组件库' };
 export const pagePath = (playbook: Playbook, page: string) => page.startsWith('/') ? page : `/agents/${playbook.agentId}/${page}`;
 
 export const playbooks: Playbook[] = [
   {
-    id: 'a', agentId: 'a', letter: 'A', theme: '快', title: '穿搭灵感', heroes: [2, 3, 4],
+    id: 'a', agentId: 'a', letter: 'A', theme: '快', title: '穿搭灵感', heroes: [2, 3, 4], locks: [],
     summary: '灰度中发现延迟超门槛，一键回退，再用 Trace 定位原因。',
     outcome: '从告警到全部流量回到 v12 用时 1 分 48 秒，Trace 直接定位到 v13 新增的步骤。',
     flow: ['v13 灰度 10%', 'AB 报告', '延迟告警', '回退到 v12', 'Trace 定位'],
@@ -57,7 +69,7 @@ export const playbooks: Playbook[] = [
     ],
   },
   {
-    id: 'b', agentId: 'b', letter: 'B', theme: '准', title: '生态守护', heroes: [1, 2, 3],
+    id: 'b', agentId: 'b', letter: 'B', theme: '准', title: '生态守护', heroes: [1, 2, 3], locks: ['plain-draft', 'strategy'],
     summary: '政策库更新后先评测再上线：门槛拦下红线漏判，修正后影子验证、审批、发布。',
     outcome: '红线漏判在上线前被强制门槛拦下；修正后影子运行与抽检标注一致率 97.8%，全部检查通过后发布。',
     flow: ['政策库 10 月版', '创建 v8', '隔离评测', '门槛阻断', 'Trace 找旧条款', '修正重测', '影子 AB', '审批发布'],
@@ -65,11 +77,11 @@ export const playbooks: Playbook[] = [
       { title: '政策库发布 2026-10 版', page: 'build', target: 'dep-upgrade', hero: 3,
         body: '线上 v7 的快照锁定政策库 2026-09 版。政策库发布 10 月版后，平台提示依赖已变化，但不会悄悄改变线上 v7 的行为。',
         next: '点「基于 v7 创建候选版本 v8（升级依赖）」。',
-        done: ctx => Boolean(version(ctx, 'v8')) },
+        done: ctx => onKnowledge(ctx, 'v8', PB_KB) },
       { title: '不发布，直接跑评测', page: 'evaluation', target: 'eval-run', hero: 1,
         body: 'v8 只在隔离环境运行，不接生产流量。评测集已包含 10 月版新增的谐音、二维码导流红线样本。',
         next: '点「运行评测」。',
-        done: ctx => Boolean(version(ctx, 'v8')?.evaluatedDatasets.length) },
+        done: ctx => onKnowledge(ctx, 'v8', PB_KB) && Boolean(version(ctx, 'v8')?.evaluatedDatasets.length) },
       { title: '红线漏判 2 条，门槛阻断', page: 'evaluation', target: 'gate-summary', hero: 1,
         body: '站外引流类召回率 91.8%（门槛 ≥ 95%），2 条红线样本漏判。强制阻断已开启，这一版不可能被发布出去。',
         next: '点「下一步」看发布页的反应。' },
@@ -81,13 +93,13 @@ export const playbooks: Playbook[] = [
         next: '点「下一步」去构建页修正 Prompt。' },
       { title: '修正 Prompt 示例', page: 'build', target: 'prompt',
         body: `把 Prompt 示例里的「${pbOldClause}」改成「${pbNewClause}」。修改后评测结果会失效，需要重新评测。`,
-        next: '手动修改后点「保存配置」并运行调试，或直接点浮层里的「代我修正」。',
-        done: ctx => { const v = version(ctx, 'v8'); return Boolean(v && !v.config.prompt.includes(pbOldClause) && v.configured && v.debugged); },
+        next: '手动修改后点「保存配置」并运行调试；或点浮层里的「代我修正」，会保存配置并自动跑一次冒烟调试。',
+        done: ctx => { const v = version(ctx, 'v8'); return Boolean(v && onKnowledge(ctx, 'v8', PB_KB) && !v.config.prompt.includes(pbOldClause) && v.configured && v.debugged); },
         helper: { label: '代我修正', run: (api, ctx) => { const v = version(ctx, 'v8'); if (v) api.applyFix(ctx.agent.id, v.id, { ...v.config, prompt: v.config.prompt.split(pbOldClause).join(pbNewClause) }); } } },
       { title: '重新评测：通过', page: 'evaluation', target: 'eval-run', hero: 1,
         body: '修正后重新在隔离环境评测：站外引流类召回率 96.4%，红线样本全部通过，门槛放行。',
         next: '点「运行评测」。',
-        done: ctx => gatePassed(ctx, 'v8') },
+        done: ctx => onKnowledge(ctx, 'v8', PB_KB) && gatePassed(ctx, 'v8') },
       { title: '影子运行 v8', page: 'release', target: 'publish', hero: 2,
         body: '发布策略是「影子运行」：v8 复制线上请求双跑，只对比不返回用户。影子运行不影响用户，审批放到全量之前。',
         next: '点「开始影子运行 v8」，再点确认。',
@@ -106,7 +118,7 @@ export const playbooks: Playbook[] = [
     ],
   },
   {
-    id: 'c', agentId: 'c', letter: 'C', theme: '稳', title: '售后答疑', heroes: [1, 2, 3, 4],
+    id: 'c', agentId: 'c', letter: 'C', theme: '稳', title: '售后答疑', heroes: [1, 2, 3, 4], locks: ['plain-draft', 'strategy', 'kb-discard'],
     summary: '用户投诉答错退货规则：从 bad case 追到过期知识，更新知识版本后回归、按会话灰度。',
     outcome: '问题归因到知识条目缺少失效时间；更新知识版本并回归后按会话灰度，转人工率 12.1% → 9.6%。',
     flow: ['用户投诉', 'Trace 过期知识', '标注「知识」', '加入评测集', '知识 v35', '创建 v22', '回归评测', '会话灰度', '转人工率下降'],
@@ -134,7 +146,12 @@ export const playbooks: Playbook[] = [
         next: '按上面填写后点「发布 v35」，或点浮层里的「代我填写」再发布。',
         done: ctx => knowledgeBasesFor(ctx.state).some(kb => kb.id === 'aftersale' && kb.versions.some(v => v.id === 'v35')),
         helper: { label: '代我填写', run: (api, ctx) => {
-          const draft = ctx.state.kbDraft; if (!draft || draft.kbId !== 'aftersale') return;
+          // 没有草稿（例如被放弃）时，先基于最新版本新建草稿再填写
+          const kb = knowledgeBasesFor(ctx.state).find(item => item.id === 'aftersale');
+          if (!kb) return;
+          const latest = kb.versions[0];
+          const draft = ctx.state.kbDraft?.kbId === 'aftersale' ? ctx.state.kbDraft
+            : { kbId: 'aftersale', fromVersion: latest.id, nextVersion: nextKbVersion(latest.id), entries: kb.entries.filter(entry => entry.versions.includes(latest.id)).map(entry => ({ title: entry.title, from: entry.from, to: entry.to })) };
           const pending = pendingEntries.aftersale[0];
           const entries = draft.entries.map(entry => entry.title === pcOldEntry ? { ...entry, to: pcOldEntryExpiry } : entry);
           api.setKbDraft({ ...draft, entries: entries.some(entry => entry.title === pending.title) ? entries : [...entries, { title: pending.title, from: pending.from, to: null, isNew: true }] });
@@ -142,11 +159,11 @@ export const playbooks: Playbook[] = [
       { title: '创建候选版本 v22', page: 'build', target: 'dep-upgrade', hero: 3,
         body: 'v21 锁定的是售后知识 v34，平台提示上游已有 v35。一键创建候选版本 v22 并升级依赖，线上 v21 不受影响。',
         next: '点「基于 v21 创建候选版本 v22（升级依赖）」。',
-        done: ctx => Boolean(version(ctx, 'v22')) },
+        done: ctx => onKnowledge(ctx, 'v22', PC_KB) },
       { title: '回归评测', page: 'evaluation', target: 'eval-run', hero: 1,
         body: '用「bad case 回归集」回归：投诉样本从 35 分到 95 分，过期知识命中 0 条，门槛通过。',
         next: '确认选中「bad case 回归集」，点「运行评测」。',
-        done: ctx => gatePassed(ctx, 'v22') },
+        done: ctx => onKnowledge(ctx, 'v22', PC_KB) && gatePassed(ctx, 'v22') },
       { title: '提交审批', page: 'release', target: 'check-approval', hero: 1,
         body: '门槛、护栏、负责人、告警都已就绪；上线真实用户需要负责人审批。',
         next: '点「提交审批」，再点「模拟审批通过」。',
@@ -163,3 +180,12 @@ export const playbooks: Playbook[] = [
 ];
 
 export const playbookOf = (id: PlaybookId) => playbooks.find(item => item.id === id) ?? playbooks[0];
+
+/** 剧本进行中时，某个入口是否被锁定；返回禁用原因。只锁剧本自己的 Agent（能力组件库这类平台页传 null）。 */
+export function usePlaybookLock(lock: PlaybookLock, agentId: string | null): string | undefined {
+  const { state } = useDemo();
+  if (!state.playbook) return undefined;
+  const playbook = playbookOf(state.playbook.id);
+  if (!playbook.locks.includes(lock) || (agentId !== null && agentId !== playbook.agentId)) return undefined;
+  return `剧本 ${playbook.letter} 进行中，此操作已锁定；请按「演示步骤」提示操作，退出剧本后可用`;
+}

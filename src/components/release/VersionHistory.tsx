@@ -12,10 +12,10 @@ function rowHint(agent: Agent, version: AgentVersion) {
   return '不可回退';
 }
 
-export function VersionHistory({ agent, onRollback }: { agent: Agent; onRollback: (version: string) => void }) {
+export function VersionHistory({ agent, onRollback, blockedReason }: { agent: Agent; onRollback: (version: string) => void; blockedReason?: string }) {
   return <div className="version-history">{agent.versions.map(version => <div className={`version-row ${version.id === agent.productionVersion ? 'is-production' : ''}`} key={version.id}>
     <div className="version-main"><VersionBadge version={version.id} /><StatusBadge status={version.status} /><div><strong>{version.note}</strong><p title={`${version.updatedAt} · ${version.config.knowledge} · ${version.config.model}`}>{version.updatedAt} · {version.config.knowledge} · {version.config.model}</p></div></div>
-    <div className="version-action">{canRollbackTo(agent, version)
+    <div className="version-action">{canRollbackTo(agent, version) && blockedReason ? <span className="meta" title={blockedReason}>暂不可回退：{blockedReason}</span> : canRollbackTo(agent, version)
       ? <ConfirmAction icon={<RotateCcw size={16} />} actionLabel={`回退到 ${version.id}`} confirmLabel={`确认回退到 ${version.id}`} impact={`线上指向将从 ${agent.productionVersion} 切换到 ${version.id}（${version.config.knowledge}），之后的新请求立即使用 ${version.id}；${agent.productionVersion} 保留为历史版本，可随时再切回。`} onConfirm={() => onRollback(version.id)} />
       : <span className="meta">{rowHint(agent, version)}</span>}</div>
   </div>)}</div>;

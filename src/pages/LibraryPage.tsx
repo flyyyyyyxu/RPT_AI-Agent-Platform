@@ -4,6 +4,8 @@ import { useDemo } from '../app/DemoProvider';
 import { entryStatus, knowledgeBasesFor, nextKbVersion, pendingFor } from '../app/scenarioData';
 import { Button } from '../components/actions/Buttons';
 import type { KbDraft } from '../types/domain';
+import { usePlaybookLock } from '../app/playbooks';
+import { demoNow } from '../app/versions';
 import { StatusBadge, VersionBadge, type Status } from '../components/badges/Badges';
 import { Card, SectionHeading } from '../components/content/Content';
 import { Capability, Phase2Row, SkeletonHeading, useSkeletonView } from '../components/skeleton/Skeleton';
@@ -16,6 +18,7 @@ const TIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
 /** 知识库新版本草稿：编辑每条知识的生效 / 失效时间，加入待入库条目后发布。 */
 function KbDraftEditor({ draft, onPublished }: { draft: KbDraft; onPublished: (id: string) => void }) {
   const { setKbDraft, publishKbDraft } = useDemo();
+  const discardLock = usePlaybookLock('kb-discard', null);
   const pending = pendingFor(draft.kbId).filter(item => !draft.entries.some(entry => entry.title === item.title));
   const patchEntry = (index: number, value: Partial<KbDraft['entries'][number]>) => setKbDraft({ ...draft, entries: draft.entries.map((entry, i) => i === index ? { ...entry, ...value } : entry) });
   const invalid = draft.entries.find(entry => !TIME.test(entry.from) || (entry.to !== null && !TIME.test(entry.to)) || (entry.to !== null && entry.to <= entry.from));
@@ -29,8 +32,8 @@ function KbDraftEditor({ draft, onPublished }: { draft: KbDraft; onPublished: (i
     {pending.length > 0 && <div><div className="sub-heading"><h4>待入库条目</h4><span className="meta">由知识运营提交，加入后可调整生效时间</span></div>
       <div className="redline-list">{pending.map(item => <div className="redline-item" key={item.title}><div><strong>{item.title}</strong><small className="meta">{item.submittedBy} · 建议 {item.from} 生效</small></div>
         <Button onClick={() => setKbDraft({ ...draft, entries: [...draft.entries, { title: item.title, from: item.from, to: item.to, isNew: true }] })}><Plus size={16} />加入本版本</Button></div>)}</div></div>}
-    <div className="gate-footer"><span className="meta">状态按演示时钟 2026-09-29 12:00 计算（演示数据）</span>
-      <span className="inline-actions"><Button onClick={() => setKbDraft(null)}>放弃草稿</Button><span data-demo="kb-publish"><Button variant="primary" disabled={Boolean(reason)} reason={reason} onClick={() => { publishKbDraft(); onPublished(draft.nextVersion); }}><Send size={16} />发布 {draft.nextVersion}</Button></span></span></div>
+    <div className="gate-footer"><span className="meta">状态按演示时钟 {demoNow()} 计算（演示数据）</span>
+      <span className="inline-actions"><Button onClick={() => setKbDraft(null)} disabled={Boolean(discardLock)} reason={discardLock}>放弃草稿</Button><span data-demo="kb-publish"><Button variant="primary" disabled={Boolean(reason)} reason={reason} onClick={() => { publishKbDraft(); onPublished(draft.nextVersion); }}><Send size={16} />发布 {draft.nextVersion}</Button></span></span></div>
   </Capability>;
 }
 

@@ -14,14 +14,18 @@ import { AbReport, AlertBanners, ReadinessCard, StrategyCard, SwitchResult, Traf
 import { CapabilityBadges, Phase2Row, SkeletonHeading, SkeletonOnly, useSkeletonView } from '../components/skeleton/Skeleton';
 import { rampSteps } from '../data/mock';
 import { approverOf } from '../app/scenarioData';
+import { usePlaybookLock } from '../app/playbooks';
 import { AgentShell } from '../layouts/AgentShell';
 import type { Agent, AgentOps } from '../types/domain';
 
 const ROLLBACK_ELAPSED = '1 分 48 秒';
+/** 正在执行、会改动演示数据的操作（按 Agent）：离开页面再回来时仍能看到，并防止重复提交。 */
+const inflight = new Map<string, string>();
 
 export function ReleasePage({ agent }: { agent: Agent }) {
   const { publishCandidate, rollbackTo, opsOf, updateOps, startExperiment, rampUp, shadowToCanary, stopExperiment, promoteExperiment } = useDemo();
   const skeletonView = useSkeletonView();
+  const strategyLock = usePlaybookLock('strategy', agent.id);
   const ops = opsOf(agent);
   const candidate = getCandidate(agent);
   const experiment = getExperiment(agent);
@@ -32,7 +36,11 @@ export function ReleasePage({ agent }: { agent: Agent }) {
   const [message, setMessage] = useState<{ title: string; description: string } | null>(null);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
+  /** 只影响界面展示的定时器：离开页面时取消。 */
   const later = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); };
+  /** 会改变演示数据的定时器：离开页面也要执行完，否则发布、审批、回退会丢失（界面状态更新在卸载后是空操作）。 */
+  const commit = (label: string, fn: () => void, ms: number) => { inflight.set(agent.id, label); window.setTimeout(() => { inflight.delete(agent.id); fn(); }, ms); };
+  const busy = inflight.get(agent.id);
 
   const from = agent.productionVersion;
   const strategy = from ? ops.strategy : 'direct';
@@ -46,24 +54,27 @@ export function ReleasePage({ agent }: { agent: Agent }) {
     : !target.configured ? '候选版本配置未保存'
     : !target.debugged ? '候选版本尚未调试'
     : !isEvaluated(target) ? '请先运行评测' : undefined;
-  const experimentReason = candidate && experiment ? `${experiment.id} 正在${experiment.status === '灰度中' ? '灰度' : '影子运行'}，请先放量完成或回退后再发布新版本` : undefined;
-  const reason = baseReason ?? (skeletonView ? experimentReason ?? (missing.length ? `生产就绪检查未完成：${missing.map(item => item.label).join('、')}` : undefined) : undefined);
+  /** 同一时间只允许一个实验：有灰度 / 影子运行时，任何视图都不能再发布新版本或回退。 */
+  const experimentBlock = experiment ? `${experiment.id} 正在${experiment.status === '灰度中' ? '灰度' : '影子运行'}，请先放量完成或回退${skeletonView ? '' : '（在「显示生产骨架」视图的「流量指向」中操作）'}` : undefined;
+  const experimentReason = candidate ? experimentBlock : undefined;
+  const reason = baseReason ?? experimentReason ?? (skeletonView && missing.length ? `生产就绪检查未完成：${missing.map(item => item.label).join('、')}` : undefined);
   const log = (who: string, action: string) => updateOps(agent.id, current => ({ ...current, approvals: [{ time: nowStamp(), who, action }, ...current.approvals] }));
   const patchOps = (patch: Partial<AgentOps>) => updateOps(agent.id, current => ({ ...current, ...patch }));
   const strategyText = !candidate && shadow ? '全量发布' : strategy === 'canary' ? `比例灰度 ${ops.canaryPercent}%` : strategyLabels[strategy].short;
 
   const publish = () => {
+    if (inflight.has(agent.id)) return;
     if (!candidate && shadow && from) {
       const id = shadow.id;
       setPublishing(true); setMessage(null); setSwitchResult(null);
-      later(() => { promoteExperiment(agent.id); setPublishing(false); log(agent.owner, `全量发布：线上指向 ${from} → ${id}`); setMessage({ title: `${id} 已全量发布`, description: `线上指向 ${from} → ${id}；影子运行结束。${from} 保留为历史版本，可随时回退。` }); }, 900);
+      commit(`正在全量发布 ${id}`, () => { promoteExperiment(agent.id); setPublishing(false); log(agent.owner, `全量发布：线上指向 ${from} → ${id}`); setMessage({ title: `${id} 已全量发布`, description: `线上指向 ${from} → ${id}；影子运行结束。${from} 保留为历史版本，可随时回退。` }); }, 900);
       return;
     }
     if (!candidate) return;
     const target = candidate.id;
     const mode = skeletonView ? strategy : 'direct';
     setPublishing(true); setMessage(null); setSwitchResult(null);
-    later(() => {
+    commit(`正在发布 ${target}`, () => {
       if (mode === 'direct') publishCandidate(agent.id); else startExperiment(agent.id);
       setPublishing(false);
       if (skeletonView) log(agent.owner, `执行发布：${target}（${mode === 'direct' ? '直接发布' : strategyText}）`);
@@ -82,7 +93,7 @@ export function ReleasePage({ agent }: { agent: Agent }) {
   const approve = () => {
     if (!target) return;
     setApproving(true);
-    later(() => { setApproving(false); updateOps(agent.id, current => ({ ...current, approvalPending: null, approvedVersion: target.id, approvals: [{ time: nowStamp(), who: approverOf(agent), action: `审批通过 ${target.id}（${strategyText}）` }, ...current.approvals] })); }, 700);
+    commit(`正在审批 ${target.id}`, () => { setApproving(false); updateOps(agent.id, current => ({ ...current, approvalPending: null, approvedVersion: target.id, approvals: [{ time: nowStamp(), who: approverOf(agent), action: `审批通过 ${target.id}（${strategyText}）` }, ...current.approvals] })); }, 700);
   };
 
   const ramp = () => {
@@ -95,11 +106,12 @@ export function ReleasePage({ agent }: { agent: Agent }) {
 
   /** 回退 = 把线上指向切回旧版本：分阶段展示，完成后显示耗时。 */
   const pointerSwitch = (fromId: string, toId: string, apply: () => void, note: string) => {
+    if (inflight.has(agent.id)) return;
     setMessage(null); setSwitchResult(null);
     if (!skeletonView) { apply(); setMessage({ title: `已回退到 ${toId}`, description: `线上指向 ${fromId} → ${toId}，新请求已使用 ${toId}。` }); return; }
     setSwitching({ from: fromId, to: toId, stage: 0, done: false });
     switchStages.forEach((_, index) => later(() => setSwitching({ from: fromId, to: toId, stage: index + 1, done: false }), 350 * (index + 1)));
-    later(() => { apply(); setSwitching(null); setSwitchResult({ from: fromId, to: toId, note }); log(agent.owner, `回退：线上指向 ${fromId} → ${toId}`); }, 350 * (switchStages.length + 1));
+    commit(`正在把线上指向从 ${fromId} 切换到 ${toId}`, () => { apply(); setSwitching(null); setSwitchResult({ from: fromId, to: toId, note }); log(agent.owner, `回退：线上指向 ${fromId} → ${toId}`); }, 350 * (switchStages.length + 1));
   };
   const rollbackTarget = experiment ? getVersion(agent, from) : previousOnline(agent);
   const rollbackVersion = (version: string) => {
@@ -139,7 +151,8 @@ export function ReleasePage({ agent }: { agent: Agent }) {
       <p className="meta">{target ? missing.length ? `待完成：${missing.map(item => item.label).join('、')}` : `可以按「${strategyText}」发布` : '发布、放量、回退都只改变线上指向。'}</p></Card></SkeletonOnly>
     {agent.productionVersion && <Link className="button button-primary full-button" to={`/agents/${agent.id}/monitor`}><Activity size={16} />查看 {agent.productionVersion} 生产监控</Link>}</>;
 
-  const feedback = <>{publishing && <Feedback kind="loading" title={`正在发布 ${candidate?.id}`} description="正在切换预发和生产环境的版本指向…" />}
+  const feedback = <>{busy && !publishing && !switching && <Feedback kind="loading" title={busy} description="上一个操作仍在执行，完成后页面会自动更新。" />}
+    {publishing && <Feedback kind="loading" title={`正在发布 ${candidate?.id}`} description="正在切换预发和生产环境的版本指向…" />}
     {message && !publishing && <Feedback kind="success" title={message.title} description={message.description} />}</>;
 
   const trafficBlock = <><TrafficCard agent={agent} ops={ops} experiment={experiment} rollbackTarget={rollbackTarget} switching={switching} onRamp={ramp} rollbackAction={rollbackAction} />
@@ -148,7 +161,7 @@ export function ReleasePage({ agent }: { agent: Agent }) {
   const releaseBlock = <><ReadinessCard candidate={target} experiment={experiment} checks={checks} approvalPending={Boolean(target && ops.approvalPending === target.id)} onSubmitApproval={submitApproval} onApprove={approve} approving={approving}>
     {target && <div className="publish-bar" data-demo="publish"><div><strong>发布策略：{strategyText}</strong><p className="meta">{reason ? '完成上面的检查项后才能发布。' : '所有检查项已完成。'}</p></div>{publishAction}</div>}
   </ReadinessCard>
-    <StrategyCard agent={agent} ops={ops} update={patchOps} locked={experiment ? `${experiment.id} 正在${experiment.status === '灰度中' ? '灰度' : '影子运行'}，结束后才能调整策略` : undefined} /></>;
+    <StrategyCard agent={agent} ops={ops} update={patchOps} locked={experiment ? `${experiment.id} 正在${experiment.status === '灰度中' ? '灰度' : '影子运行'}，结束后才能调整策略` : strategyLock} /></>;
 
   return <AgentShell agent={agent} stepId="release" aside={aside}><SectionHeading eyebrow="基础能力 · 发布" title="环境与版本" description="发布和回退都只是改变生产环境的线上指向，版本快照本身不变。" aside={<ScopeBadge phase="MVP" />} />
     <Card><div className="release-heading"><div><h3>环境指向</h3><p>{skeletonView ? '发布入口在下方「生产就绪检查」中。' : '发布会把候选版本同时推到预发和生产。'}</p></div>
@@ -168,6 +181,6 @@ export function ReleasePage({ agent }: { agent: Agent }) {
     </>}
 
     <SectionHeading eyebrow="版本管理" title="版本历史" description="只有曾经上线过的版本可以回退；草稿、待发布和灰度中的版本需要走发布流程。" />
-    <Card><VersionHistory agent={agent} onRollback={rollbackVersion} /></Card>
+    <Card><VersionHistory agent={agent} onRollback={rollbackVersion} blockedReason={experimentBlock} /></Card>
   </AgentShell>;
 }

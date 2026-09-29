@@ -53,8 +53,10 @@ export function EvaluationPage({ agent }: { agent: Agent }) {
     timers.current = [
       window.setTimeout(() => setProgress(48), 350),
       window.setTimeout(() => setProgress(78), 700),
-      window.setTimeout(() => { setProgress(100); setRunning(false); markEvaluated(agent.id, candidate.id, dataset.id); }, 1150),
     ];
+    // 写入评测结果的定时器不随页面卸载取消：离开页面评测照样完成（界面状态更新在卸载后是空操作）
+    const versionId = candidate.id; const datasetId = dataset.id;
+    window.setTimeout(() => { setProgress(100); setRunning(false); markEvaluated(agent.id, versionId, datasetId); }, 1150);
   };
   const aside = <><Card><span className="eyebrow">评测对象</span><h3>{baseline ? <>线上 <VersionBadge version={baseline} /> 对比候选 <VersionBadge version={candidate.id} /></> : <>首次评测 <VersionBadge version={candidate.id} /></>}</h3><p>{baseline ? `相同样本分别运行 ${baseline} 和 ${candidate.id}，按预设规则打分。` : '还没有线上版本，只展示候选版本的得分。'}</p></Card>
     <Card><span className="eyebrow">已完成</span><h3>{candidate.evaluatedDatasets.length} / {datasets.length} 个评测集</h3><p className="meta">完成任意一个评测集即可发布。配置修改后评测结果会失效，需要重新运行。</p></Card>{isolationCard}</>;

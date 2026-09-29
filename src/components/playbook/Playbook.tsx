@@ -4,7 +4,7 @@ import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flag, ListChecks,
 import { useDemo } from '../../app/DemoProvider';
 import { pageNames, pagePath, playbookOf, playbooks, type Playbook } from '../../app/playbooks';
 import type { PlaybookId } from '../../types/domain';
-import { Button } from '../actions/Buttons';
+import { Button, ConfirmAction } from '../actions/Buttons';
 import { DemoTag } from '../badges/Badges';
 import { Card, SectionHeading } from '../content/Content';
 import { HeroTag, heroNames } from '../skeleton/Skeleton';
@@ -33,7 +33,8 @@ export function PlaybookCards() {
         <div className="playbook-heroes">{playbook.heroes.map(n => <HeroTag key={n} n={n} compact />)}</div>
         <div className="playbook-card-foot"><span className="meta">{playbook.steps.length} 步{active ? ` · 进行到第 ${Math.min(active.step + 1, playbook.steps.length)} 步` : ''}</span>
           <span className="inline-actions">{active && active.step < playbook.steps.length && <Button onClick={() => resume(playbook, active.step)}><ChevronRight size={16} />继续</Button>}
-            <Button onClick={() => start(playbook.id)}>{active ? <RotateCcw size={16} /> : <Play size={16} />}{active ? '重新开始' : `开始剧本 ${playbook.letter}`}</Button></span></div>
+            <ConfirmAction icon={active ? <RotateCcw size={16} /> : <Play size={16} />} actionLabel={active ? '重新开始' : `开始剧本 ${playbook.letter}`} confirmLabel={`确认${active ? '重新开始' : '开始'}剧本 ${playbook.letter}`}
+              impact={`「${playbook.title}」的演示数据会换成剧本 ${playbook.letter} 的初始数据，这个 Agent 当前的演示进度会被覆盖；其它 Agent 不受影响。`} onConfirm={() => start(playbook.id)} /></span></div>
       </Card>;
     })}</div>
   </section>;
@@ -48,6 +49,7 @@ export function PlaybookPanel() {
   const start = useStartPlaybook();
   const [collapsed, setCollapsed] = useState(false);
   const [dockLeft, setDockLeft] = useState(false);
+  const [exiting, setExiting] = useState(false);
   const panelRef = useRef<HTMLElement | null>(null);
   const pb = state.playbook;
   const playbook = pb ? playbookOf(pb.id) : null;
@@ -117,14 +119,17 @@ export function PlaybookPanel() {
 
   return <aside ref={panelRef} className={`playbook-panel ${dockLeft ? 'dock-left' : ''}`} aria-label="演示步骤" aria-live="polite">
     <div className="pb-head"><div><span className="eyebrow">演示步骤 · 剧本 {playbook.letter}「{playbook.theme}」</span><strong>{playbook.title}</strong></div>
-      <div className="pb-head-actions"><button type="button" className="icon-button" onClick={() => setCollapsed(true)} aria-label="收起演示步骤" title="收起"><ChevronDown size={16} /></button><button type="button" className="icon-button" onClick={exitPlaybook} aria-label="退出剧本" title="退出剧本（数据保留）"><X size={16} /></button></div></div>
+      <div className="pb-head-actions"><button type="button" className="icon-button" onClick={() => setCollapsed(true)} aria-label="收起演示步骤" title="收起"><ChevronDown size={16} /></button><button type="button" className="icon-button" onClick={() => setExiting(true)} aria-label="退出剧本" title="退出剧本"><X size={16} /></button></div></div>
+    {exiting && <div className="confirmation pb-exit" role="group" aria-label="退出剧本二次确认"><strong>退出剧本 {playbook.letter}？</strong>
+      <p>保留：「{playbook.title}」停在当前剧本数据，可继续自由操作。恢复：换回剧本开始前的原始演示数据。</p>
+      <div className="inline-actions"><Button onClick={() => setExiting(false)}>取消</Button><Button onClick={() => { setExiting(false); exitPlaybook(false); }}>保留数据退出</Button><Button onClick={() => { setExiting(false); exitPlaybook(true); }}>恢复原始数据</Button></div></div>}
     <ol className="pb-dots" aria-label="进度">{playbook.steps.map((item, i) => <li key={item.title} className={i < index ? 'done' : i === index ? 'current' : ''} title={`${i + 1}. ${item.title}`} />)}</ol>
     {state.viewMode === 'basic' && <div className="alert-banner"><Flag size={16} aria-hidden="true" /><div><strong>当前为「只看基础能力」</strong><p>剧本用到的生产骨架能力已隐藏。</p></div><Button onClick={() => setViewMode('skeleton')}>显示生产骨架</Button></div>}
     {finished ? <div className="pb-body">
       <div className="pb-finish"><Flag size={20} aria-hidden="true" /><strong>剧本 {playbook.letter} 完成</strong></div>
       <p>{playbook.outcome}</p>
       <div className="playbook-heroes">{playbook.heroes.map(n => <HeroTag key={n} n={n} compact />)}</div>
-      <div className="pb-nav"><Button onClick={() => navigate('/')}>返回工作台</Button><Button onClick={() => start(playbook.id)}><RotateCcw size={16} />重新开始</Button><Button onClick={exitPlaybook}>退出剧本</Button></div>
+      <div className="pb-nav"><Button onClick={() => navigate('/')}>返回工作台</Button><Button onClick={() => start(playbook.id)}><RotateCcw size={16} />重新开始</Button><Button onClick={() => setExiting(true)}>退出剧本</Button></div>
     </div> : step && <div className="pb-body">
       <span className="pb-count">第 {index + 1} / {total} 步 · {pageNames[step.page] ?? ''}</span>
       <h3>{step.title}</h3>

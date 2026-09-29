@@ -902,3 +902,5 @@ code { font-family: var(--font-mono); font-size: var(--type-metaSize); }
   .pb-desc, .pb-foot { display: none; }
   .pb-body { gap: var(--space-2); }
 }
+.step-进行中 { background: var(--color-indigoLight); color: var(--color-indigo); }
+.pb-exit { margin-top: 0; }

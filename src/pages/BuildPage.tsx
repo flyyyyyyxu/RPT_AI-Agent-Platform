@@ -12,8 +12,12 @@ import { WorkflowStepList } from '../components/build/WorkflowStepList';
 import { DependencyLock, VersionDiff } from '../components/build/VersionSnapshot';
 import { Phase2Row, SkeletonHeading } from '../components/skeleton/Skeleton';
 import { Card, SectionHeading } from '../components/content/Content';
-import { knowledgeOptions, modelOptions, toolOptions } from '../data/mock';
-import { debugPresets } from '../app/scenarioData';
+import { modelOptions, toolCatalog } from '../data/mock';
+import { debugPresets, knowledgeBasesFor } from '../app/scenarioData';
+import { usePlaybookLock } from '../app/playbooks';
+
+/** 工具选项：工具目录里的在用版本和最新版本。 */
+const toolOptions = [...new Set(toolCatalog.flatMap(tool => [`${tool.name} ${tool.version}`, `${tool.name} ${tool.latest}`]))];
 import { AgentShell } from '../layouts/AgentShell';
 import type { Agent, AgentConfig, AgentVersion } from '../types/domain';
 
@@ -21,11 +25,15 @@ const withCurrent = (options: string[], value: string) => options.includes(value
 
 export function BuildPage({ agent }: { agent: Agent }) {
   const { selected } = useSelectedVersion(agent);
-  return <BuildWorkspace key={`${agent.id}-${selected.id}`} agent={agent} version={selected} />;
+  // updatedAt 变化说明配置被页面外修改过（依赖升级、剧本代改），重新挂载，避免表单留着旧配置被误保存
+  return <BuildWorkspace key={`${agent.id}-${selected.id}-${selected.updatedAt}`} agent={agent} version={selected} />;
 }
 
 function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersion }) {
-  const { saveConfig, createDraft, markDebugged } = useDemo();
+  const { state, saveConfig, createDraft, markDebugged } = useDemo();
+  const draftLock = usePlaybookLock('plain-draft', agent.id);
+  /** 知识库选项：来自能力组件库，新发布的知识版本会立即出现在这里。 */
+  const knowledgeOptions = [...knowledgeBasesFor(state).flatMap(kb => kb.versions.map(item => `${kb.name} ${item.id}`)), '暂不接入'];
   const { select } = useSelectedVersion(agent);
   const [form, setForm] = useState<AgentConfig>(() => structuredClone(version.config));
   const editable = isEditable(version);
@@ -44,7 +52,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
   return <AgentShell agent={agent} stepId="build" aside={aside}><SectionHeading eyebrow="基础能力 · 构建" title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`} description={editable ? '修改 Prompt、模型、知识、工具和执行步骤；保存后需要重新调试和评测。' : '已上线或历史版本是不可修改的快照，包含模型、Prompt、编排、工具和知识版本。'} aside={<div className="heading-badges"><StatusBadge status={version.status} /><ScopeBadge phase="MVP" /></div>} />
     {!editable && <div className="snapshot-banner"><Lock size={20} /><div><strong>{version.id} 是只读快照</strong><p>{candidate ? `已有候选版本 ${candidate.id}，请在候选版本上继续修改。` : `如需修改，请基于 ${version.id} 新建草稿 ${nextVersionId(agent)}；线上指向不受影响。`}</p></div>
       {candidate ? <Link className="button button-primary" to={`/agents/${agent.id}/build`}>前往候选版本 {candidate.id}</Link>
-        : <Button variant="primary" onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={16} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button>}</div>}
+        : <Button variant="primary" disabled={Boolean(draftLock)} reason={draftLock} onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={16} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button>}</div>}
     <Card className="config-card"><fieldset disabled={!editable} className="config-fieldset">
       <div data-demo="prompt"><ConfigSection title="Prompt" description="用双花括号声明变量，例如 {{question}}。"><textarea className="prompt-editor" rows={9} value={form.prompt} readOnly={!editable} onChange={event => patch({ prompt: event.target.value })} /><div className="variable-row"><span className="meta">已识别变量</span>{variables ? variables.map(item => <code key={item}>{item}</code>) : <span className="meta">暂无变量</span>}</div></ConfigSection></div>
       <div className="config-pair"><ConfigSection title="模型" description="选择公司托管的基础模型。"><label className="select-field"><select value={form.model} onChange={event => patch({ model: event.target.value })}>{withCurrent(modelOptions, form.model).map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={16} /></label></ConfigSection><ConfigSection title="输出格式" description="约束最终回答的结构。"><input value={form.outputFormat} readOnly={!editable} onChange={event => patch({ outputFormat: event.target.value })} /></ConfigSection></div>

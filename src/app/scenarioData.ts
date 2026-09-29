@@ -2,9 +2,10 @@
  * 统一取数：页面只通过这里读 mock，演示剧本（pa / pb / pc）在这里替换数据，页面和组件不变。
  */
 import {
-  DEMO_NOW, abProfiles, approverFor, badCaseProfiles, baseOf, batchPresets, gateProfiles, knowledgeBases, pbDatasets, pbEvalTrace, pbGate, pbOldClause,
+  abProfiles, approverFor, badCaseProfiles, baseOf, batchPresets, gateProfiles, knowledgeBases, pbDatasets, pbEvalTrace, pbGate, pbOldClause,
   pbPolicyKb, pcAftersaleKb, pendingEntries, profiles, scenarioOverrides, traceProfiles, upstreamChanges,
 } from '../data/mock';
+import { demoNow } from './versions';
 import type { AbProfile, Agent, AgentOps, AgentVersion, AlertDef, BadCase, DemoState, EvalDataset, GateProfile, KnowledgeBase, KnowledgeEntry, TraceRecord } from '../types/domain';
 
 const scenario = (agent: Agent) => agent.profile === 'pa' || agent.profile === 'pb' || agent.profile === 'pc' ? scenarioOverrides[agent.profile] : null;
@@ -37,10 +38,16 @@ export const alertsFor = (agent: Agent): AlertDef[] => scenario(agent)?.alerts ?
 
 export function tracesFor(agent: Agent): TraceRecord[] {
   if (agent.profile === 'pb') {
+    /* 隔离评测的 Trace 只在评测跑过之后出现：
+       修正前跑过评测 → 出现失败的 ev_v8_0931；修正后（评测结果已清空）只保留这条历史；
+       修正后重新评测 → 再出现通过的 ev_v8_1004。 */
     const v8 = agent.versions.find(item => item.id === 'v8');
     const production = traceProfiles.b.map(trace => ({ ...trace, version: 'v7' }));
-    if (!v8 || !v8.evaluatedDatasets.length && pbState(v8) === 'unfixed') return v8 && pbState(v8) !== 'legacy' ? [pbEvalTrace(false), ...production] : production;
-    return pbState(v8) === 'fixed' ? [pbEvalTrace(true), pbEvalTrace(false), ...production] : [pbEvalTrace(false), ...production];
+    const state = pbState(v8 ?? null);
+    const evaluated = Boolean(v8?.evaluatedDatasets.length) || agent.productionVersion === 'v8' || v8?.status === '影子运行';
+    if (!v8 || state === 'legacy') return production;
+    if (state === 'unfixed') return evaluated ? [pbEvalTrace(false), ...production] : production;
+    return evaluated ? [pbEvalTrace(true), pbEvalTrace(false), ...production] : [pbEvalTrace(false), ...production];
   }
   const own = scenario(agent)?.traces ?? traceProfiles[baseOf(agent.profile)];
   return own.length ? own : traceProfiles.general;
@@ -67,7 +74,7 @@ export const pendingFor = (kbId: string) => pendingEntries[kbId] ?? [];
 
 export type EntryStatus = '生效中' | '已失效' | '待生效';
 export const entryStatus = (entry: Pick<KnowledgeEntry, 'from' | 'to'>): EntryStatus =>
-  entry.to && entry.to < DEMO_NOW ? '已失效' : entry.from > DEMO_NOW ? '待生效' : '生效中';
+  entry.to && entry.to < demoNow() ? '已失效' : entry.from > demoNow() ? '待生效' : '生效中';
 
 export const nextKbVersion = (id: string) => { const match = /^v(\d+)$/.exec(id); return match ? `v${Number(match[1]) + 1}` : `${id} 修订`; };
 
