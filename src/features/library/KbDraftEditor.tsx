@@ -22,7 +22,7 @@ export function KbDraftEditor({ draft, onPublished }: { draft: KbDraft; onPublis
   const patchEntry = (index: number, value: Partial<KbDraft['entries'][number]>) => setKbDraft({ ...draft, entries: draft.entries.map((entry, i) => i === index ? { ...entry, ...value } : entry) });
   const invalid = draft.entries.find(entry => !TIME.test(entry.from) || (entry.to !== null && !TIME.test(entry.to)) || (entry.to !== null && entry.to <= entry.from));
   const reason = invalid ? `「${invalid.title}」的时间格式应为 2026-09-01 00:00，且失效时间晚于生效时间` : undefined;
-  return <Capability skeleton={[1]} hero={3} demo="kb-draft" title={`新版本草稿 ${draft.nextVersion}（基于 ${draft.fromVersion}）`} description="发布后成为新的知识版本快照；已上线的 Agent 版本仍锁定旧版本，升级需创建候选版本并回归评测。">
+  return <Capability demo="kb-draft" title={`新版本草稿 ${draft.nextVersion}（基于 ${draft.fromVersion}）`} description="发布后成为新的知识版本快照；已上线的 Agent 版本仍锁定旧版本，升级需创建候选版本并回归评测。">
     <div className="table-scroll"><table className="data-table entry-table kb-draft-table"><thead><tr><th className="col-entry">知识条目</th><th className="col-time">生效时间</th><th className="col-time">失效时间</th><th className="col-state">状态</th></tr></thead>
       <tbody>{draft.entries.map((entry, index) => <tr key={entry.title}><td><span className="truncate" title={entry.title}>{entry.isNew && <span className="new-tag">新增</span>}{entry.title}</span></td>
         <td><input className="time-input" aria-label={`${entry.title} 生效时间`} value={entry.from} onChange={event => patchEntry(index, { from: event.target.value })} /></td>

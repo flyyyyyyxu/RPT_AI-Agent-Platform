@@ -33,11 +33,6 @@ export async function go(page, route, wait = 600) {
   await page.waitForTimeout(wait);
 }
 
-export async function setView(page, mode) {
-  await page.getByRole('radio', { name: mode === 'basic' ? '只看基础能力' : '显示生产骨架' }).click();
-  await page.waitForTimeout(300);
-}
-
 /** 从工作台开始剧本（含页内二次确认）。 */
 export async function startPlaybook(page, letter) {
   await go(page, '/', 400);
@@ -50,7 +45,7 @@ export async function startPlaybook(page, letter) {
 /** 读取演示存档里某个 Agent 的状态。 */
 export async function agentState(page, id) {
   return page.evaluate(agentId => {
-    const state = JSON.parse(localStorage.getItem('agent-platform-demo-v4') ?? 'null');
+    const state = JSON.parse(localStorage.getItem('agent-platform-demo-v5') ?? 'null');
     if (!state) return null;
     const agent = state.agents.find(item => item.id === agentId);
     return { profile: agent.profile, production: agent.productionVersion, versions: agent.versions.map(v => ({ id: v.id, status: v.status, traffic: v.traffic ?? null, knowledge: v.config.knowledge, evaluated: v.evaluatedDatasets.length })), ops: state.ops[agentId] ?? null, playbook: state.playbook, knowledge: state.knowledge };

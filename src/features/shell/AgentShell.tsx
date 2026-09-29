@@ -5,16 +5,13 @@ import { lifecycleSteps } from '../../data';
 import type { Agent } from '../../types/domain';
 import { StatusBadge, VersionBadge } from '../../shared/components/Badges';
 import { useSelectedVersion } from '../../core/hooks/useSelectedVersion';
-import { useDemo } from '../../core/store/DemoProvider';
-import { SkeletonBadge } from '../../shared/components/Badges';
 import { getCandidate } from '../../core/rules/versions';
 import { lifecycleState } from '../../core/rules/lifecycle';
 import { icon } from '../../shared/styles/tokens';
 
 export function AgentShell({ agent, stepId, children, aside }: { agent: Agent; stepId: string; children: ReactNode; aside: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const skeletonView = useDemo().state.viewMode === 'skeleton';
-  const steps = lifecycleSteps.filter(step => skeletonView || step.id !== 'trace');
+  const steps = lifecycleSteps;
   const { selected, select, search } = useSelectedVersion(agent);
   const states = lifecycleState(agent);
   const candidate = getCandidate(agent);
@@ -27,7 +24,7 @@ export function AgentShell({ agent, stepId, children, aside }: { agent: Agent; s
       <nav className="lifecycle-nav" aria-label="Agent 生命周期">{steps.map((step, index) => {
         const current = step.id === stepId;
         const state = states[step.id];
-        return <NavLink key={step.id} to={`/agents/${agent.id}/${step.id}${search}`} className={({ isActive }) => `lifecycle-item ${isActive ? 'current' : ''}`} aria-current={step.id === stepId ? 'step' : undefined}><span className={`step-index step-${current ? '当前' : state}`}>{index + 1}</span><span className="step-copy"><strong>{step.label}{step.id === 'trace' && <><SkeletonBadge number={6} /><SkeletonBadge number={8} /></>}</strong><small>{current ? `当前${state !== '未开始' ? ` · ${state}` : ''}` : state}</small></span></NavLink>;
+        return <NavLink key={step.id} to={`/agents/${agent.id}/${step.id}${search}`} className={({ isActive }) => `lifecycle-item ${isActive ? 'current' : ''}`} aria-current={step.id === stepId ? 'step' : undefined}><span className={`step-index step-${current ? '当前' : state}`}>{index + 1}</span><span className="step-copy"><strong>{step.label}</strong><small>{current ? `当前${state !== '未开始' ? ` · ${state}` : ''}` : state}</small></span></NavLink>;
       })}</nav></div>
     <div className="workspace-toolbar"><span className="meta">{iteration} · 正在查看 {selected.id}：{selected.note}</span><button className="button button-secondary aside-toggle" onClick={() => setDrawerOpen(value => !value)} aria-expanded={drawerOpen}>{drawerOpen ? <PanelRightClose size={icon.small} /> : <PanelRightOpen size={icon.small} />}{drawerOpen ? '收起辅助信息' : '展开辅助信息'}</button></div>
     <div className="workspace-columns"><section className="workspace-main">{children}</section><aside className={`workspace-aside ${drawerOpen ? 'drawer-open' : ''}`} aria-label="辅助信息"><div className="drawer-heading"><strong>辅助信息</strong><button className="icon-button" onClick={() => setDrawerOpen(false)} aria-label="关闭辅助信息"><PanelRightClose size={icon.large} /></button></div>{aside}</aside></div>

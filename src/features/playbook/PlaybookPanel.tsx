@@ -1,41 +1,52 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Flag, ListChecks, MousePointerClick, RotateCcw, Sparkles, Wand2, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, ChevronUp, Flag, ListChecks, MousePointerClick, RotateCcw, Wand2, X } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
 import { pageNames, pagePath, playbookOf } from './playbooks';
 import { Button } from '../../shared/components/Buttons';
 import { DemoTag } from '../../shared/components/Badges';
-import { HeroTag, heroNames } from '../../shared/components/Capability';
 import { useStartPlaybook } from './useStartPlaybook';
-import './playbook.css';
 import { icon } from '../../shared/styles/tokens';
+import './playbook.css';
+
+/**
+ * 剧本浮层的显示状态：
+ * - 用户点 ✕ 收起后保持胶囊（存进演示状态，换页、刷新后不变）
+ * - 没收起时，只在当前步骤所在的页面（或剧本已完成时）展开，其它页面显示胶囊
+ */
+export function usePlaybookPanel() {
+  const { state } = useDemo();
+  const location = useLocation();
+  const pb = state.playbook;
+  const playbook = pb ? playbookOf(pb.id) : null;
+  const index = pb?.step ?? 0;
+  const step = playbook?.steps[index];
+  const finished = Boolean(playbook && index >= playbook.steps.length);
+  const path = playbook && step ? pagePath(playbook, step.page) : '';
+  const onPage = location.pathname === path;
+  const expanded = Boolean(pb && !pb.collapsed && (finished || onPage));
+  return { pb, playbook, index, step, finished, path, onPage, expanded };
+}
 
 /** 右下角「演示步骤」浮层。 */
 export function PlaybookPanel() {
   const api = useDemo();
-  const { state, setPlaybookStep, exitPlaybook, opsOf, setViewMode } = api;
-  const location = useLocation();
+  const { state, setPlaybookStep, setPlaybookCollapsed, exitPlaybook, opsOf } = api;
   const navigate = useNavigate();
+  const location = useLocation();
   const start = useStartPlaybook();
-  const [collapsed, setCollapsed] = useState(false);
+  const { pb, playbook, index, step, finished, path, onPage, expanded } = usePlaybookPanel();
   const [dockLeft, setDockLeft] = useState(false);
   const [exiting, setExiting] = useState(false);
   const panelRef = useRef<HTMLElement | null>(null);
-  const pb = state.playbook;
-  const playbook = pb ? playbookOf(pb.id) : null;
   const agent = playbook ? state.agents.find(item => item.id === playbook.agentId) : undefined;
   const ctx = agent ? { state, agent, ops: opsOf(agent) } : null;
-  const index = pb?.step ?? 0;
-  const step = playbook?.steps[index];
-  const finished = Boolean(playbook && index >= playbook.steps.length);
   const done = Boolean(step?.done && ctx && step.done(ctx));
-  const path = playbook && step ? pagePath(playbook, step.page) : '';
-  const onPage = location.pathname === path;
 
-  /* 进入某一步时如果条件已满足，就不自动跳；只有在这一步里完成操作才自动进入下一步。 */
+  /* 进入某一步时如果条件已满足，就不自动跳；只有在这一步里完成操作才自动进入下一步（浮层收起时照样推进）。 */
   const entered = useRef<{ key: string; done: boolean } | null>(null);
   const stepKey = `${pb?.id}-${index}`;
-  useEffect(() => { entered.current = { key: stepKey, done }; }, [stepKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { entered.current = { key: stepKey, done }; setExiting(false); }, [stepKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!pb || !step?.done || !done) return;
     if (entered.current?.key === stepKey && entered.current.done) return;
@@ -43,9 +54,9 @@ export function PlaybookPanel() {
     return () => window.clearTimeout(timer);
   }, [done, stepKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* 高亮下一步要点的元素 */
+  /* 浮层展开时才高亮下一步要点的元素 */
   useEffect(() => {
-    if (!step?.target || finished) return;
+    if (!step?.target || finished || !expanded) return;
     let current: Element | null = null;
     let scrolled = false;
     let docked = false;
@@ -75,7 +86,7 @@ export function PlaybookPanel() {
     apply();
     const timer = window.setInterval(apply, 400);
     return () => { window.clearInterval(timer); current?.classList.remove('demo-target'); };
-  }, [stepKey, location.pathname, finished]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stepKey, location.pathname, finished, expanded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!pb || !playbook) return null;
   const total = playbook.steps.length;
@@ -85,33 +96,39 @@ export function PlaybookPanel() {
     if (next) { const nextPath = pagePath(playbook, next.page); if (nextPath !== location.pathname) navigate(nextPath); }
   };
 
-  if (collapsed) return <button type="button" className="playbook-pill" onClick={() => setCollapsed(false)} aria-label="展开演示步骤"><ListChecks size={icon.small} />演示步骤 · 剧本 {playbook.letter} {finished ? '已完成' : `第 ${index + 1} / ${total} 步`}<ChevronDown size={icon.small} className="pill-caret" /></button>;
+  if (!expanded) {
+    const openPanel = () => { setPlaybookCollapsed(false); if (!finished && !onPage) navigate(path); };
+    const where = !finished && !onPage && step ? `前往${pageNames[step.page] ?? '对应页面'}` : '展开';
+    return <button type="button" className="playbook-pill" onClick={openPanel} aria-label={`演示步骤：${where}`}>
+      <ListChecks size={icon.small} aria-hidden="true" />
+      <span className="pill-text">剧本 {playbook.letter} · {finished ? '已完成' : `${index + 1} / ${total}：${step?.title ?? ''}`}</span>
+      <span className="pill-action">{where}{!finished && !onPage ? <ChevronRight size={icon.small} aria-hidden="true" /> : <ChevronUp size={icon.small} aria-hidden="true" />}</span>
+    </button>;
+  }
+
+  const exitConfirm = exiting && <div className="confirmation pb-exit" role="group" aria-label="退出剧本二次确认"><strong>退出剧本 {playbook.letter}？</strong>
+    <p>保留：「{playbook.title}」停在当前剧本数据，可继续自由操作。恢复：换回剧本开始前的原始演示数据。</p>
+    <div className="inline-actions"><Button onClick={() => setExiting(false)}>取消</Button><Button onClick={() => { setExiting(false); exitPlaybook(false); }}>保留数据退出</Button><Button onClick={() => { setExiting(false); exitPlaybook(true); }}>恢复原始数据</Button></div></div>;
 
   return <aside ref={panelRef} className={`playbook-panel ${dockLeft ? 'dock-left' : ''}`} aria-label="演示步骤" aria-live="polite">
     <div className="pb-head"><div><span className="eyebrow">演示步骤 · 剧本 {playbook.letter}「{playbook.theme}」</span><strong>{playbook.title}</strong></div>
-      <div className="pb-head-actions"><button type="button" className="icon-button" onClick={() => setCollapsed(true)} aria-label="收起演示步骤" title="收起"><ChevronDown size={icon.small} /></button><button type="button" className="icon-button" onClick={() => setExiting(true)} aria-label="退出剧本" title="退出剧本"><X size={icon.small} /></button></div></div>
-    {exiting && <div className="confirmation pb-exit" role="group" aria-label="退出剧本二次确认"><strong>退出剧本 {playbook.letter}？</strong>
-      <p>保留：「{playbook.title}」停在当前剧本数据，可继续自由操作。恢复：换回剧本开始前的原始演示数据。</p>
-      <div className="inline-actions"><Button onClick={() => setExiting(false)}>取消</Button><Button onClick={() => { setExiting(false); exitPlaybook(false); }}>保留数据退出</Button><Button onClick={() => { setExiting(false); exitPlaybook(true); }}>恢复原始数据</Button></div></div>}
+      <button type="button" className="icon-button" onClick={() => setPlaybookCollapsed(true)} aria-label="收起演示步骤" title="收起（剧本进度保留）"><X size={icon.small} /></button></div>
     <ol className="pb-dots" aria-label="进度">{playbook.steps.map((item, i) => <li key={item.title} className={i < index ? 'done' : i === index ? 'current' : ''} title={`${i + 1}. ${item.title}`} />)}</ol>
-    {state.viewMode === 'basic' && <div className="alert-banner"><Flag size={icon.small} aria-hidden="true" /><div><strong>当前为「只看基础能力」</strong><p>剧本用到的生产骨架能力已隐藏。</p></div><Button onClick={() => setViewMode('skeleton')}>显示生产骨架</Button></div>}
     {finished ? <div className="pb-body">
       <div className="pb-finish"><Flag size={icon.large} aria-hidden="true" /><strong>剧本 {playbook.letter} 完成</strong></div>
       <p>{playbook.outcome}</p>
-      <div className="playbook-heroes">{playbook.heroes.map(n => <HeroTag key={n} n={n} compact />)}</div>
-      <div className="pb-nav"><Button onClick={() => navigate('/')}>返回工作台</Button><Button onClick={() => start(playbook.id)}><RotateCcw size={icon.small} />重新开始</Button><Button onClick={() => setExiting(true)}>退出剧本</Button></div>
+      <div className="pb-nav"><Button onClick={() => navigate('/')}>返回工作台</Button><Button onClick={() => start(playbook.id)}><RotateCcw size={icon.small} />重新开始</Button></div>
     </div> : step && <div className="pb-body">
       <span className="pb-count">第 {index + 1} / {total} 步 · {pageNames[step.page] ?? ''}</span>
       <h3>{step.title}</h3>
       <p className="pb-desc">{step.body}</p>
-      {step.hero && <div className="pb-hero"><Sparkles size={icon.small} aria-hidden="true" /><span>这一步体现了<strong>主角 {step.hero}</strong>：{heroNames[step.hero]}</span></div>}
-      <div className="pb-next"><MousePointerClick size={icon.small} aria-hidden="true" /><div><span className="meta">下一步点哪里</span><p>{onPage ? step.next : `先前往${pageNames[step.page] ?? '对应页面'}，然后：${step.next}`}</p></div></div>
-      {!onPage && <Button variant="primary" onClick={() => navigate(path)}>前往{pageNames[step.page] ?? '对应页面'}<ChevronRight size={icon.small} /></Button>}
-      {onPage && step.helper && !done && ctx && <Button onClick={() => step.helper?.run({ applyFix: api.applyFix, setKbDraft: api.setKbDraft }, ctx)}><Wand2 size={icon.small} />{step.helper.label}</Button>}
+      <div className="pb-next"><MousePointerClick size={icon.small} aria-hidden="true" /><div><span className="meta">下一步点哪里</span><p>{step.next}</p></div></div>
+      {step.helper && !done && ctx && <Button onClick={() => step.helper?.run({ applyFix: api.applyFix, setKbDraft: api.setKbDraft }, ctx)}><Wand2 size={icon.small} />{step.helper.label}</Button>}
       {done && step.done && <p className="added-note"><CheckCircle2 size={icon.small} aria-hidden="true" />这一步已完成</p>}
       <div className="pb-nav"><Button onClick={() => go(index - 1)} disabled={index === 0} reason={index === 0 ? '已是第一步' : undefined}><ChevronLeft size={icon.small} />上一步</Button>
         <Button onClick={() => go(index + 1)} disabled={Boolean(step.done) && !done} reason={step.done && !done ? '完成页面上的操作后自动进入下一步' : undefined}>{index === total - 1 ? '完成剧本' : '下一步'}<ChevronRight size={icon.small} /></Button></div>
     </div>}
-    <p className="pb-foot"><DemoTag label="演示数据" />页面上所有数字均为演示数据</p>
+    {exitConfirm}
+    <div className="pb-foot"><span><DemoTag label="演示数据" />页面上所有数字均为演示数据</span>{!exiting && <button type="button" className="link-button" onClick={() => setExiting(true)}>退出剧本</button>}</div>
   </aside>;
 }

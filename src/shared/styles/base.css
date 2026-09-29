@@ -25,5 +25,5 @@ code { font-family: var(--font-mono); font-size: var(--type-metaSize); }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 @media (max-width: 767px) {
-  :root { --mobile-topbar-height: calc(var(--space-12) + var(--space-12) - var(--space-2)); }
+  :root { --mobile-topbar-height: calc(var(--space-12) + var(--space-4)); }
 }

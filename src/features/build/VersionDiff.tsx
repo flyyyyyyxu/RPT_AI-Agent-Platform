@@ -35,7 +35,7 @@ export function VersionDiff({ agent, version }: { agent: Agent; version: AgentVe
   ];
   const toolChanges = toolChips.filter(item => item.type !== 'same').length;
   const knowledgeLabel = /政策/.test(version.config.knowledge) ? '政策版本' : '知识版本';
-  return <Capability skeleton={[1]} title="版本 diff" description="四类变更分别对比：Prompt、模型、工具版本、知识 / 政策版本。版本是不可修改的快照，diff 直接读快照内容。"
+  return <Capability title="版本 diff" description="四类变更分别对比：Prompt、模型、工具版本、知识 / 政策版本。版本是不可修改的快照，diff 直接读快照内容。"
     actions={others.length > 0 && <label className="compact-select diff-select"><span className="sr-only">对比基线</span><select value={baseId ?? ''} onChange={event => setBaseId(event.target.value)}>{others.map(item => <option key={item.id} value={item.id}>对比 {item.id} · {item.status}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></label>}>
     {!base ? <Feedback kind="empty" title="暂无可对比的版本" description="只有一个版本；基于它新建草稿后，这里逐项对比 Prompt、模型、工具和知识版本。" /> : <>
       <div className="diff-toolbar"><VersionBadge version={base.id} /><ArrowRight size={icon.small} aria-hidden="true" /><VersionBadge version={version.id} /><span className="meta">新增行翠绿底，删除行红底</span></div>

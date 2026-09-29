@@ -1,4 +1,4 @@
-/** 生产骨架的默认运营配置：把门槛、审批、设置组合成每个 Agent 的初始 AgentOps。 */
+/** 默认运营配置：把门槛、审批、设置组合成每个 Agent 的初始 AgentOps。 */
 import type { AgentOps, BaseProfileId, ProfileId } from '../../types/domain';
 import { gateProfiles } from './evaluation';
 import { approvalsFor } from './release';

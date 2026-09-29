@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CircleAlert } from 'lucide-react';
 import { Button, ConfirmAction } from '../../shared/components/Buttons';
-import { DemoBadge, FeatureMark, IntegrationNote, ScopeBadge, SkeletonBadge, StatusBadge, VersionBadge, type Status } from '../../shared/components/Badges';
+import { DemoBadge, IntegrationNote, ScopeBadge, StatusBadge, VersionBadge, type Status } from '../../shared/components/Badges';
 import { Card, SectionHeading } from '../../shared/components/Content';
 import { CompareView, DataTable, MetricCard } from '../../shared/components/DataDisplay';
 import { Feedback } from '../../shared/components/Feedback';
@@ -29,9 +29,9 @@ export function DesignSystemPage() {
       <Card><span className="eyebrow">间距 / 圆角 / 阴影</span><div className="space-samples">{Object.entries(tokens.space).map(([key, value]) => <div key={key}><span className="space-bar" style={{ width: `var(--space-${key})` }} /><code>{value}</code></div>)}</div><p className="meta">卡片 12px · 控件 8px · 徽章 6px</p><div className="shadow-samples"><span>卡片阴影</span><span>悬停阴影</span></div></Card></div>
     <Card className="token-rule-card"><span className="eyebrow">布局与动效</span><p>内容最大 {tokens.layout.max} · 导航 {tokens.layout.sidebar} / {tokens.layout.sidebarCollapsed} · 辅助区 {tokens.layout.asideMin}–{tokens.layout.asideMax}</p><p>断点 ≥{tokens.breakpoint.wide}px 双栏 · {tokens.breakpoint.mobile}–{tokens.breakpoint.wide - 1}px 辅助抽屉 · &lt;{tokens.breakpoint.mobile}px 单列</p><p>过渡 {tokens.motion.fast}–{tokens.motion.slow} {tokens.motion.ease} · 位移不超过 {tokens.motion.distance} · 尊重减少动态效果</p></Card>
 
-    <SectionHeading eyebrow="B2 / B4 · 语义与标记" title="状态、徽章和差异化" description="颜色对应固定含义；二期内容整块置灰且无法操作。" />
-    <div className="sample-grid"><Card><h3>状态标签</h3><div className="badge-row">{statusValues.map(status => <StatusBadge key={status} status={status} />)}</div><h3>专属徽章</h3><div className="badge-row"><ScopeBadge phase="MVP" /><ScopeBadge phase="二期" />{Array.from({ length: 10 }, (_, index) => <SkeletonBadge key={index} number={index + 1} />)}<VersionBadge version="v12" /><DemoBadge /></div><IntegrationNote platform="实验" /></Card>
-      <Card><h3>差异化能力</h3><FeatureMark><strong>强制上线门槛</strong><p>候选版本先评测；门槛不通过时发布入口说明阻断原因。</p></FeatureMark><div className="phase2-block mini-phase2" title="二期建设"><ScopeBadge phase="二期" /><strong>扩展能力</strong><p>二期建设</p></div></Card></div>
+    <SectionHeading eyebrow="B2 / B4 · 语义与标记" title="状态与徽章" description="颜色对应固定含义；二期内容整块置灰且无法操作。" />
+    <div className="sample-grid"><Card><h3>状态标签</h3><div className="badge-row">{statusValues.map(status => <StatusBadge key={status} status={status} />)}</div><h3>专属徽章</h3><div className="badge-row"><ScopeBadge phase="MVP" /><ScopeBadge phase="二期" /><VersionBadge version="v12" /><DemoBadge /></div><IntegrationNote platform="实验" /></Card>
+      <Card><h3>二期占位</h3><div className="phase2-block mini-phase2" title="二期建设"><ScopeBadge phase="二期" /><strong>扩展能力</strong><p>二期建设</p></div></Card></div>
 
     <SectionHeading eyebrow="B5 · 操作层级" title="按钮与反馈" description="每个区域最多一个主按钮；影响线上的操作在页面内二次确认。" />
     <div className="sample-grid"><Card><h3>操作状态</h3><div className="button-samples"><Button variant="primary" onClick={simulate}>运行评测</Button><Button onClick={simulate}>查看版本</Button><Button disabled reason="上线门槛未通过">发布 v13</Button></div><p className="meta">禁用原因在按钮下方显示，也可悬停查看。</p></Card>

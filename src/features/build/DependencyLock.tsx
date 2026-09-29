@@ -25,7 +25,7 @@ export function DependencyLock({ agent, version, onCreated }: { agent: Agent; ve
   const upgraded = { knowledge: knowledgeChange?.latest ?? version.config.knowledge, tools: [...new Set(version.config.tools.map(tool => upstreamFor(tool, kbs)?.latest ?? tool))] };
   const upgradeNote = `升级依赖：${changed.map(row => row.change?.latest).join('、')}`;
   const canCreate = !isCandidate && !candidate && version.everOnline;
-  return <Capability skeleton={[1]} hero={3} title="依赖锁定" description={`${version.id} 快照锁定了下列依赖的具体版本；上游更新不会悄悄改变线上行为，回退时知识版本也一并回到旧快照。`}>
+  return <Capability title="依赖锁定" description={`${version.id} 快照锁定了下列依赖的具体版本；上游更新不会悄悄改变线上行为，回退时知识版本也一并回到旧快照。`}>
     <div className="dep-list">{rows.map(row => <div className="dep-row" key={`${row.kind}-${row.name}`}>
       <span className="meta">{row.kind}</span>
       <span><strong>{row.name}</strong><br /><code><Lock size={icon.small} aria-hidden="true" /> {row.lock}</code></span>

@@ -62,8 +62,8 @@ export const mockAgents: Agent[] = [
   },
 ];
 
-export const initialDemoState: DemoState = { schema: 4, agents: mockAgents, team: '全部团队', viewMode: 'skeleton', ops: {}, knowledge: {}, kbDraft: null, playbook: null };
-export const teams = ['全部团队', ...new Set(mockAgents.map(agent => agent.team))];
+export const initialDemoState: DemoState = { schema: 5, agents: mockAgents, ops: {}, knowledge: {}, kbDraft: null, playbook: null };
+export const teams = [...new Set(mockAgents.map(agent => agent.team))];
 export const lifecycleSteps = [
   { id: 'build', label: '构建' }, { id: 'evaluation', label: '评测' }, { id: 'release', label: '发布与实验' },
   { id: 'monitor', label: '监控' }, { id: 'trace', label: 'Trace 与 bad case' },

@@ -1,5 +1,4 @@
 import { AlertCircle, ExternalLink } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { icon } from '../styles/tokens';
 
 export type Status = '线上' | '通过' | '灰度中' | '进行中' | '待审批' | '警告' | '阻断' | '失败' | '错误' | '草稿' | '二期' | '待发布' | '历史' | '影子运行' | '已审批' | '未完成' | '成功' | '异常';
@@ -16,15 +15,6 @@ export function StatusBadge({ status }: { status: Status }) {
 
 export function ScopeBadge({ phase }: { phase: 'MVP' | '二期' }) {
   return <span className={`scope-badge ${phase === '二期' ? 'scope-badge-later' : ''}`} title={phase === '二期' ? '二期建设' : undefined}>{phase}</span>;
-}
-
-export function SkeletonBadge({ number }: { number: number }) {
-  const numerals = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
-  return <span className="skeleton-badge" aria-label={`生产骨架第 ${number} 项`}>{numerals[number - 1]}</span>;
-}
-
-export function FeatureMark({ children }: { children: ReactNode }) {
-  return <div className="feature-mark"><span className="feature-label">差异化</span>{children}</div>;
 }
 
 export function VersionBadge({ version }: { version: string }) { return <span className="version-badge">{version}</span>; }

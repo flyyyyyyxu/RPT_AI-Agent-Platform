@@ -7,7 +7,7 @@ import { strategyLabels, bucketLabel } from './labels';
 /* ---------------- ③ 发布策略 ---------------- */
 export function StrategyCard({ agent, ops, update, locked }: { agent: Agent; ops: AgentOps; update: (patch: Partial<AgentOps>) => void; locked?: string }) {
   const strategy: ReleaseStrategy = agent.productionVersion ? ops.strategy : 'direct';
-  return <Capability skeleton={[3]} demo="strategy" title="发布策略" description="选择新版本进入生产的方式；比例灰度和影子运行都不改变线上指向。">
+  return <Capability demo="strategy" title="发布策略" description="选择新版本进入生产的方式；比例灰度和影子运行都不改变线上指向。">
     <div className="strategy-grid"><div className="settings-grid">
       <div className="strategy-options" role="radiogroup" aria-label="发布策略">{(Object.keys(strategyLabels) as ReleaseStrategy[]).map(key => {
         const disabled = Boolean(locked) || (!agent.productionVersion && key !== 'direct');

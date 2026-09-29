@@ -23,7 +23,7 @@ export function TrafficCard({ agent, ops, experiment, rollbackTarget, switching,
   const shadow = experiment?.status === '影子运行' ? experiment : null;
   const traffic = gray?.traffic ?? 0;
   const next = rampSteps.find(step => step > traffic) ?? 100;
-  return <Capability skeleton={[3, 5]} hero={[2, 3]} demo="traffic" title="流量指向" description="平台网关负责分流：发布、放量、回退都只是改变指向，版本快照本身不变。">
+  return <Capability demo="traffic" title="流量指向" description="平台网关负责分流：发布、放量、回退都只是改变指向，版本快照本身不变。">
     {!production ? <Feedback kind="empty" title="暂无生产流量" description="该 Agent 尚未发布；首次发布后，这里显示线上指向、流量分配和回退入口。" /> : <>
       <div className="pointer-cards">
         <div className="pointer-card active"><span className="meta"><Radio size={icon.small} aria-hidden="true" /> 线上指向</span><strong><VersionBadge version={production} /> <StatusBadge status="线上" /></strong><span className="meta">{gray ? `承接 ${100 - traffic}% 流量` : '承接全部生产流量'}</span></div>

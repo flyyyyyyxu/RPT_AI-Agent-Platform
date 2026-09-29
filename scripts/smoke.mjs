@@ -1,12 +1,13 @@
 // 冒烟检查：三条演示剧本从头走到尾 + 已修复问题的回归检查。
 //   node scripts/smoke.mjs        全部失败项会列出来，退出码为 1
-import { agentState, go, launch, newPage, setView, startPlaybook } from './lib.mjs';
+import { agentState, go, launch, newPage, startPlaybook } from './lib.mjs';
 
 const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok: Boolean(ok), detail }); console.log(`${ok ? '✓' : '✗'} ${name}${!ok && detail ? ` —— ${detail}` : ''}`); };
-const panelTitle = async page => (await page.locator('.playbook-panel h3').allInnerTexts())[0] ?? (await page.locator('.playbook-panel .pb-finish').allInnerTexts())[0] ?? '';
+// 浮层只在当前步骤所在页面展开；其它页面是胶囊，胶囊文字里带步骤标题
+const panelTitle = async page => (await page.locator('.playbook-panel h3').allInnerTexts())[0] ?? (await page.locator('.playbook-panel .pb-finish').allInnerTexts())[0] ?? (await page.locator('.playbook-pill .pill-text').allInnerTexts())[0] ?? '';
 const next = async page => { await page.locator('.playbook-panel .pb-nav button', { hasText: /下一步|完成剧本/ }).click(); await page.waitForTimeout(700); };
-const gotoStep = async page => { const button = page.locator('.playbook-panel button', { hasText: '前往' }); if (await button.count()) { await button.click(); await page.waitForTimeout(700); } };
+const gotoStep = async page => { const pill = page.locator('.playbook-pill', { hasText: '前往' }); if (await pill.count()) { await pill.click(); await page.waitForTimeout(700); } };
 const confirmIn = async (page, scope) => { await page.locator(`${scope} button.button-primary`).first().click(); await page.locator(`${scope} .confirmation button.button-primary`).click(); };
 const expectStep = async (page, title) => { const actual = await panelTitle(page); check(`剧本步骤：${title}`, actual.includes(title), `实际为「${actual}」`); };
 
@@ -123,15 +124,22 @@ const browser = await launch();
   const restored = await agentState(page, 'a');
   check('回归：退出剧本可恢复原始数据', restored.profile === 'a' && restored.playbook === null);
 
-  // 基础视图下，灰度期间也不能发布新版本
+  // 灰度期间不能发布新版本
   await go(page, '/agents/a/build', 400);
   await page.getByRole('button', { name: '基于 v12 新建草稿 v14' }).click(); await page.waitForTimeout(400);
   await page.getByRole('button', { name: '保存配置' }).click(); await page.waitForTimeout(300);
   await page.getByRole('button', { name: '运行调试' }).click(); await page.waitForTimeout(1300);
   await go(page, '/agents/a/evaluation', 400);
   await page.getByRole('button', { name: '运行评测', exact: true }).click(); await page.waitForTimeout(1600);
-  await setView(page, 'basic'); await go(page, '/agents/a/release', 400);
-  check('回归：基础视图灰度期间不能发布新版本', await page.getByRole('button', { name: '发布 v14 到生产' }).isDisabled());
+  await go(page, '/agents/a/release', 400);
+  const publishV14 = page.locator('[data-demo=publish] .confirm-action button', { hasText: 'v14' });
+  check('回归：灰度期间不能发布新版本', await publishV14.isDisabled() && (await page.locator('[data-demo=publish] .button-reason').innerText()).includes('正在灰度'));
+  // 剧本浮层：✕ 只收起不退出，刷新后仍是胶囊
+  await startPlaybook(page, 'A');
+  await page.getByRole('button', { name: '收起演示步骤' }).click(); await page.waitForTimeout(300);
+  await page.reload(); await page.waitForTimeout(500);
+  const collapsed = await agentState(page, 'a');
+  check('回归：收起剧本浮层不退出剧本，刷新后保持收起', collapsed.playbook?.id === 'a' && collapsed.playbook.collapsed === true && await page.locator('.playbook-panel').count() === 0 && await page.locator('.playbook-pill').count() === 1);
   check('回归：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }

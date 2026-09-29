@@ -1,11 +1,4 @@
 /* 工作台：Agent 目录。 */
-.agent-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--layout-sidebar) + var(--space-12))), 1fr)); }
-.agent-directory-link .card { height: 100%; transition: box-shadow var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
-.agent-directory-link:hover .card { box-shadow: var(--shadow-hover); transform: translateY(calc(-1 * var(--motion-distance))); }
-.directory-card-top, .directory-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.directory-card-top svg { color: var(--color-coral); }
-.agent-directory-link h2 { margin: var(--space-6) 0 var(--space-1); }
-.directory-card-bottom { margin-top: var(--space-6); color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
 /* Basic capability journey */
 .directory-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-6); }
 .directory-heading .page-heading { margin-bottom: var(--space-6); }

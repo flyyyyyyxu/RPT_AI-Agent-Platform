@@ -1,7 +1,4 @@
 /* 评测页：评测集、评测报告、上线门槛、批量评测。 */
-.dataset-heading { display: flex; align-items: center; gap: var(--space-3); }
-.dataset-heading > div:nth-child(2) { flex: 1; }
-.dataset-heading h3 { margin: 0; }
 .dataset-icon { display: grid; place-items: center; width: var(--space-12); height: var(--space-12); color: var(--color-indigo); background: var(--color-indigoLight); border-radius: var(--radius-control); }
 .dataset-list { display: grid; gap: var(--space-2); }
 .dataset-list > button { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-3); padding: var(--space-3); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); text-align: left; }
@@ -73,7 +70,7 @@
 .gate-table td { height: auto; padding-block: var(--space-2); }
 .gate-table .metric-name { display: grid; }
 .gate-table .metric-name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gate-summary { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-card); border: var(--border-thin) solid var(--color-border); border-left: var(--layout-featureBar) solid var(--color-indigo); background: var(--color-card); box-shadow: var(--shadow-hover); margin-bottom: var(--space-4); }
+.gate-summary { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-card); border: var(--border-thin) solid var(--color-border); background: var(--color-card); box-shadow: var(--shadow-card); margin-bottom: var(--space-4); }
 .gate-summary > div { flex: 1; min-width: 0; display: grid; gap: var(--space-2); }
 .gate-summary .gate-verdict { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .gate-summary .gate-verdict strong { font-size: var(--type-sectionSize); line-height: var(--type-sectionLine); }

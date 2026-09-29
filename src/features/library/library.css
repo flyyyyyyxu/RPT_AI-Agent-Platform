@@ -1,7 +1,6 @@
 /* 能力组件库：知识库版本、生效期、新版本草稿。 */
 .page-stack > .capability, .page-stack > .phase2-row, .page-stack > .card { margin-top: var(--space-4); }
 /* ① 能力组件库 */
-.library-tabs { margin-bottom: var(--space-4); }
 .kb-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 4.5), 1fr)); gap: var(--space-3); }
 .kb-card { display: grid; gap: var(--space-1); text-align: left; padding: var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); color: var(--color-text); }
 .kb-card strong { color: var(--color-secondary); font-weight: var(--weight-semibold); }

@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, LoaderCircle, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, LoaderCircle, RotateCcw, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDemo } from '../../core/store/DemoProvider';
@@ -6,7 +6,7 @@ import { Button } from '../../shared/components/Buttons';
 import { ScenarioTemplatePicker, scenarios } from './ScenarioTemplatePicker';
 import { Card, SectionHeading } from '../../shared/components/Content';
 import { Feedback } from '../../shared/components/Feedback';
-import { applyTemplate, generateFromDescription, generationStages, templateMode, templateProfile } from '../../data';
+import { applyTemplate, generateFromDescription, generationStages, teams, templateMode, templateProfile } from '../../data';
 import type { AgentConfig, ProfileId } from '../../types/domain';
 import './create.css';
 import { icon } from '../../shared/styles/tokens';
@@ -14,7 +14,7 @@ import { icon } from '../../shared/styles/tokens';
 type Draft = { config: AgentConfig; profile: ProfileId; mode: string; matched: string };
 
 export function CreateAgentPage() {
-  const { state, createAgent } = useDemo();
+  const { createAgent } = useDemo();
   const navigate = useNavigate();
   const [method, setMethod] = useState<'natural' | 'template'>('natural');
   const [name, setName] = useState('员工福利问答');
@@ -25,7 +25,7 @@ export function CreateAgentPage() {
   const [creating, setCreating] = useState(false);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
-  const team = state.team === '全部团队' ? '企业服务' : state.team;
+  const [team, setTeam] = useState(teams[0]);
   const generating = stage >= 0 && stage < generationStages.length;
   const missing = !name.trim() ? '请填写 Agent 名称' : method === 'natural' && !description.trim() ? '请描述需求' : undefined;
 
@@ -46,7 +46,7 @@ export function CreateAgentPage() {
 
   return <div className="create-agent-page"><Link className="back-link" to="/"><ArrowLeft size={icon.small} />返回 Agent 目录</Link><div className="page-heading"><span className="eyebrow">新建 Agent</span><h1>创建初始配置</h1><p>描述需求或选择模板，平台生成一份初始配置，保存为草稿 v1，之后可在构建页继续修改。</p></div>
     <div className="create-method-tabs" role="tablist"><button className={method === 'natural' ? 'active' : ''} onClick={() => switchMethod('natural')} role="tab" aria-selected={method === 'natural'}>自然语言生成</button><button className={method === 'template' ? 'active' : ''} onClick={() => switchMethod('template')} role="tab" aria-selected={method === 'template'}>选择场景模板</button></div>
-    <Card><div className="form-grid"><label className="field-label">Agent 名称<input value={name} onChange={event => { setName(event.target.value); setDraft(null); }} /></label><label className="field-label">所属团队<input value={team} readOnly aria-readonly="true" /></label>
+    <Card><div className="form-grid"><label className="field-label">Agent 名称<input value={name} onChange={event => { setName(event.target.value); setDraft(null); }} /></label><label className="field-label">所属团队<span className="select-field"><select value={team} onChange={event => setTeam(event.target.value)}>{teams.map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></span></label>
       <label className="field-label field-span">{method === 'natural' ? '需求描述' : '需求描述（可选）'}<textarea rows={4} value={description} onChange={event => { setDescription(event.target.value); setDraft(null); }} placeholder="例如：帮助员工查询公司制度，回答时引用有效条款。" /></label></div>
       {method === 'template' && <><SectionHeading eyebrow="场景模板" title="选择起点" description="模板只填充基础配置，创建后仍可修改。" /><ScenarioTemplatePicker value={template} onChange={setTemplate} /></>}
 

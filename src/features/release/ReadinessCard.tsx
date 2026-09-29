@@ -16,7 +16,7 @@ export function ReadinessCard({ candidate, experiment, checks, approvalPending, 
   onSubmitApproval: () => void; onApprove: () => void; approving: boolean; children: ReactNode;
 }) {
   const doneCount = checks.filter(item => item.done).length;
-  return <Capability skeleton={[3]} hero={1} demo="readiness" title="生产就绪检查" description="发布前逐项确认；任一项未完成，发布按钮禁用并写明原因。门槛、护栏、告警的配置变化会实时反映在这里。"
+  return <Capability demo="readiness" title="生产就绪检查" description="发布前逐项确认；任一项未完成，发布按钮禁用并写明原因。门槛、护栏、告警的配置变化会实时反映在这里。"
     actions={candidate ? <span className="meta">{candidate.id} · 已完成 {doneCount} / {checks.length}</span> : undefined}>
     {!candidate ? <Feedback kind="empty" title={experiment ? `${experiment.id} 已完成生产就绪检查` : '没有待发布的候选版本'} description={experiment ? `当前${experiment.status}${experiment.traffic ? ` ${experiment.traffic}%` : ''}；放量与回退见「流量指向」。` : '请先在构建页新建草稿，完成配置、调试和评测后再发布。'} />
       : <ul className="check-list">{checks.map(item => <li key={item.key} data-demo={`check-${item.key}`} className={`check-item ${item.done ? item.warn ? 'warn' : 'done' : ''}`}>

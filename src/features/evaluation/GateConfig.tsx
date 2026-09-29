@@ -15,7 +15,7 @@ export function GateConfig({ agent, version }: { agent: Agent; version: AgentVer
   const ops = opsOf(agent);
   const gate = evaluateGate(agent, ops, version);
   const setThreshold = (id: string, value: number) => updateOps(agent.id, current => ({ ...current, thresholds: { ...current.thresholds, [id]: value } }));
-  return <Capability skeleton={[2]} hero={1} title="上线门槛配置" description="门槛由 Agent 负责人按业务指标设置；候选版本不达标时，发布页的「生产就绪检查」会阻断发布。修改即时生效。">
+  return <Capability title="上线门槛配置" description="门槛由 Agent 负责人按业务指标设置；候选版本不达标时，发布页的「生产就绪检查」会阻断发布。修改即时生效。">
     <div className="table-scroll"><table className="data-table gate-table"><thead><tr><th className="col-metric">指标</th><th className="col-op">条件</th><th className="col-threshold">阈值</th><th className="col-value numeric">{version ? `${version.id} 结果` : '候选结果'}</th><th className="col-state">状态</th></tr></thead>
       <tbody>{gate.rules.map(rule => <tr key={rule.id}><td><span className="metric-name" title={`${rule.metric} · ${rule.note}`}><strong>{rule.metric}</strong><small className="meta">{rule.note}</small></span></td><td>{opLabel[rule.op]}</td>
         <td><span className="threshold-input"><input type="number" step={stepFor(rule.unit)} value={rule.threshold} aria-label={`${rule.metric}阈值`} onChange={event => { const value = Number(event.target.value); if (!Number.isNaN(value)) setThreshold(rule.id, value); }} /><span className="meta">{rule.unit}</span></span></td>

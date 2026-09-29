@@ -13,7 +13,7 @@ export interface BadCaseLabel { stage: ProblemStage | null; inEvalSet: boolean }
 export function BadCaseBoard({ cases, labelOf, setLabel, onShowTrace }: {
   cases: BadCase[]; labelOf: (id: string) => BadCaseLabel; setLabel: (id: string, patch: Partial<BadCaseLabel>) => void; onShowTrace: (traceId: string) => void;
 }) {
-  return <Capability skeleton={[6]} hero={4} title="bad case 工作台" description="汇集用户反馈、申诉和抽检发现的问题；人工标注问题环节后，一键加入评测集，下次候选版本评测自动覆盖。"
+  return <Capability title="bad case 工作台" description="汇集用户反馈、申诉和抽检发现的问题；人工标注问题环节后，一键加入评测集，下次候选版本评测自动覆盖。"
     actions={<IntegrationNote platform="标注" />}>
     {!cases.length && <Feedback kind="empty" title="暂无 bad case" description="用户反馈、申诉和抽检发现的问题会汇集到这里。" />}
     <div className="badcase-list">{cases.map(item => {

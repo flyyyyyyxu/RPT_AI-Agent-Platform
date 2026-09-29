@@ -5,7 +5,6 @@
 .guard-list { display: grid; gap: var(--space-2); }
 .guard-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4); align-items: center; padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); }
 .guard-row p { font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
-.guard-row.hero-row { border-left: var(--layout-featureBar) solid var(--color-indigo); background: var(--color-indigoLight); }
 .guard-row-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .gateway-flow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--type-metaSize); line-height: var(--type-metaLine); color: var(--color-secondary); }
 .gateway-flow span { padding: var(--space-1) var(--space-2); border-radius: var(--radius-badge); border: var(--border-thin) solid var(--color-border); background: var(--color-page); }

@@ -3,7 +3,7 @@
 //   node scripts/snapshots.mjs compare    重新截图并与基准比对，有差异时退出码为 1
 import { mkdirSync, readFileSync, readdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { go, launch, newPage, root, setView, startPlaybook } from './lib.mjs';
+import { go, launch, newPage, root, startPlaybook } from './lib.mjs';
 
 const mode = process.argv[2] === 'compare' ? 'compare' : 'baseline';
 const outDir = resolve(root, 'scripts/.snapshots', mode === 'compare' ? 'current' : 'baseline');
@@ -16,7 +16,6 @@ const pages = [
   '/agents/b/build', '/agents/b/evaluation', '/agents/b/release',
   '/agents/c/build', '/agents/c/release', '/agents/c/trace', '/agents/c/settings',
 ];
-const basicPages = ['/', '/library', '/agents/general/build', '/agents/general/release', '/agents/a/release', '/agents/c/settings'];
 /** 交互后的状态：弹出确认、跑完评测、剧本中途等，覆盖只在操作后出现的样式。 */
 const collapse = async page => { const button = page.getByRole('button', { name: '收起演示步骤' }); if (await button.count()) await button.click(); };
 const flows = {
@@ -31,12 +30,11 @@ const flows = {
   'playbook-exit-confirm': async page => { await startPlaybook(page, 'A'); await page.getByRole('button', { name: '退出剧本' }).click(); },
 };
 
-const name = (route, width, view) => `${width}-${view}-${route.replace(/^\//, '').replace(/[/?=]/g, '_') || 'home'}.png`;
+const name = (route, width) => `${width}-${route.replace(/^\//, '').replace(/[/?=]/g, '_') || 'home'}.png`;
 
 const cases = [];
 for (const width of [1440, 390]) {
-  for (const route of pages) cases.push({ route, width, view: 'skeleton' });
-  for (const route of basicPages) cases.push({ route, width, view: 'basic' });
+  for (const route of pages) cases.push({ route, width });
 }
 
 rmSync(outDir, { recursive: true, force: true });
@@ -47,9 +45,8 @@ for (const width of [1440, 390]) {
   // 同一宽度下每个用例都用新上下文，保证初始数据一致
   for (const item of cases.filter(c => c.width === width)) {
     const { page, context, errors } = await newPage(browser, width);
-    if (item.view === 'basic') await setView(page, 'basic');
     await go(page, item.route);
-    writeFileSync(resolve(outDir, name(item.route, width, item.view)), await page.screenshot({ fullPage: true }));
+    writeFileSync(resolve(outDir, name(item.route, width)), await page.screenshot({ fullPage: true }));
     allErrors.push(...errors.map(error => `${item.route}: ${error}`));
     await context.close();
   }

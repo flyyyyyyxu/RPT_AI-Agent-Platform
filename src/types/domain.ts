@@ -108,10 +108,9 @@ export interface MonitorProfile {
 }
 
 /* ------------------------------------------------------------------ */
-/* 生产骨架（① – ⑩）                                                    */
+/* 生产能力：门槛、发布、实验、Trace、护栏、成本等                         */
 /* ------------------------------------------------------------------ */
 
-export type ViewMode = 'basic' | 'skeleton';
 export type ReleaseStrategy = 'direct' | 'canary' | 'shadow';
 export type ExecMode = '在线' | '批量' | '会话';
 export type ProblemStage = 'Prompt' | '知识' | '模型' | '工具' | '策略';
@@ -150,7 +149,7 @@ export interface AgentSettings {
   monthlyBudget: number; budgetAlert: number; overBudget: string;
 }
 
-/** 每个 Agent 的生产骨架演示状态；缺省时按 profile 生成默认值。 */
+/** 每个 Agent 的运营配置演示状态；缺省时按 profile 生成默认值。 */
 export interface AgentOps {
   thresholds: Record<string, number>;
   forceBlock: boolean;
@@ -165,13 +164,12 @@ export interface AgentOps {
 }
 
 export interface DemoState {
-  schema: 4;
+  schema: 5;
   agents: Agent[];
-  team: string;
-  viewMode: ViewMode;
   ops: Record<string, AgentOps>;
   /** 已发布的知识库新版本（覆盖 mock） */
   knowledge: Record<string, KnowledgeBase>;
   kbDraft: KbDraft | null;
-  playbook: { id: PlaybookId; step: number } | null;
+  /** collapsed：演示步骤浮层被用户收起成胶囊，换页、刷新后保持 */
+  playbook: { id: PlaybookId; step: number; collapsed: boolean } | null;
 }

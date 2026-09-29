@@ -11,7 +11,7 @@ import { DebugPreview } from './DebugPreview';
 import { WorkflowStepList } from './WorkflowStepList';
 import { DependencyLock } from './DependencyLock';
 import { VersionDiff } from './VersionDiff';
-import { Phase2Row, SkeletonHeading } from '../../shared/components/Capability';
+import { Phase2Row } from '../../shared/components/Capability';
 import { Card, SectionHeading } from '../../shared/components/Content';
 import { modelOptions, toolCatalog } from '../../data';
 import { debugPresets, knowledgeBasesFor } from '../../core/data-access/scenarioData';
@@ -52,7 +52,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
     snapshotNote={editable ? undefined : `正在调试只读快照 ${version.id}，不影响生命周期状态。`}
     onRun={async question => { await new Promise(resolve => window.setTimeout(resolve, 950)); markDebugged(agent.id, version.id, question); }} />;
 
-  return <AgentShell agent={agent} stepId="build" aside={aside}><SectionHeading eyebrow="基础能力 · 构建" title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`} description={editable ? '修改 Prompt、模型、知识、工具和执行步骤；保存后需要重新调试和评测。' : '已上线或历史版本是不可修改的快照，包含模型、Prompt、编排、工具和知识版本。'} aside={<div className="heading-badges"><StatusBadge status={version.status} /><ScopeBadge phase="MVP" /></div>} />
+  return <AgentShell agent={agent} stepId="build" aside={aside}><SectionHeading eyebrow="构建" title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`} description={editable ? '修改 Prompt、模型、知识、工具和执行步骤；保存后需要重新调试和评测。' : '已上线或历史版本是不可修改的快照，包含模型、Prompt、编排、工具和知识版本。'} aside={<div className="heading-badges"><StatusBadge status={version.status} /><ScopeBadge phase="MVP" /></div>} />
     {!editable && <div className="snapshot-banner"><Lock size={icon.large} /><div><strong>{version.id} 是只读快照</strong><p>{candidate ? `已有候选版本 ${candidate.id}，请在候选版本上继续修改。` : `如需修改，请基于 ${version.id} 新建草稿 ${nextVersionId(agent)}；线上指向不受影响。`}</p></div>
       {candidate ? <Link className="button button-secondary" to={`/agents/${agent.id}/build`}>前往候选版本 {candidate.id}</Link>
         : <Button variant="primary" disabled={Boolean(draftLock)} reason={draftLock} onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={icon.small} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button>}</div>}
@@ -69,9 +69,9 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
         <Button variant="primary" disabled={!dirty && version.configured} reason={!dirty && version.configured ? '配置未修改' : undefined} onClick={() => saveConfig(agent.id, version.id, form)}>{!dirty && version.configured ? <Check size={icon.small} /> : <Save size={icon.small} />}{!dirty && version.configured ? '已保存' : '保存配置'}</Button>
       </div>}
     </Card>
-    <SkeletonHeading skeleton={[1]} title={`版本快照 ${version.id}`} description="变更与版本管理：每个版本锁定模型、Prompt、工具和知识的具体版本，可逐项 diff。" />
+    <SectionHeading eyebrow="版本管理" title={`版本快照 ${version.id}`} description="变更与版本管理：每个版本锁定模型、Prompt、工具和知识的具体版本，可逐项 diff。" />
     <DependencyLock agent={agent} version={version} onCreated={select} />
     <VersionDiff agent={agent} version={version} />
-    <Phase2Row items={[{ skeleton: [1, 2], title: '依赖变化自动触发回归', description: '模型、知识或工具上游发版后，自动用受影响 Agent 的评测集跑回归并通知负责人。' }]} />
+    <Phase2Row items={[{ title: '依赖变化自动触发回归', description: '模型、知识或工具上游发版后，自动用受影响 Agent 的评测集跑回归并通知负责人。' }]} />
   </AgentShell>;
 }
