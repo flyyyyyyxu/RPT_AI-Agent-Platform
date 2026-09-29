@@ -11,7 +11,7 @@ import { GateConfig, GateSummary } from '../components/evaluation/Gate';
 import { BatchEvaluation } from '../components/evaluation/BatchEvaluation';
 import { CapabilityBadges, Phase2Row, SkeletonHeading, SkeletonOnly } from '../components/skeleton/Skeleton';
 import { Feedback } from '../components/feedback/Feedback';
-import { profiles } from '../data/mock';
+import { datasetsFor } from '../app/scenarioData';
 import { AgentShell } from '../layouts/AgentShell';
 import type { Agent } from '../types/domain';
 
@@ -23,9 +23,9 @@ const phase2 = [
 const isolationCard = <SkeletonOnly><Card><div className="sub-heading"><span className="eyebrow">隔离环境</span><CapabilityBadges skeleton={[2]} /></div><h3>候选版本不发布也能评测</h3><p>评测在独立环境运行：单独的模型配额、只读工具沙箱、下游写接口全部 mock，不接生产流量。本原型的评测结果均为预设 mock 数据。</p></Card></SkeletonOnly>;
 
 export function EvaluationPage({ agent }: { agent: Agent }) {
-  const { markEvaluated } = useDemo();
+  const { markEvaluated, opsOf } = useDemo();
   const candidate = getCandidate(agent);
-  const datasets = profiles[agent.profile].datasets;
+  const datasets = datasetsFor(agent, candidate, opsOf(agent));
   const [datasetId, setDatasetId] = useState(datasets[0].id);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);

@@ -31,8 +31,8 @@ export function CapabilityBadges({ skeleton, phase = 'MVP' }: { skeleton: number
  * - 二期：灰色虚线、整块置灰、不可操作，悬停提示「二期建设」
  * - 主角能力：左侧 3px 靛蓝色条 + 「差异化 · 主角 N」标签
  */
-export function Capability({ skeleton, phase = 'MVP', hero, title, description, children, className = '', actions }: {
-  skeleton: number[]; phase?: 'MVP' | '二期'; hero?: HeroId | HeroId[]; title: ReactNode; description: ReactNode; children?: ReactNode; className?: string; actions?: ReactNode;
+export function Capability({ skeleton, phase = 'MVP', hero, title, description, children, className = '', actions, demo }: {
+  skeleton: number[]; phase?: 'MVP' | '二期'; hero?: HeroId | HeroId[]; title: ReactNode; description: ReactNode; children?: ReactNode; className?: string; actions?: ReactNode; demo?: string;
 }) {
   const visible = useSkeletonView();
   if (!visible) return null;
@@ -43,7 +43,7 @@ export function Capability({ skeleton, phase = 'MVP', hero, title, description, 
       <span className="meta">二期建设 · 暂不开放</span>
     </section>;
   }
-  return <section className={`card capability ${heroes.length ? 'capability-hero' : ''} ${className}`}>
+  return <section className={`card capability ${heroes.length ? 'capability-hero' : ''} ${className}`} data-demo={demo}>
     {heroes.length > 0 && <div className="hero-tags">{heroes.map(n => <HeroTag key={n} n={n} />)}</div>}
     <div className="capability-head"><div className="capability-title"><h3>{title}</h3><p>{description}</p></div><div className="capability-side"><CapabilityBadges skeleton={skeleton} />{actions}</div></div>
     {children}

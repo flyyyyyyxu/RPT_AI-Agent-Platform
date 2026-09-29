@@ -12,7 +12,8 @@ import { WorkflowStepList } from '../components/build/WorkflowStepList';
 import { DependencyLock, VersionDiff } from '../components/build/VersionSnapshot';
 import { Phase2Row, SkeletonHeading } from '../components/skeleton/Skeleton';
 import { Card, SectionHeading } from '../components/content/Content';
-import { knowledgeOptions, modelOptions, profiles, toolOptions } from '../data/mock';
+import { knowledgeOptions, modelOptions, toolOptions } from '../data/mock';
+import { debugPresets } from '../app/scenarioData';
 import { AgentShell } from '../layouts/AgentShell';
 import type { Agent, AgentConfig, AgentVersion } from '../types/domain';
 
@@ -36,7 +37,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
   const loseProgress = dirty && (version.debugged || isEvaluated(version));
   const debugReason = editable ? (dirty ? '请先保存配置，再调试' : !version.configured ? '请先保存配置' : undefined) : undefined;
 
-  const aside = <DebugPreview presets={profiles[agent.profile].debug} initialQuestion={!editable || version.debugged ? agent.lastDebugQuestion : ''} disabledReason={debugReason}
+  const aside = <DebugPreview presets={debugPresets(agent)} initialQuestion={!editable || version.debugged ? agent.lastDebugQuestion : ''} disabledReason={debugReason}
     snapshotNote={editable ? undefined : `正在调试只读快照 ${version.id}，不影响生命周期状态。`}
     onRun={async question => { await new Promise(resolve => window.setTimeout(resolve, 950)); markDebugged(agent.id, version.id, question); }} />;
 
@@ -45,7 +46,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
       {candidate ? <Link className="button button-primary" to={`/agents/${agent.id}/build`}>前往候选版本 {candidate.id}</Link>
         : <Button variant="primary" onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={16} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button>}</div>}
     <Card className="config-card"><fieldset disabled={!editable} className="config-fieldset">
-      <ConfigSection title="Prompt" description="用双花括号声明变量，例如 {{question}}。"><textarea className="prompt-editor" rows={9} value={form.prompt} readOnly={!editable} onChange={event => patch({ prompt: event.target.value })} /><div className="variable-row"><span className="meta">已识别变量</span>{variables ? variables.map(item => <code key={item}>{item}</code>) : <span className="meta">暂无变量</span>}</div></ConfigSection>
+      <div data-demo="prompt"><ConfigSection title="Prompt" description="用双花括号声明变量，例如 {{question}}。"><textarea className="prompt-editor" rows={9} value={form.prompt} readOnly={!editable} onChange={event => patch({ prompt: event.target.value })} /><div className="variable-row"><span className="meta">已识别变量</span>{variables ? variables.map(item => <code key={item}>{item}</code>) : <span className="meta">暂无变量</span>}</div></ConfigSection></div>
       <div className="config-pair"><ConfigSection title="模型" description="选择公司托管的基础模型。"><label className="select-field"><select value={form.model} onChange={event => patch({ model: event.target.value })}>{withCurrent(modelOptions, form.model).map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={16} /></label></ConfigSection><ConfigSection title="输出格式" description="约束最终回答的结构。"><input value={form.outputFormat} readOnly={!editable} onChange={event => patch({ outputFormat: event.target.value })} /></ConfigSection></div>
       <div className="config-pair"><ConfigSection title="知识库" description="知识版本会随配置一起写入版本快照。"><label className="select-field"><select value={form.knowledge} onChange={event => patch({ knowledge: event.target.value })}>{withCurrent(knowledgeOptions, form.knowledge).map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={16} /></label></ConfigSection>
         <ConfigSection title="工具" description="调用已登记的公司内部工具，可多选。"><div className="tool-options">{[...toolOptions, ...form.tools.filter(tool => !toolOptions.includes(tool))].map(tool => <label key={tool} className={`tool-option ${form.tools.includes(tool) ? 'selected' : ''}`}><input type="checkbox" checked={form.tools.includes(tool)} onChange={() => toggleTool(tool)} />{tool}</label>)}</div></ConfigSection></div>
@@ -58,7 +59,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
       </div>}
     </Card>
     <SkeletonHeading skeleton={[1]} title={`版本快照 ${version.id}`} description="变更与版本管理：每个版本锁定模型、Prompt、工具和知识的具体版本，可逐项 diff。" />
-    <DependencyLock agent={agent} version={version} />
+    <DependencyLock agent={agent} version={version} onCreated={select} />
     <VersionDiff agent={agent} version={version} />
     <Phase2Row items={[{ skeleton: [1, 2], title: '依赖变化自动触发回归', description: '模型、知识或工具上游发版后，自动用受影响 Agent 的评测集跑回归并通知负责人。' }]} />
   </AgentShell>;

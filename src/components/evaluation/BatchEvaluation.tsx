@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Download, FileSpreadsheet, Info, Play, RotateCcw, Upload } from 'lucide-react';
-import { batchPresets } from '../../data/mock';
+import { batchFor } from '../../app/scenarioData';
 import type { Agent } from '../../types/domain';
 import { Button } from '../actions/Buttons';
 import { StatusBadge, VersionBadge } from '../badges/Badges';
@@ -10,7 +10,7 @@ type FileInfo = { name: string; rows: number };
 
 /** 批量评测：只在前端读取文件名和行数，进度与结果均为预设数据。 */
 export function BatchEvaluation({ agent, versionId }: { agent: Agent; versionId: string }) {
-  const preset = batchPresets[agent.profile] ?? batchPresets.general;
+  const preset = batchFor(agent);
   const [file, setFile] = useState<FileInfo | null>(null);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'running' | 'done'>('idle');

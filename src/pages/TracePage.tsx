@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, Layers, ListPlus, Network, ScanSearch } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Layers, ListPlus, Network, ScanSearch } from 'lucide-react';
 import { useDemo } from '../app/DemoProvider';
 import { Button } from '../components/actions/Buttons';
-import { IntegrationNote, StatusBadge, VersionBadge } from '../components/badges/Badges';
+import { DemoTag, IntegrationNote, StatusBadge, VersionBadge } from '../components/badges/Badges';
 import { Card, SectionHeading } from '../components/content/Content';
 import { Feedback } from '../components/feedback/Feedback';
 import { Capability, CapabilityBadges, Phase2Row, useSkeletonView } from '../components/skeleton/Skeleton';
-import { badCaseProfiles, problemStages, traceProfiles } from '../data/mock';
+import { problemStages } from '../data/mock';
+import { badcasesFor, tracesFor } from '../app/scenarioData';
 import { AgentShell } from '../layouts/AgentShell';
 import type { Agent, ProblemStage, TraceRecord } from '../types/domain';
 
@@ -15,28 +16,29 @@ const fmtMs = (ms: number) => ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${ms}
 
 function TraceTree({ trace, agentName }: { trace: TraceRecord; agentName: string }) {
   const total = trace.steps.reduce((sum, step) => sum + step.ms, 0);
+  const issueIndex = trace.steps.findIndex(step => step.isNew || step.error);
   let offset = 0;
-  return <div className="span-tree" role="tree" aria-label={`Trace ${trace.id}`}>
-    <div className="span-row root" role="treeitem"><div className="span-main"><div className="span-title"><Network size={16} strokeWidth={1.5} aria-hidden="true" /><strong>agent.run · {agentName}</strong><VersionBadge version={trace.version} /><StatusBadge status={trace.status === '成功' ? '通过' : '警告'} /></div><span className="span-detail">trace_id={trace.id} · service.version={trace.version} · {trace.time}</span></div>
+  return <>{trace.note && <p className="trace-note"><Info size={16} aria-hidden="true" />{trace.note}<DemoTag /></p>}<div className="span-tree" role="tree" aria-label={`Trace ${trace.id}`}>
+    <div className="span-row root" role="treeitem"><div className="span-main"><div className="span-title"><Network size={16} strokeWidth={1.5} aria-hidden="true" /><strong>agent.run · {agentName}</strong><VersionBadge version={trace.version} />{trace.env && <span className={`env-tag ${trace.env === '隔离评测' ? 'isolated' : ''}`}>{trace.env}</span>}<StatusBadge status={trace.status === '成功' ? '通过' : '警告'} /></div><span className="span-detail">trace_id={trace.id} · service.version={trace.version} · {trace.time}</span></div>
       <div className="span-timing"><div className="span-bar"><span style={{ left: 0, width: '100%' }} /></div><span className="span-ms">{fmtMs(total)}</span></div></div>
     {trace.steps.map((step, index) => {
       const left = (offset / total) * 100; offset += step.ms;
-      return <div key={index} role="treeitem" className={`span-row span-depth-${step.depth} ${step.error ? 'has-error' : ''}`}>
-        <div className="span-main"><div className="span-title"><span className="span-kind">{step.kind}</span><strong>{step.name}</strong><VersionBadge version={trace.version} /></div>
+      return <div key={index} role="treeitem" data-demo={index === issueIndex ? 'trace-issue' : undefined} className={`span-row span-depth-${step.depth} ${step.error ? 'has-error' : ''}`}>
+        <div className="span-main"><div className="span-title"><span className="span-kind">{step.kind}</span><strong>{step.name}</strong><VersionBadge version={trace.version} />{step.isNew && <span className="new-tag">{trace.version} 新增</span>}</div>
           <span className="span-detail">{step.detail}</span>
-          {step.evidence && <div className="span-evidence">{step.evidence.map(item => <span key={item.entry} className={`evidence-chip ${item.expired ? 'expired' : ''}`}>依据：{item.entry}<code>{item.version}</code>{item.expired && <StatusBadge status="失败" />}</span>)}</div>}
+          {step.evidence && <div className="span-evidence">{step.evidence.map(item => <span key={item.entry} className={`evidence-chip ${item.expired ? 'expired' : ''}`}>依据：{item.entry}<code>{item.version}</code>{item.expired && <span className="expired-tag"><AlertCircle size={16} aria-hidden="true" />已失效</span>}</span>)}</div>}
           {step.error && <span className="span-error"><AlertCircle size={16} aria-hidden="true" />{step.error}</span>}</div>
         <div className="span-timing"><div className="span-bar"><span style={{ left: `${left}%`, width: `${Math.max(1.5, (step.ms / total) * 100)}%` }} /></div><span className="span-ms">{fmtMs(step.ms)}</span></div>
       </div>;
     })}
-  </div>;
+  </div></>;
 }
 
 export function TracePage({ agent }: { agent: Agent }) {
   const { opsOf, updateOps, setViewMode } = useDemo();
   const skeletonView = useSkeletonView();
-  const traces = traceProfiles[agent.profile]?.length ? traceProfiles[agent.profile] : traceProfiles.general;
-  const cases = badCaseProfiles[agent.profile]?.length ? badCaseProfiles[agent.profile] : badCaseProfiles.general;
+  const traces = tracesFor(agent);
+  const cases = badcasesFor(agent);
   const [searchParams] = useSearchParams();
   const linked = searchParams.get('trace');
   const [traceId, setTraceId] = useState(traces.find(item => item.id === linked)?.id ?? traces.find(item => item.status === '异常')?.id ?? traces[0].id);
@@ -46,7 +48,7 @@ export function TracePage({ agent }: { agent: Agent }) {
   const setLabel = (id: string, patch: Partial<{ stage: ProblemStage | null; inEvalSet: boolean }>) => updateOps(agent.id, current => ({ ...current, badcases: { ...current.badcases, [id]: { ...(current.badcases[id] ?? { stage: null, inEvalSet: false }), ...patch } } }));
   const labeled = cases.filter(item => labelOf(item.id).stage).length;
   const added = cases.filter(item => labelOf(item.id).inEvalSet).length;
-  const showTrace = (id: string) => { setTraceId(id); document.getElementById('trace-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const showTrace = (id: string) => { if (traces.some(item => item.id === id)) setTraceId(id); document.getElementById('trace-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   if (!skeletonView) {
     return <AgentShell agent={agent} stepId="trace" aside={<Card><span className="eyebrow">说明</span><h3>生产骨架能力</h3><p>Trace 与 bad case 属于生产骨架第 ⑥ ⑧ 项，基础能力视图下不显示。</p></Card>}>
@@ -66,7 +68,7 @@ export function TracePage({ agent }: { agent: Agent }) {
       actions={<span className="otel-note"><ScanSearch size={16} strokeWidth={1.5} aria-hidden="true" />OpenTelemetry 标准 · 可接入公司链路追踪</span>}>
       <div className="trace-layout">
         <div className="trace-list" role="listbox" aria-label="最近 Trace">{traces.map(item => <button key={item.id} type="button" role="option" aria-selected={item.id === trace.id} className={item.id === trace.id ? 'selected' : ''} onClick={() => setTraceId(item.id)}>
-          <span className="trace-list-top"><code>{item.id}</code><StatusBadge status={item.status === '成功' ? '通过' : '警告'} /></span><span className="trace-q" title={item.summary}>{item.summary}</span><span className="meta">{item.time} · {item.version} · {fmtMs(item.steps.reduce((sum, step) => sum + step.ms, 0))}</span></button>)}</div>
+          <span className="trace-list-top"><code>{item.id}</code><StatusBadge status={item.status === '成功' ? '通过' : '警告'} /></span>{item.env === '隔离评测' && <span className="env-tag isolated">隔离评测</span>}<span className="trace-q" title={item.summary}>{item.summary}</span><span className="meta">{item.time} · {item.version} · {fmtMs(item.steps.reduce((sum, step) => sum + step.ms, 0))}</span></button>)}</div>
         <TraceTree trace={trace} agentName={agent.name} />
       </div>
     </Capability></div>
@@ -75,14 +77,14 @@ export function TracePage({ agent }: { agent: Agent }) {
       actions={<IntegrationNote platform="标注" />}>
       <div className="badcase-list">{cases.map(item => {
         const label = labelOf(item.id);
-        return <div className="badcase" key={item.id}>
+        return <div className="badcase" key={item.id} data-demo={`badcase-${item.id}`}>
           <div className="badcase-main"><div className="badcase-meta"><span className="source-tag">{item.source}</span><code>{item.id}</code><VersionBadge version={item.version} /><span className="meta">{item.time}</span></div>
             <strong>{item.summary}</strong><p>{item.detail}</p>
-            <button type="button" className="link-button" onClick={() => showTrace(item.traceId)}><Network size={16} aria-hidden="true" />查看 Trace {item.traceId}</button></div>
+            <button type="button" className="link-button" data-demo={`badcase-trace-${item.id}`} onClick={() => showTrace(item.traceId)}><Network size={16} aria-hidden="true" />查看 Trace {item.traceId}</button></div>
           <div className="badcase-actions"><span className="meta">问题环节（人工标注）</span>
-            <div className="stage-picker" role="radiogroup" aria-label={`${item.id} 问题环节`}>{problemStages.map(stage => <button key={stage} type="button" role="radio" aria-checked={label.stage === stage} className={label.stage === stage ? 'active' : ''} onClick={() => setLabel(item.id, { stage })}>{stage}</button>)}</div>
+            <div className="stage-picker" data-demo={`stage-${item.id}`} role="radiogroup" aria-label={`${item.id} 问题环节`}>{problemStages.map(stage => <button key={stage} type="button" role="radio" aria-checked={label.stage === stage} className={label.stage === stage ? 'active' : ''} onClick={() => setLabel(item.id, { stage })}>{stage}</button>)}</div>
             {label.inEvalSet ? <span className="added-note"><CheckCircle2 size={16} aria-hidden="true" />已加入「bad case 回归集」· 标注：{label.stage}</span>
-              : <Button onClick={() => setLabel(item.id, { inEvalSet: true })} disabled={!label.stage} reason={!label.stage ? '请先标注问题环节' : undefined}><ListPlus size={16} />加入评测集</Button>}
+              : <span data-demo={`add-eval-${item.id}`}><Button onClick={() => setLabel(item.id, { inEvalSet: true })} disabled={!label.stage} reason={!label.stage ? '请先标注问题环节' : undefined}><ListPlus size={16} />加入评测集</Button></span>}
           </div>
         </div>;
       })}</div>

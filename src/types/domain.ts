@@ -1,7 +1,11 @@
 export type VersionStatus = '线上' | '灰度中' | '影子运行' | '待发布' | '草稿' | '历史';
 export type AgentLevel = '原型' | '生产';
-export type ProfileId = 'general' | 'a' | 'b' | 'c' | 'blank';
-export type MonitorProfileId = ProfileId | 'fresh';
+export type BaseProfileId = 'general' | 'a' | 'b' | 'c' | 'blank';
+/** 演示剧本专用的数据配置：页面不变，只换这套数据。 */
+export type ScenarioProfileId = 'pa' | 'pb' | 'pc';
+export type ProfileId = BaseProfileId | ScenarioProfileId;
+export type MonitorProfileId = BaseProfileId | 'fresh';
+export type PlaybookId = 'a' | 'b' | 'c';
 
 export type WorkflowStepType = '模型调用' | '检索' | '工具调用' | '代码节点';
 
@@ -121,7 +125,7 @@ export interface GateRule { id: string; metric: string; op: '>=' | '<='; unit: s
 export interface RedlineSample { name: string; input: string; passed: boolean }
 export interface GateProfile { rules: GateRule[]; redlines: RedlineSample[] }
 
-export interface AbMetric { label: string; oldValue: number; newValue: number; unit: string; ci: [number, number]; higherIsBetter: boolean; decimals: number }
+export interface AbMetric { label: string; oldValue: number; newValue: number; unit: string; ci: [number, number]; higherIsBetter: boolean; decimals: number; /** 上线门槛：新版本越过时标红 */ threshold?: number }
 export interface AbProfile { experimentId: string; days: number; sample: string; metrics: AbMetric[]; conclusion: string }
 
 export interface TraceStep {
@@ -129,9 +133,19 @@ export interface TraceStep {
   name: string; ms: number; detail: string; depth: 0 | 1;
   evidence?: { entry: string; version: string; expired?: boolean }[];
   error?: string;
+  /** 该版本新增的步骤 */
+  isNew?: boolean;
 }
-export interface TraceRecord { id: string; time: string; summary: string; version: string; status: '成功' | '异常'; steps: TraceStep[] }
-export interface BadCase { id: string; source: '用户反馈' | '申诉' | '抽检'; time: string; summary: string; detail: string; traceId: string; version: string }
+export interface TraceRecord { id: string; time: string; summary: string; version: string; status: '成功' | '异常'; steps: TraceStep[]; env?: '生产' | '隔离评测'; note?: string }
+export interface BadCase { id: string; source: '用户反馈' | '申诉' | '抽检'; time: string; summary: string; detail: string; traceId: string; version: string; /** 加入评测集后生成的样本 */ evalCase?: EvalCase }
+
+export interface AlertDef { id: string; title: string; detail: string; time: string; version: string; notify: string; resolvedNote: string }
+
+export interface KnowledgeEntry { title: string; versions: string[]; from: string; to: string | null }
+export interface KnowledgeVersion { id: string; publishedAt: string; usedBy: string[]; note?: string }
+export interface KnowledgeBase { id: string; name: string; owner: string; description: string; versions: KnowledgeVersion[]; entries: KnowledgeEntry[] }
+export interface PendingEntry { title: string; from: string; to: string | null; submittedBy: string }
+export interface KbDraft { kbId: string; fromVersion: string; nextVersion: string; entries: { title: string; from: string; to: string | null; isNew?: boolean }[] }
 
 export interface ApprovalRecord { time: string; who: string; action: string }
 
@@ -156,9 +170,13 @@ export interface AgentOps {
 }
 
 export interface DemoState {
-  schema: 3;
+  schema: 4;
   agents: Agent[];
   team: string;
   viewMode: ViewMode;
   ops: Record<string, AgentOps>;
+  /** 已发布的知识库新版本（覆盖 mock） */
+  knowledge: Record<string, KnowledgeBase>;
+  kbDraft: KbDraft | null;
+  playbook: { id: PlaybookId; step: number } | null;
 }

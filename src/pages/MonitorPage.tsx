@@ -13,6 +13,7 @@ import { formatMetric, isGood, metricLabels } from '../components/monitor/format
 import { monitorProfiles } from '../data/mock';
 import { AgentShell } from '../layouts/AgentShell';
 import { useSkeletonView } from '../components/skeleton/Skeleton';
+import { AlertBanners } from '../components/release/Production';
 import type { Agent, MonitorMetricKey } from '../types/domain';
 
 const metricKeys: MonitorMetricKey[] = ['calls', 'p95', 'errorRate', 'tokens'];
@@ -46,6 +47,7 @@ export function MonitorPage({ agent }: { agent: Agent }) {
 
   return <AgentShell agent={agent} stepId="monitor" aside={aside}><SectionHeading eyebrow="基础能力 · 监控" title="生产运行概览" description={`${profile.period} · 线上指向 ${production} 的调用、延迟、错误和 Token 消耗。`} aside={<ScopeBadge phase="MVP" />} />
     {justChanged && agent.lastReleaseAt && <Feedback kind="success" title={`线上指向已切换到 ${production}`} description={`变更时间 ${agent.lastReleaseAt}。以下为演示数据，新请求已记录到 ${production}。`} />}
+    {skeletonView && <AlertBanners agent={agent} />}
     <div className="metric-grid monitor-metrics">{metricKeys.map(key => {
       const change = profile.changes?.[key];
       return <MetricCard key={key} label={`${metricLabels[key]}${key === 'p95' || key === 'errorRate' ? '（最新）' : ''}`} value={formatMetric[key](totals[key])} change={change?.value} direction={change?.direction} good={change ? isGood(key, change.direction) : undefined} detail={change ? profile.compareLabel : profile.period} />;

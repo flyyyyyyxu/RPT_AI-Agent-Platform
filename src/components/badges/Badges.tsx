@@ -29,3 +29,5 @@ export function FeatureMark({ children }: { children: ReactNode }) {
 export function VersionBadge({ version }: { version: string }) { return <span className="version-badge">{version}</span>; }
 export function IntegrationNote({ platform }: { platform: string }) { return <span className="integration-note"><ExternalLink size={16} strokeWidth={1.5} aria-hidden="true" />已接入公司{platform}平台</span>; }
 export function DemoBadge() { return <span className="demo-badge">演示数据</span>; }
+/** 关键数字旁的「演示数据」标注。 */
+export function DemoTag({ label = '演示数据' }: { label?: string }) { return <span className="demo-tag" title="本原型所有数字均为演示数据">{label}</span>; }

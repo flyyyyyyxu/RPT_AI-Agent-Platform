@@ -1,14 +1,14 @@
 import type { DemoState } from '../types/domain';
 
 /** 数据结构变化时必须同步提升版本号，旧存档会被直接丢弃，避免读到不兼容的数据导致白屏。 */
-const SCHEMA = 3;
+const SCHEMA = 4;
 const KEY = `agent-platform-demo-v${SCHEMA}`;
-const LEGACY_KEYS = ['agent-platform-demo-v1', 'agent-platform-demo-v2'];
+const LEGACY_KEYS = ['agent-platform-demo-v1', 'agent-platform-demo-v2', 'agent-platform-demo-v3'];
 
 const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
 
 function isValidState(value: unknown): value is DemoState {
-  if (!isObject(value) || value.schema !== SCHEMA || typeof value.team !== 'string' || !Array.isArray(value.agents) || (value.viewMode !== 'basic' && value.viewMode !== 'skeleton') || !isObject(value.ops)) return false;
+  if (!isObject(value) || value.schema !== SCHEMA || typeof value.team !== 'string' || !Array.isArray(value.agents) || (value.viewMode !== 'basic' && value.viewMode !== 'skeleton') || !isObject(value.ops) || !isObject(value.knowledge)) return false;
   return value.agents.every(agent => isObject(agent)
     && typeof agent.id === 'string' && typeof agent.name === 'string'
     && Array.isArray(agent.versions) && agent.versions.length > 0

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { defaultOps, initialDemoState, rampSteps } from '../data/mock';
-import type { Agent, AgentConfig, AgentOps, AgentVersion, DemoState, ProfileId, ViewMode } from '../types/domain';
+import { defaultOps, initialDemoState, playbookKb, playbookSeed, rampSteps } from '../data/mock';
+import { knowledgeBasesFor } from './scenarioData';
+import type { Agent, AgentConfig, AgentOps, AgentVersion, DemoState, KbDraft, PlaybookId, ProfileId, ViewMode } from '../types/domain';
 import { clearDemo, readDemo, writeDemo } from './storage';
 import { canRollbackTo, getCandidate, getExperiment, isEditable, isEvaluated, nextVersionId, nowStamp } from './versions';
 
@@ -26,6 +27,15 @@ interface DemoContextValue {
   rampUp: (agentId: string) => void;
   shadowToCanary: (agentId: string) => void;
   stopExperiment: (agentId: string) => void;
+  promoteExperiment: (agentId: string) => void;
+  createUpgradedDraft: (agentId: string, fromVersionId: string, patch: Partial<AgentConfig>, note: string) => string;
+  applyFix: (agentId: string, versionId: string, config: AgentConfig) => void;
+  setKbDraft: (draft: KbDraft | null) => void;
+  publishKbDraft: () => void;
+  /* 演示剧本 */
+  startPlaybook: (id: PlaybookId) => void;
+  setPlaybookStep: (step: number) => void;
+  exitPlaybook: () => void;
 }
 
 const DemoContext = createContext<DemoContextValue | null>(null);
@@ -109,6 +119,60 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const reset = () => { clearDemo(); setState(fresh()); };
 
+  /** 依赖升级：基于某个快照创建候选版本，替换为最新依赖；平台自动完成冒烟调试（演示）。 */
+  const createUpgradedDraft: DemoContextValue['createUpgradedDraft'] = (agentId, fromVersionId, patch, note) => {
+    const agent = state.agents.find(item => item.id === agentId);
+    if (!agent) return fromVersionId;
+    const existing = getCandidate(agent);
+    if (existing) return existing.id;
+    const source = agent.versions.find(version => version.id === fromVersionId) ?? agent.versions[0];
+    const id = nextVersionId(agent);
+    updateAgent(agentId, current => ({ ...current, lastDebugQuestion: current.lastDebugQuestion, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note, config: { ...structuredClone(source.config), ...patch }, everOnline: false, configured: true, debugged: true, evaluatedDatasets: [] }, ...current.versions] }));
+    return id;
+  };
+
+  /** 直接写入修正后的配置：保存并完成冒烟调试，评测结果失效需要重跑。 */
+  const applyFix: DemoContextValue['applyFix'] = (agentId, versionId, config) => updateAgent(agentId, agent => updateVersion(agent, versionId, version =>
+    isEditable(version) ? { ...version, config: structuredClone(config), status: '草稿', configured: true, debugged: true, evaluatedDatasets: [], updatedAt: nowStamp() } : version));
+
+  /** 影子运行 / 灰度中的版本直接全量：线上指向切过去。 */
+  const promoteExperiment = (agentId: string) => updateAgent(agentId, agent => {
+    const experiment = getExperiment(agent);
+    if (!experiment) return agent;
+    return updateVersion(switchProduction(agent, experiment.id), experiment.id, version => ({ ...version, traffic: undefined }));
+  });
+
+  const setKbDraft = (kbDraft: KbDraft | null) => setState(previous => ({ ...previous, kbDraft }));
+  const publishKbDraft = () => setState(previous => {
+    const draft = previous.kbDraft;
+    const kb = draft ? knowledgeBasesFor(previous).find(item => item.id === draft.kbId) : null;
+    if (!draft || !kb) return previous;
+    const oldEntries = kb.entries.filter(entry => entry.versions.includes(draft.fromVersion));
+    const changes = draft.entries.map(entry => {
+      if (entry.isNew) return `新增「${entry.title}」（${entry.from} 生效）`;
+      const old = oldEntries.find(item => item.title === entry.title);
+      if (old && old.to !== entry.to) return `「${entry.title}」失效时间设为 ${entry.to ?? '长期有效'}`;
+      if (old && old.from !== entry.from) return `「${entry.title}」生效时间设为 ${entry.from}`;
+      return null;
+    }).filter(Boolean);
+    const next: typeof kb = {
+      ...kb,
+      versions: [{ id: draft.nextVersion, publishedAt: nowStamp(), usedBy: [], note: changes.length ? changes.join('；') : `基于 ${draft.fromVersion} 重新发布` }, ...kb.versions],
+      entries: [...draft.entries.map(entry => ({ title: entry.title, versions: [draft.nextVersion], from: entry.from, to: entry.to })), ...kb.entries],
+    };
+    return { ...previous, kbDraft: null, knowledge: { ...previous.knowledge, [kb.id]: next } };
+  });
+
+  /* ---------------- 演示剧本 ---------------- */
+  const startPlaybook = (id: PlaybookId) => setState(previous => {
+    const seed = playbookSeed(id);
+    const ops = { ...previous.ops }; delete ops[seed.id];
+    const knowledge = { ...previous.knowledge }; const kbId = playbookKb[id]; if (kbId) delete knowledge[kbId];
+    return { ...previous, agents: previous.agents.map(agent => agent.id === seed.id ? seed : agent), ops, knowledge, kbDraft: null, viewMode: 'skeleton', team: '全部团队', playbook: { id, step: 0 } };
+  });
+  const setPlaybookStep = (step: number) => setState(previous => previous.playbook ? { ...previous, playbook: { ...previous.playbook, step } } : previous);
+  const exitPlaybook = () => setState(previous => ({ ...previous, playbook: null }));
+
   /* ---------------- 生产骨架 ---------------- */
   const setViewMode = (viewMode: ViewMode) => setState(previous => ({ ...previous, viewMode }));
   const profileOf = (agentId: string) => state.agents.find(agent => agent.id === agentId)?.profile ?? 'general';
@@ -163,7 +227,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     updateOps(agentId, ops => ops.approvedVersion === experiment.id ? { ...ops, approvedVersion: null } : ops);
   };
 
-  return <DemoContext.Provider value={{ state, setTeam, createAgent, saveConfig, createDraft, markDebugged, markEvaluated, markMonitored, publishCandidate, rollbackTo, reset, setViewMode, opsOf, updateOps, startExperiment, rampUp, shadowToCanary, stopExperiment }}>{children}</DemoContext.Provider>;
+  return <DemoContext.Provider value={{ state, setTeam, createAgent, saveConfig, createDraft, markDebugged, markEvaluated, markMonitored, publishCandidate, rollbackTo, reset, setViewMode, opsOf, updateOps, startExperiment, rampUp, shadowToCanary, stopExperiment, promoteExperiment, createUpgradedDraft, applyFix, setKbDraft, publishKbDraft, startPlaybook, setPlaybookStep, exitPlaybook }}>{children}</DemoContext.Provider>;
 }
 
 export function useDemo() {

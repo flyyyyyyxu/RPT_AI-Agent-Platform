@@ -2,7 +2,7 @@ import { AlertCircle, AlertTriangle, CheckCircle2, CircleDashed, ShieldAlert } f
 import { useDemo } from '../../app/DemoProvider';
 import { evaluateGate, formatGateValue } from '../../app/gate';
 import type { Agent, AgentVersion } from '../../types/domain';
-import { StatusBadge, VersionBadge } from '../badges/Badges';
+import { DemoTag, StatusBadge, VersionBadge } from '../badges/Badges';
 import { Capability, HeroTag, Switch, useSkeletonView } from '../skeleton/Skeleton';
 
 const opLabel = { '>=': '≥', '<=': '≤' } as const;
@@ -18,9 +18,9 @@ export function GateSummary({ agent, version }: { agent: Agent; version: AgentVe
   const tone = !gate.evaluated ? 'pending' : gate.passed ? 'passed' : ops.forceBlock ? 'blocked' : 'warned';
   const Icon = { pending: CircleDashed, passed: CheckCircle2, blocked: ShieldAlert, warned: AlertTriangle }[tone];
   const verdict = { pending: '上线门槛：待评测', passed: '上线门槛：通过', blocked: '上线门槛：未通过 · 发布已阻断', warned: '上线门槛：未通过 · 仅提醒' }[tone];
-  const detail = { pending: `${version.id} 完成隔离环境评测后判断是否满足门槛。`, passed: `${version.id} 的 ${gate.rules.length} 项指标、${gate.redlines.length} 条红线样本全部达标，可进入发布前检查。`, blocked: `${gate.failedRules.map(rule => `${rule.metric} ${formatGateValue(rule.value, rule.unit)}（门槛 ${opLabel[rule.op]} ${formatGateValue(rule.threshold, rule.unit)}）`).join('；')}。已开启强制阻断，发布按钮不可用。`, warned: '未开启强制阻断：发布前检查会显示警告，但不阻止发布。' }[tone];
-  return <div className={`gate-summary ${tone}`} role="status"><Icon size={20} aria-hidden="true" /><div>
-    <div className="gate-verdict"><strong>{verdict}</strong><VersionBadge version={version.id} /><HeroTag n={1} compact /></div>
+  const detail = { pending: `${version.id} 完成隔离环境评测后判断是否满足门槛。`, passed: `${version.id} 的 ${gate.rules.length} 项指标、${gate.redlines.length} 条红线样本全部达标，可进入发布前检查。`, blocked: `${[...gate.failedRules.map(rule => `${rule.metric} ${formatGateValue(rule.value, rule.unit)}（门槛 ${opLabel[rule.op]} ${formatGateValue(rule.threshold, rule.unit)}）`), ...(gate.failedRedlines.length ? [`红线样本漏判 ${gate.failedRedlines.length} 条（${gate.failedRedlines.map(item => item.name).join('、')}）`] : [])].join('；')}。已开启强制阻断，发布按钮不可用。`, warned: '未开启强制阻断：发布前检查会显示警告，但不阻止发布。' }[tone];
+  return <div className={`gate-summary ${tone}`} role="status" data-demo="gate-summary"><Icon size={20} aria-hidden="true" /><div>
+    <div className="gate-verdict"><strong>{verdict}</strong><VersionBadge version={version.id} /><HeroTag n={1} compact /><DemoTag /></div>
     <p>{detail}</p>
     {gate.evaluated && <div className="gate-chips">{gate.rules.map(rule => <span key={rule.id} className={`gate-chip ${rule.pass ? 'pass' : 'fail'}`}>{rule.pass ? <CheckCircle2 size={16} aria-hidden="true" /> : <AlertCircle size={16} aria-hidden="true" />}{rule.metric} {formatGateValue(rule.value, rule.unit)}</span>)}
       <span className={`gate-chip ${gate.failedRedlines.length ? 'fail' : 'pass'}`}>{gate.failedRedlines.length ? <AlertCircle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}红线样本 {gate.redlines.length - gate.failedRedlines.length}/{gate.redlines.length}</span></div>}

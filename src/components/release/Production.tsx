@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowRight, ArrowUp, CheckCircle2, CircleDashed, AlertTriangle, LoaderCircle, Minus, Radio, Tag, Timer } from 'lucide-react';
-import { abProfiles, rampSteps } from '../../data/mock';
+import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, BellRing, CheckCircle2, CircleDashed, AlertTriangle, LoaderCircle, Minus, Radio, Tag, Timer } from 'lucide-react';
+import { rampSteps } from '../../data/mock';
+import { abFor, alertsFor } from '../../app/scenarioData';
 import type { Agent, AgentOps, AgentVersion, ReleaseStrategy } from '../../types/domain';
 import type { ReadinessItem } from '../../app/gate';
 import { Button } from '../actions/Buttons';
-import { IntegrationNote, StatusBadge, VersionBadge } from '../badges/Badges';
-import { Capability, Switch } from '../skeleton/Skeleton';
+import { DemoTag, IntegrationNote, StatusBadge, VersionBadge } from '../badges/Badges';
+import { Capability, HeroTag, Switch } from '../skeleton/Skeleton';
 
 export const strategyLabels: Record<ReleaseStrategy, { title: string; short: string; description: string }> = {
   direct: { title: '直接发布', short: '直接发布', description: '线上指向立即切换到新版本，适合低风险变更。' },
@@ -20,25 +21,27 @@ export function ReadinessCard({ candidate, experiment, checks, approvalPending, 
   onSubmitApproval: () => void; onApprove: () => void; approving: boolean; children: ReactNode;
 }) {
   const doneCount = checks.filter(item => item.done).length;
-  return <Capability skeleton={[3]} hero={1} title="生产就绪检查" description="发布前逐项确认；任一项未完成，发布按钮禁用并写明原因。门槛、护栏、告警的配置变化会实时反映在这里。"
+  return <Capability skeleton={[3]} hero={1} demo="readiness" title="生产就绪检查" description="发布前逐项确认；任一项未完成，发布按钮禁用并写明原因。门槛、护栏、告警的配置变化会实时反映在这里。"
     actions={candidate ? <span className="meta">{candidate.id} · 已完成 {doneCount} / {checks.length}</span> : undefined}>
     {!candidate ? <p className="meta">{experiment ? `${experiment.id} 已完成生产就绪检查，当前${experiment.status}${experiment.traffic ? ` ${experiment.traffic}%` : ''}；放量与回退见「流量指向」。` : '没有候选版本。请先在构建页新建草稿，完成配置、调试和评测后再发布。'}</p>
-      : <ul className="check-list">{checks.map(item => <li key={item.key} className={`check-item ${item.done ? item.warn ? 'warn' : 'done' : ''}`}>
+      : <ul className="check-list">{checks.map(item => <li key={item.key} data-demo={`check-${item.key}`} className={`check-item ${item.done ? item.warn ? 'warn' : 'done' : ''}`}>
         <span className="check-icon">{item.done ? item.warn ? <AlertTriangle size={20} aria-hidden="true" /> : <CheckCircle2 size={20} aria-hidden="true" /> : <CircleDashed size={20} aria-hidden="true" />}</span>
         <span><strong>{item.label}</strong><small className="meta">{item.detail}</small></span>
         <span className="check-actions">
-          {item.key === 'approval' && !item.done && <>{approvalPending ? <Button onClick={onApprove} disabled={approving}>{approving ? <LoaderCircle size={16} className="spin" /> : null}模拟审批通过</Button> : <Button onClick={onSubmitApproval}>提交审批</Button>}</>}
+          {item.key === 'approval' && !item.done && !item.optional && <>{approvalPending ? <Button onClick={onApprove} disabled={approving}>{approving ? <LoaderCircle size={16} className="spin" /> : null}模拟审批通过</Button> : <Button onClick={onSubmitApproval}>提交审批</Button>}</>}
           {item.key !== 'approval' && !item.done && item.link && <Link className="button button-secondary" to={item.link.to}>{item.link.label}</Link>}
-          {item.done ? <StatusBadge status={item.warn ? '警告' : '通过'} /> : <StatusBadge status={item.key === 'approval' && approvalPending ? '待审批' : '未完成'} />}
+          {item.done ? <StatusBadge status={item.warn ? '警告' : '通过'} /> : item.optional ? <span className="meta">全量前需要</span> : <StatusBadge status={item.key === 'approval' && approvalPending ? '待审批' : '未完成'} />}
         </span></li>)}</ul>}
     {children}
   </Capability>;
 }
 
 /* ---------------- ③ 发布策略 ---------------- */
+export const bucketLabel = (ops: AgentOps) => ops.settings.execMode === '会话' ? '按会话 ID 分桶' : '按用户 ID 哈希分桶';
+
 export function StrategyCard({ agent, ops, update, locked }: { agent: Agent; ops: AgentOps; update: (patch: Partial<AgentOps>) => void; locked?: string }) {
   const strategy: ReleaseStrategy = agent.productionVersion ? ops.strategy : 'direct';
-  return <Capability skeleton={[3]} title="发布策略" description="选择新版本进入生产的方式；比例灰度和影子运行都不改变线上指向。">
+  return <Capability skeleton={[3]} demo="strategy" title="发布策略" description="选择新版本进入生产的方式；比例灰度和影子运行都不改变线上指向。">
     <div className="strategy-grid"><div className="settings-grid">
       <div className="strategy-options" role="radiogroup" aria-label="发布策略">{(Object.keys(strategyLabels) as ReleaseStrategy[]).map(key => {
         const disabled = Boolean(locked) || (!agent.productionVersion && key !== 'direct');
@@ -48,7 +51,7 @@ export function StrategyCard({ agent, ops, update, locked }: { agent: Agent; ops
       {!agent.productionVersion && <p className="meta">首次发布没有线上版本可对照，只能直接发布。</p>}
       {strategy === 'canary' && <div className="range-field"><span className="field-label">灰度比例<span className="range-value">{ops.canaryPercent}%</span></span>
         <input type="range" min={1} max={50} step={1} value={ops.canaryPercent} disabled={Boolean(locked)} aria-label="灰度比例" onChange={event => update({ canaryPercent: Number(event.target.value) })} />
-        <span className="range-scale meta"><span>1%</span><span>按用户 ID 哈希分桶</span><span>50%</span></span></div>}
+        <span className="range-scale meta"><span>1%</span><span>{bucketLabel(ops)}</span><span>50%</span></span></div>}
       <Switch checked={ops.sticky} disabled={Boolean(locked) || strategy === 'shadow'} onChange={value => update({ sticky: value })} label="会话粘性" />
       <p className="meta">{strategy === 'shadow' ? '影子运行不向用户返回结果，无需会话粘性。' : ops.sticky ? '同一用户 / 会话在灰度期间固定命中同一版本，多轮对话不会中途切版本。' : '未开启：多轮会话可能在两个版本之间切换，影响体验和指标归因。'}</p>
     </div>
@@ -70,12 +73,12 @@ export function TrafficCard({ agent, ops, experiment, rollbackTarget, switching,
   const shadow = experiment?.status === '影子运行' ? experiment : null;
   const traffic = gray?.traffic ?? 0;
   const next = rampSteps.find(step => step > traffic) ?? 100;
-  return <Capability skeleton={[3, 5]} hero={[2, 3]} title="流量指向" description="平台网关负责分流：发布、放量、回退都只是改变指向，版本快照本身不变。">
+  return <Capability skeleton={[3, 5]} hero={[2, 3]} demo="traffic" title="流量指向" description="平台网关负责分流：发布、放量、回退都只是改变指向，版本快照本身不变。">
     {!production ? <p className="meta">尚未发布，暂无生产流量。</p> : <>
       <div className="pointer-cards">
         <div className="pointer-card active"><span className="meta"><Radio size={16} strokeWidth={1.5} aria-hidden="true" /> 线上指向</span><strong><VersionBadge version={production} /> <StatusBadge status="线上" /></strong><span className="meta">{gray ? `承接 ${100 - traffic}% 流量` : '承接全部生产流量'}</span></div>
         <ArrowRight className="pointer-arrow" size={20} aria-hidden="true" />
-        {experiment ? <div className="pointer-card gray"><span className="meta">{gray ? '灰度分桶指向' : '影子双跑'}</span><strong><VersionBadge version={experiment.id} /> <StatusBadge status={experiment.status === '灰度中' ? '灰度中' : '影子运行'} /></strong><span className="meta">{gray ? `${traffic}% 流量 · ${ops.sticky ? '会话粘性已开启' : '未开启会话粘性'}` : '复制 100% 请求，不返回用户'}</span></div>
+        {experiment ? <div className="pointer-card gray"><span className="meta">{gray ? '灰度分桶指向' : '影子双跑'}</span><strong><VersionBadge version={experiment.id} /> <StatusBadge status={experiment.status === '灰度中' ? '灰度中' : '影子运行'} /></strong><span className="meta">{gray ? `${traffic}% 流量 · ${bucketLabel(ops)} · ${ops.sticky ? '会话粘性已开启' : '未开启会话粘性'}` : '复制 100% 请求，不返回用户'}</span></div>
           : <div className="pointer-card"><span className="meta">可回退目标</span><strong>{rollbackTarget ? <VersionBadge version={rollbackTarget.id} /> : '—'}</strong><span className="meta">{rollbackTarget ? `${rollbackTarget.config.knowledge} · ${rollbackTarget.config.model}` : '没有曾上线的历史版本'}</span></div>}
       </div>
       <div className="traffic-split"><div className="traffic-bar" aria-label="流量分配">
@@ -88,14 +91,14 @@ export function TrafficCard({ agent, ops, experiment, rollbackTarget, switching,
         <ol className="switch-stages">{switchStages.map((label, index) => <li key={label} className={index < switching.stage ? 'done' : index === switching.stage ? 'active' : ''}>{index < switching.stage ? <CheckCircle2 size={16} aria-hidden="true" /> : index === switching.stage ? <LoaderCircle size={16} className="spin" aria-hidden="true" /> : <CircleDashed size={16} aria-hidden="true" />}{label}</li>)}</ol></div>}
       {!switching && <div className="rollout-actions">
         {gray && <Button variant="primary" onClick={onRamp}><ArrowUp size={16} />{next >= 100 ? `全量放量：线上指向切到 ${gray.id}` : `放量到 ${next}%`}</Button>}
-        {rollbackAction}
+        <span className="rollback-slot" data-demo="rollback">{rollbackAction}</span>
       </div>}
     </>}
   </Capability>;
 }
 
 export function SwitchResult({ from, to, elapsed, note }: { from: string; to: string; elapsed: string; note: string }) {
-  return <div className="switch-result" role="status"><CheckCircle2 size={20} aria-hidden="true" /><div><strong className="pointer-flip">线上指向 <del>{from}</del><ArrowRight size={16} aria-hidden="true" />{to}</strong><p>{note}</p></div><span className="elapsed" title="从确认回退到全部流量切换完成">耗时 {elapsed}</span></div>;
+  return <div className="switch-result" role="status" data-demo="switch-result"><CheckCircle2 size={20} aria-hidden="true" /><div><strong className="pointer-flip">线上指向 <del>{from}</del><ArrowRight size={16} aria-hidden="true" />{to}</strong><p>{note}</p></div><span className="elapsed" title="从确认回退到全部流量切换完成">耗时 {elapsed}</span><DemoTag /></div>;
 }
 
 /* ---------------- ④ AB 实验报告 ---------------- */
@@ -107,18 +110,19 @@ const deltaUnit = (unit: string) => unit === '%' ? 'pp' : unit;
 const signed = (value: number, decimals: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toFixed(decimals)}`;
 
 export function AbReport({ agent, experiment }: { agent: Agent; experiment: AgentVersion | null }) {
-  const ab = abProfiles[agent.profile] ?? abProfiles.general;
+  const ab = abFor(agent);
   const production = agent.productionVersion;
   const shadow = experiment?.status === '影子运行';
-  return <Capability skeleton={[4]} hero={[2, 4]} title={shadow ? '影子运行对比报告' : 'AB 实验报告'} description="新旧版本在同一时段、按版本号归因的业务指标对比。颜色表示好坏，不表示涨跌。">
+  return <Capability skeleton={[4]} hero={[2, 4]} demo="ab" title={shadow ? '影子运行对比报告' : 'AB 实验报告'} description="新旧版本在同一时段、按版本号归因的业务指标对比。颜色表示好坏，不表示涨跌。">
     {!experiment || !production ? <p className="meta">当前没有进行中的实验。以「比例灰度」或「影子运行」发布候选版本后，这里显示新旧版本的业务指标对比。</p> : <>
-      <div className="ab-meta"><IntegrationNote platform="实验" /><span className="meta">数据来自公司实验平台 · 实验 {ab.experimentId} · 已运行 {ab.days} 天 · {ab.sample}</span></div>
+      <div className="ab-meta"><IntegrationNote platform="实验" /><span className="meta">数据来自公司实验平台 · 实验 {ab.experimentId} · 已运行 {ab.days} 天 · {ab.sample}</span><DemoTag label="以下数字均为演示数据" /></div>
       <div className="chart-legend"><span><i className="legend-old" />旧版本 {production}</span><span><i className="legend-new" />新版本 {experiment.id}</span></div>
       <div className="ab-grid">{ab.metrics.map(metric => {
         const delta = metric.newValue - metric.oldValue;
         const significant = metric.ci[0] > 0 || metric.ci[1] < 0;
         const good = metric.higherIsBetter ? delta > 0 : delta < 0;
-        const max = Math.max(metric.oldValue, metric.newValue) * 1.15 || 1;
+        const max = Math.max(metric.oldValue, metric.newValue, metric.threshold ?? 0) * 1.15 || 1;
+        const overThreshold = metric.threshold !== undefined && (metric.higherIsBetter ? metric.newValue < metric.threshold : metric.newValue > metric.threshold);
         return <div className="ab-row" key={metric.label}>
           <div className="ab-label"><strong>{metric.label}</strong><span className="meta">{metric.higherIsBetter ? '越高越好' : '越低越好'}</span></div>
           <div className="ab-bars">
@@ -127,11 +131,28 @@ export function AbReport({ agent, experiment }: { agent: Agent; experiment: Agen
           </div>
           <div className="ab-delta"><span className={`metric-change ${significant ? good ? 'positive' : 'negative' : 'neutral'}`}>{delta === 0 ? <Minus size={16} aria-hidden="true" /> : delta > 0 ? <ArrowUp size={16} aria-hidden="true" /> : <ArrowDown size={16} aria-hidden="true" />}{signed(delta, metric.decimals)} {deltaUnit(metric.unit)}</span>
             <span className="meta ab-ci">95% CI [{signed(metric.ci[0], metric.decimals)}, {signed(metric.ci[1], metric.decimals)}] {deltaUnit(metric.unit)}</span>
-            <span className={`sig ${significant ? 'yes' : ''}`}>{significant ? '显著' : '不显著'}</span></div>
+            <span className={`sig ${significant ? 'yes' : ''}`}>{significant ? '显著' : '不显著'}</span>
+            {metric.threshold !== undefined && <span className={`gate-chip ${overThreshold ? 'fail' : 'pass'}`}>{overThreshold ? <AlertCircle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{overThreshold ? '超过门槛' : '门槛内'} {metric.higherIsBetter ? '≥' : '≤'} {formatValue(metric.threshold, metric.unit, metric.decimals)}</span>}</div>
         </div>;
       })}</div>
       <p className="ab-conclusion">{ab.conclusion}</p>
       <p className="tracking-note"><Tag size={16} aria-hidden="true" /><span><strong>版本号已写入埋点</strong>：每次曝光、点击、会话事件都带 <code>agent_version={experiment.id}</code> 和 <code>exp_id={ab.experimentId}</code> 上报，指标按版本号归因，不依赖按时间切分。</span></p>
     </>}
   </Capability>;
+}
+
+/* ---------------- ⑦ ⑧ 告警（来自公司监控平台） ---------------- */
+export function AlertBanners({ agent }: { agent: Agent }) {
+  const alerts = alertsFor(agent);
+  if (!alerts.length) return null;
+  return <div className="alert-stack" data-demo="alert">{alerts.map(alert => {
+    const version = agent.versions.find(item => item.id === alert.version);
+    const active = Boolean(version && (version.status === '灰度中' || version.status === '影子运行' || version.id === agent.productionVersion));
+    return active
+      ? <div key={alert.id} className="alert-banner error hero-alert" role="alert"><BellRing size={20} aria-hidden="true" /><div>
+          <div className="alert-title"><strong>告警 · {alert.title}</strong><VersionBadge version={alert.version} /><HeroTag n={4} compact /><DemoTag /></div>
+          <p>{alert.detail} · 触发于 {alert.time}</p><p>已通知：{alert.notify}</p><IntegrationNote platform="监控" /></div></div>
+      : <div key={alert.id} className="alert-banner success" role="status"><CheckCircle2 size={20} aria-hidden="true" /><div>
+          <div className="alert-title"><strong>告警已恢复 · {alert.title}</strong><VersionBadge version={alert.version} /><DemoTag /></div><p>{alert.resolvedNote}</p><IntegrationNote platform="监控" /></div></div>;
+  })}</div>;
 }
