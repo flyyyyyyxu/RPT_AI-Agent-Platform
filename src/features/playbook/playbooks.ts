@@ -19,7 +19,7 @@ export const phases = ['构建', '调试', '评测', '发布', '上线后'] as c
 export type Phase = '起因' | typeof phases[number];
 export interface PlaybookStep {
   title: string; body: string; next: string; phase: Phase;
-  /** 'release' 这类 Agent 页面，或 '/library' 这类平台页面 */
+  /** 'release' 这类 Agent 页面，或 '/assets' 这类平台页面 */
   page: string; target?: string;
   done?: (ctx: PlaybookCtx) => boolean;
   helper?: { label: string; run: (api: PlaybookApi, ctx: PlaybookCtx) => void };
@@ -41,7 +41,7 @@ const PB_KB = /政策库 2026-10 版/;
 const PC_KB = /售后知识 v35/;
 const PB_FIXED = (ctx: PlaybookCtx) => { const v = version(ctx, 'v8'); return Boolean(v && onKnowledge(ctx, 'v8', PB_KB) && !v.config.prompt.includes(pbOldClause) && v.configured); };
 
-export const pageNames: Record<string, string> = { build: '构建页', evaluation: '评测页', release: '发布与实验页', monitor: '监控页', trace: 'Trace 与 bad case 页', settings: '设置页', '/library': '能力组件库' };
+export const pageNames: Record<string, string> = { build: '构建页', evaluation: '评测页', release: '发布与实验页', monitor: '观测 · 监控页', trace: '观测 · Trace 页', settings: '设置页', '/assets': '资产中心' };
 export const pagePath = (playbook: Playbook, page: string) => page.startsWith('/') ? page : `/agents/${playbook.agentId}/${page}`;
 
 const DEBUG_NEXT = '点「运行调试」。调试台在页面右侧；窄屏先点「展开辅助信息」。';
@@ -98,7 +98,7 @@ export const playbooks: Playbook[] = [
   {
     id: 'b', agentId: 'b', letter: 'B', theme: '准', title: '生态守护', locks: ['plain-draft', 'strategy'],
     summary: '政策库更新：升级依赖建 v8 → 调试、评测 → 门槛拦下红线漏判 → 修正重测 → 影子验证 → 审批全量。',
-    outcome: '红线漏判在上线前被强制门槛拦下；修正后影子运行与抽检标注一致率 97.8%，全部检查通过后全量发布，上线后在监控页持续观察。',
+    outcome: '红线漏判在上线前被强制门槛拦下；修正后影子运行与抽检标注一致率 97.8%，全部检查通过后全量发布，上线后在观测页持续观察。',
     steps: [
       { phase: '构建', title: '政策库发布 2026-10 版', page: 'build', target: 'dep-upgrade',
         body: '线上 v7 的快照锁定政策库 2026-09 版。政策库发布 10 月版后，平台提示依赖已变化，但不会悄悄改变线上 v7 的行为；要用新政策，先建候选版本。',
@@ -143,7 +143,7 @@ export const playbooks: Playbook[] = [
         next: '点「提交审批」→「模拟审批通过」，再点「全量发布 v8」并确认。',
         done: ctx => ctx.agent.productionVersion === 'v8' },
       { phase: '上线后', title: '监控线上 v8', page: 'monitor', target: 'monitor',
-        body: '全量后在监控页看 v8 的调用量、延迟和错误率；调用日志逐条带版本号，出问题可以在发布页一键回退到 v7。',
+        body: '全量后在观测页的「监控」里看 v8 的调用量、延迟和错误率；调用日志逐条带版本号，出问题可以在发布页一键回退到 v7。',
         next: '剧本结束，点「完成剧本」。' },
     ],
   },
@@ -166,11 +166,11 @@ export const playbooks: Playbook[] = [
         body: '加入后生成「bad case 回归集」，之后每个候选版本上线前都会用它回归。',
         next: '点「加入评测集」。',
         done: ctx => Boolean(ctx.ops.badcases['bc-4431']?.inEvalSet) },
-      { phase: '构建', title: '新建知识版本', page: '/library', target: 'kb-new-version',
-        body: '去能力组件库更新售后知识：基于 v34 新建 v35，而不是直接改线上正在用的 v34。',
+      { phase: '构建', title: '新建知识版本', page: '/assets', target: 'kb-new-version',
+        body: '去资产中心更新售后知识：基于 v34 新建 v35，而不是直接改线上正在用的 v34。',
         next: '确认选中「售后知识」，点「基于 v34 新建版本 v35」。',
         done: ctx => ctx.state.kbDraft?.kbId === 'aftersale' || knowledgeBasesFor(ctx.state).some(kb => kb.id === 'aftersale' && kb.versions.some(v => v.id === 'v35')) },
-      { phase: '构建', title: '设置生效 / 失效时间', page: '/library', target: 'kb-draft',
+      { phase: '构建', title: '设置生效 / 失效时间', page: '/assets', target: 'kb-draft',
         body: `给旧条目「七天无理由退货」设置失效时间 ${pcOldEntryExpiry}；把知识运营提交的「十五天无理由退货」加入本版本，生效时间 2026-09-01 00:00。`,
         next: '按上面填写后点「发布 v35」，或点浮层里的「代我填写」再发布。',
         done: ctx => knowledgeBasesFor(ctx.state).some(kb => kb.id === 'aftersale' && kb.versions.some(v => v.id === 'v35')),
@@ -214,7 +214,7 @@ export const playbooks: Playbook[] = [
 
 export const playbookOf = (id: PlaybookId) => playbooks.find(item => item.id === id) ?? playbooks[0];
 
-/** 剧本进行中时，某个入口是否被锁定；返回禁用原因。只锁剧本自己的 Agent（能力组件库这类平台页传 null）。 */
+/** 剧本进行中时，某个入口是否被锁定；返回禁用原因。只锁剧本自己的 Agent（资产中心这类平台页传 null）。 */
 export function usePlaybookLock(lock: PlaybookLock, agentId: string | null): string | undefined {
   const { state } = useDemo();
   if (!state.playbook) return undefined;

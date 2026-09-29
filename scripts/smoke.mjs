@@ -165,7 +165,8 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   const a = await agentState(page, 'a');
   check('回归：回退中途离开页面仍生效', a.versions.find(v => v.id === 'v13').status === '待发布');
   check('回归：操作时间使用演示时钟', a.ops.approvals[0].time.startsWith('2026-09-29 12:0'), a.ops.approvals[0].time);
-  check('回归：生命周期显示监控 / Trace 可查看', (await page.locator('.lifecycle-item small').allInnerTexts()).join('|') === '已完成|已完成|未开始|可查看|当前 · 可查看');
+  check('回归：生命周期显示观测可查看（监控、Trace 同属观测）', (await page.locator('.lifecycle-item small').allInnerTexts()).join('|') === '已完成|已完成|未开始|当前 · 可查看|运行策略 · 护栏 · 成本');
+  check('回归：观测下有监控 / Trace 两个标签页', (await page.locator('.observe-tabs a').allInnerTexts()).join('|') === '监控|Trace 与 bad case');
 
   // 退出剧本并恢复原始数据
   await startPlaybook(page, 'A');
@@ -191,6 +192,33 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   const collapsed = await agentState(page, 'a');
   check('回归：收起剧本浮层不退出剧本，刷新后保持收起', collapsed.playbook?.id === 'a' && collapsed.playbook.collapsed === true && await page.locator('.playbook-panel').count() === 0 && await page.locator('.playbook-pill').count() === 1);
   check('回归：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 两轴信息架构：一级导航与平台页 ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  const navText = (await page.locator('.sidebar-links').innerText()).replace(/\s+/g, ' ');
+  check('导航：工作台 / 资产中心 / 监控与成本 / 治理 / 模板广场（二期）', ['工作台', '资产中心', '监控与成本', '治理', '模板广场'].every(label => navText.includes(label)) && !navText.includes('评测中心'), navText);
+  check('导航：模板广场置灰不可点', await page.locator('.nav-item-phase2[aria-disabled=true]').count() === 1);
+  await go(page, '/library', 400);
+  check('旧入口：能力组件库跳到资产中心', page.url().endsWith('#/assets'), page.url());
+  await go(page, '/evaluation', 400);
+  check('旧入口：评测中心跳到资产中心 · 评测集', page.url().endsWith('#/assets?tab=evalsets') && await page.locator('.evalset-table tbody tr').count() >= 8, page.url());
+  for (const [tab, label] of [['tools', '工具版本'], ['models', '模型目录'], ['prompts', '模板目录']]) {
+    await go(page, `/assets?tab=${tab}`, 300);
+    check(`资产中心：${label}`, await page.locator('.capability h3', { hasText: label }).count() === 1);
+  }
+  await go(page, '/operations', 400);
+  check('监控与成本：每个 Agent 一行', await page.locator('.ops-table tbody tr').count() === 4);
+  check('监控与成本：按团队显示预算', await page.locator('.team-budget').count() === 4);
+  await go(page, '/governance', 400);
+  check('治理：护栏覆盖和审计日志', await page.locator('.guard-table tbody tr').count() === 4 && await page.locator('.audit-table tbody tr').count() > 0);
+  await go(page, '/settings', 300);
+  check('旧入口：平台设置跳到治理', page.url().endsWith('#/governance'), page.url());
+  await go(page, '/agents/a/observe', 400);
+  check('Agent：观测默认进入监控', page.url().endsWith('#/agents/a/monitor') && await page.locator('.lifecycle-item.current strong').innerText() === '观测', page.url());
+  check('平台页：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 

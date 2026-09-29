@@ -1,28 +1,33 @@
 import { useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Blocks, ChevronLeft, ChevronRight, ClipboardCheck, Gauge, LayoutGrid, Menu, RotateCcw, Settings, X } from 'lucide-react';
+import { Boxes, ChevronLeft, ChevronRight, Gauge, LayoutGrid, Menu, RotateCcw, ShieldCheck, Store, X } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
 import { Button } from '../../shared/components/Buttons';
-import { DemoBadge } from '../../shared/components/Badges';
+import { DemoBadge, ScopeBadge } from '../../shared/components/Badges';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 import { PlaybookPanel, usePlaybookPanel } from '../playbook/PlaybookPanel';
 import './shell.css';
 import { icon } from '../../shared/styles/tokens';
 
-const navigation = [
-  { to: '/', label: '工作台', icon: LayoutGrid },
-  { to: '/library', label: '能力组件库', icon: Blocks },
-  { to: '/evaluation', label: '评测中心', icon: ClipboardCheck },
-  { to: '/operations', label: '运维与成本', icon: Gauge },
-  { to: '/settings', label: '设置', icon: Settings },
+/**
+ * 一级导航按两个轴组织：
+ *   工作台：进入单个 Agent 的生产闭环（纵轴）
+ *   平台共享：跨 Agent 的资产、监控与成本、治理（横轴）
+ */
+const workbench = { to: '/', label: '工作台', icon: LayoutGrid };
+const platformNav = [
+  { to: '/assets', label: '资产中心', icon: Boxes },
+  { to: '/operations', label: '监控与成本', icon: Gauge },
+  { to: '/governance', label: '治理', icon: ShieldCheck },
 ];
+const navigation = [workbench, ...platformNav];
 
 function Breadcrumbs() {
   const { pathname } = useLocation();
   const { state } = useDemo();
   const parts = pathname.split('/').filter(Boolean);
   const agent = parts[0] === 'agents' ? state.agents.find(item => item.id === parts[1]) : undefined;
-  const current = pathname === '/design-system' ? '设计规范' : pathname === '/agents/new' ? '新建 Agent' : agent ? ({ build: '构建', evaluation: '评测', release: '发布与实验', monitor: '监控', trace: 'Trace 与 bad case', settings: '设置' } as Record<string, string>)[parts[2] ?? 'build'] : navigation.find(item => item.to === pathname)?.label ?? '工作台';
+  const current = pathname === '/design-system' ? '设计规范' : pathname === '/agents/new' ? '新建 Agent' : agent ? ({ build: '构建', evaluation: '评测', release: '发布与实验', monitor: '观测 · 监控', trace: '观测 · Trace 与 bad case', settings: '设置' } as Record<string, string>)[parts[2] ?? 'build'] : navigation.find(item => item.to === pathname)?.label ?? '工作台';
   return <nav className="breadcrumbs" aria-label="面包屑"><Link to="/">工作台</Link>{agent && <><ChevronRight aria-hidden="true" /><Link to={`/agents/${agent.id}/build`}>{agent.name}</Link></>}
     {(pathname !== '/' || agent) && <><ChevronRight aria-hidden="true" /><span aria-current="page">{current}</span></>}</nav>;
 }
@@ -34,7 +39,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const playbook = usePlaybookPanel();
   const location = useLocation();
   const navigate = useNavigate();
-  const navItems = navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} title={collapsed ? label : undefined} onClick={() => setMobileOpen(false)} className={({ isActive }) => `nav-item ${(isActive || (to === '/' && location.pathname.startsWith('/agents'))) ? 'active' : ''}`}><Icon size={icon.large} aria-hidden="true" /><span>{label}</span></NavLink>);
+  const navLink = ({ to, label, icon: Icon }: typeof workbench) => <NavLink key={to} to={to} end={to === '/'} title={collapsed ? label : undefined} onClick={() => setMobileOpen(false)} className={({ isActive }) => `nav-item ${(isActive || (to === '/' && location.pathname.startsWith('/agents'))) ? 'active' : ''}`}><Icon size={icon.large} aria-hidden="true" /><span>{label}</span></NavLink>;
+  const navItems = <>{navLink(workbench)}<span className="sidebar-group-label">平台共享 · 跨 Agent</span>{platformNav.map(navLink)}
+    <div className="nav-item nav-item-phase2" title="二期建设" aria-disabled="true"><Store size={icon.large} aria-hidden="true" /><span>模板广场</span><ScopeBadge phase="二期" /></div></>;
   return <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${playbook.expanded ? 'has-playbook' : playbook.pb ? 'has-playbook-pill' : ''}`}>
     <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`} aria-label="一级导航">
       <div className="brand"><span className="brand-symbol" aria-hidden="true">A</span><span className="brand-text">Agent 基建平台</span><button className="icon-button collapse-button" onClick={() => setCollapsed(value => !value)} title={collapsed ? '展开导航' : '收起导航'} aria-label={collapsed ? '展开导航' : '收起导航'}>{collapsed ? <ChevronRight /> : <ChevronLeft />}</button></div>

@@ -1,4 +1,4 @@
-/** 能力组件库：知识库新版本草稿、发布新版本（覆盖 mock，保存在演示状态里）。 */
+/** 资产中心 · 知识库：知识库新版本草稿、发布新版本（覆盖 mock，保存在演示状态里）。 */
 import type { KbDraft } from '../../../types/domain';
 import { knowledgeBasesFor } from '../../data-access/scenarioData';
 import { nowStamp } from '../../rules/clock';

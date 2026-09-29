@@ -1,7 +1,7 @@
-/** 能力组件库：知识库（带版本与生效期）、工具目录、知识运营提交的待入库条目。 */
+/** 资产中心：知识库（带版本与生效期）、工具目录、Prompt 模板、知识运营提交的待入库条目。模型和评测集分别复用 build.ts、evaluation.ts 的数据。 */
 import type { KnowledgeBase, PendingEntry } from '../../types/domain';
 
-/* ① 能力组件库：知识库（带版本与生效期）和工具（带版本） */
+/* ① 资产中心：知识库（带版本与生效期）和工具（带版本） */
 export const knowledgeBases: KnowledgeBase[] = [
   { id: 'hr', name: '制度库', owner: '企业服务 · 李一宁', description: '公司人事、差旅、报销制度条款',
     versions: [{ id: '2026-09 版', publishedAt: '2026-09-01 00:00', usedBy: ['内部制度问答助手 v3', 'v4'], note: '新增 2026 版差旅与休假条款' }, { id: '2026-08 版', publishedAt: '2026-08-01 00:00', usedBy: ['内部制度问答助手 v1', 'v2'] }],
@@ -52,3 +52,10 @@ export const toolCatalog = [
 export const pendingEntries: Record<string, PendingEntry[]> = {
   aftersale: [{ title: '《退货政策》2.1 十五天无理由退货（2026-09 修订）', from: '2026-09-01 00:00', to: null, submittedBy: '知识运营 · 赵敏 · 2026-09-28 17:20 提交' }],
 };
+
+/* Prompt 模板：从已上线 Agent 中沉淀的结构，新 Agent 在构建页套用后再改 */
+export const promptTemplates = [
+  { name: '带引用的知识问答', version: 'v3', scene: '知识检索 + 多轮问答', structure: '角色 → 只依据有效知识 → 给出条款来源 → 无依据时明确说明', owner: '平台团队', usedBy: ['内部制度问答助手', '售后答疑'] },
+  { name: '结构化分类判定', version: 'v2', scene: '批量判定 + 人工复核', structure: '角色 → 依据政策条款 → 输出类别 / 理由 / 依据 JSON → 低置信度标记复核', owner: '内容安全 · 周可', usedBy: ['生态守护'] },
+  { name: '场景推荐生成', version: 'v1', scene: '在线推荐 + 引用内容', structure: '角色 → 场景与偏好变量 → 生成 N 套方案 → 引用候选内容 → 不做功效承诺', owner: '社区内容 · 陈思远', usedBy: ['穿搭灵感'] },
+];

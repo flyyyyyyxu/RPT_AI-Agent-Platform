@@ -1,0 +1,16 @@
+/* 治理：角色卡片、护栏覆盖表、审计日志。 */
+.role-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 5), 1fr)); gap: var(--space-4); }
+.role-card { display: grid; gap: var(--space-1); padding: var(--space-4); background: var(--color-card); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.role-card svg { color: var(--color-indigo); }
+.role-card p { color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.guard-table .col-guard { width: 16%; }
+.guard-on, .guard-off { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
+.guard-on { color: var(--color-greenText); }
+.guard-off { color: var(--color-muted); }
+.audit-table .col-time { width: 20%; }
+.audit-table .col-agent { width: 18%; }
+.audit-table .col-who { width: 22%; }
+.audit-table .version-badge { margin-inline: var(--space-1); }
+@media (max-width: 767px) {
+  .guard-table, .audit-table { min-width: calc(var(--space-12) * 13); }
+}

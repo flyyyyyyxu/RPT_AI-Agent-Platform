@@ -32,7 +32,7 @@ export function TracePage({ agent }: { agent: Agent }) {
 
   if (!online || !trace) {
     return <AgentShell agent={agent} stepId="trace" aside={<Card><span className="eyebrow">可追溯</span><h3>Trace 来自生产请求</h3><p className="meta">发布后，每次运行都会记录版本号、每一步的输入输出和引用依据；bad case 也会关联到对应的 Trace。</p></Card>}>
-      <SectionHeading eyebrow="可观测与可追溯" title="Trace 与 bad case" description="从一条异常请求出发：看清每一步用了哪个版本、引用了哪条知识，再把问题标注回流到评测集。" />
+      <SectionHeading eyebrow="观测 · Trace" title="Trace 与 bad case" description="从一条异常请求出发：看清每一步用了哪个版本、引用了哪条知识，再把问题标注回流到评测集。" />
       <Feedback kind="empty" title="暂无 Trace 记录" description={online ? `线上 ${agent.productionVersion} 还没有产生请求记录，有新请求后这里会显示 Trace 和 bad case。` : '该 Agent 尚未发布，没有生产请求；发布后这里会显示每次运行的 Trace 和 bad case。'}
         action={online ? undefined : <Link className="button button-secondary feedback-action" to={`/agents/${agent.id}/release`}><Rocket size={icon.small} />前往发布</Link>} />
     </AgentShell>;
@@ -41,10 +41,10 @@ export function TracePage({ agent }: { agent: Agent }) {
   const aside = <><Card><span className="eyebrow">bad case 概览</span><h3>{cases.length} 条待处理</h3>
     <p>{(['用户反馈', '申诉', '抽检'] as const).map(source => `${source} ${cases.filter(item => item.source === source).length}`).join(' · ')}</p>
     <p className="meta">已标注 {labeled} / {cases.length} · 已加入评测集 {added}</p></Card>
-    <Card><span className="eyebrow">可追溯</span><h3>每次运行都能还原</h3><p className="meta">Trace 记录版本号、每一步的输入输出和引用依据（知识条目 + 知识版本）。监控页的调用日志通过 Trace ID 跳转到这里。</p></Card></>;
+    <Card><span className="eyebrow">可追溯</span><h3>每次运行都能还原</h3><p className="meta">Trace 记录版本号、每一步的输入输出和引用依据（知识条目 + 知识版本）。「监控」标签页的调用日志通过 Trace ID 跳转到这里。</p></Card></>;
 
   return <AgentShell agent={agent} stepId="trace" aside={aside}>
-    <SectionHeading eyebrow="可观测与可追溯" title="Trace 与 bad case" description="从一条异常请求出发：看清每一步用了哪个版本、引用了哪条知识，再把问题标注回流到评测集。" />
+    <SectionHeading eyebrow="观测 · Trace" title="Trace 与 bad case" description="从一条异常请求出发：看清每一步用了哪个版本、引用了哪条知识，再把问题标注回流到评测集。" />
     <div id="trace-card"><Capability title="Trace 树" description="输入 → 检索 → 工具调用 → 生成 → 护栏检查 → 输出，每一步显示耗时、引用依据和 Agent 版本号。"
       actions={<span className="otel-note"><ScanSearch size={icon.small} aria-hidden="true" />OpenTelemetry 标准 · 可接入公司链路追踪</span>}>
       <div className="trace-layout">

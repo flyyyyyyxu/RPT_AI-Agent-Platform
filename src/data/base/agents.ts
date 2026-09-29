@@ -64,7 +64,11 @@ export const mockAgents: Agent[] = [
 
 export const initialDemoState: DemoState = { schema: 5, agents: mockAgents, ops: {}, knowledge: {}, kbDraft: null, playbook: null };
 export const teams = [...new Set(mockAgents.map(agent => agent.team))];
+/** 纵轴：单个 Agent 的生产闭环。观测包含「监控」和「Trace 与 bad case」两个标签页，bad case 回流评测集后开始下一轮。 */
 export const lifecycleSteps = [
   { id: 'build', label: '构建' }, { id: 'evaluation', label: '评测' }, { id: 'release', label: '发布与实验' },
+  { id: 'observe', label: '观测' },
+] as const;
+export const observeTabs = [
   { id: 'monitor', label: '监控' }, { id: 'trace', label: 'Trace 与 bad case' },
 ] as const;

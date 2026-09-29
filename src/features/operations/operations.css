@@ -1,0 +1,23 @@
+/* 监控与成本：跨 Agent 运行表、团队预算。 */
+.ops-table .col-agent { width: 18%; }
+.ops-table .col-ver { width: 17%; }
+.ops-table .col-cost { width: 16%; }
+.ops-table .col-alert { width: 13%; }
+.ops-table .col-go { width: 7%; }
+.ops-table td small { display: block; }
+.ops-table td { height: auto; padding-block: var(--space-2); }
+.ops-versions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+.ops-flag { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
+.ops-flag.ok { color: var(--color-greenText); }
+.team-budgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 6), 1fr)); gap: var(--space-4); }
+.team-budget { display: grid; gap: var(--space-2); padding: var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); }
+.team-budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.team-budget-head span { font-variant-numeric: tabular-nums; }
+.quota-bar { height: var(--space-3); background: var(--color-page); border-radius: var(--radius-badge); overflow: hidden; position: relative; }
+.quota-bar span { display: block; height: 100%; background: var(--color-indigo); border-radius: var(--radius-badge); }
+.quota-bar span.over { background: var(--color-orange); }
+.quota-bar i { position: absolute; top: 0; bottom: 0; border-left: var(--border-thick) dashed var(--color-orange); }
+@media (max-width: 1023px) {
+  .ops-table { min-width: calc(var(--space-12) * 17); }
+}
+.ops-metrics .metric-change-empty .metric-detail { margin-left: 0; white-space: normal; }

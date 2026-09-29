@@ -108,3 +108,20 @@
 .app-shell.has-playbook-pill .content { padding-bottom: calc(var(--space-12) * 2); }
 .app-shell.has-playbook .content { padding-bottom: calc(var(--space-12) * 8); }
 .step-进行中 { background: var(--color-indigoLight); color: var(--color-indigo); }
+/* ------------------------------------------------------------------ */
+/* 两轴信息架构：Agent 内的「设置」入口、「观测」标签页、二期导航项         */
+/* ------------------------------------------------------------------ */
+.lifecycle-item.lifecycle-settings { flex: 0 0 auto; color: var(--color-muted); }
+.lifecycle-item.lifecycle-settings.current svg { color: var(--color-coral); }
+.observe-tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); width: fit-content; max-width: 100%; margin-top: var(--space-2); padding: var(--space-1); background: var(--color-card); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); }
+.observe-tabs a { display: inline-flex; align-items: center; min-height: var(--space-8); padding: var(--space-1) var(--space-3); border: var(--border-thin) solid transparent; border-radius: var(--radius-badge); color: var(--color-secondary); white-space: nowrap; }
+.observe-tabs a:hover { background: var(--color-page); }
+.observe-tabs a.active { background: var(--color-coralLight); border-color: var(--color-coral); color: var(--color-text); font-weight: var(--weight-semibold); }
+.nav-item.nav-item-phase2 { opacity: var(--opacity-disabled); border: var(--border-thin) dashed var(--color-disabled); cursor: not-allowed; }
+.nav-item.nav-item-phase2:hover { background: transparent; }
+.nav-item-phase2 .scope-badge { margin-left: auto; }
+.sidebar-group-label { padding: var(--space-3) var(--space-3) var(--space-1); color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); white-space: nowrap; }
+.sidebar-collapsed .sidebar-group-label { visibility: hidden; height: var(--space-2); padding: 0; }
+@media (max-width: 767px) {
+  .sidebar-group-label { grid-column: 1 / -1; }
+}

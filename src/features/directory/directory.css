@@ -45,3 +45,5 @@
 @media (max-width: 767px) {
   .agent-table tr { grid-template-columns: minmax(0, 1fr); }
 }
+/* 工作台待办：名单较长时换行，不撑破卡片；没有涨跌时说明文字不缩进 */
+.directory-todos .metric-card .metric-detail { white-space: normal; margin-left: 0; }

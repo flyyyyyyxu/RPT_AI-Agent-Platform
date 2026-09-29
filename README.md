@@ -2,6 +2,13 @@
 
 本阶段提供全局导航、设计规范样板页、4 个 Agent 的演示数据，以及「内部制度问答助手」的完整主路径：新建、配置、调试、评测、发布、监控和回退。上线门槛、灰度与 AB、回退、Trace、护栏、成本等生产能力直接融入各页面（见下文），全部为前端交互 + mock 数据。
 
+## 信息架构（两个轴）
+
+- **一级导航（横轴 · 平台共享）**：工作台（Agent 目录 + 待办）· 资产中心（`#/assets`，知识库 / 工具 / 评测集 / 模型 / Prompt 模板）· 监控与成本（`#/operations`）· 治理（`#/governance`）· 模板广场（二期，置灰）。
+- **Agent 内（纵轴 · 生产闭环）**：构建 → 评测 → 发布与实验 → 观测，外加设置。观测包含「监控」（`/monitor`）和「Trace 与 bad case」（`/trace`）两个标签页；`/agents/:id/observe` 会跳到监控。
+- 旧地址保留跳转：`#/library` → 资产中心，`#/evaluation` → 资产中心 · 评测集，`#/settings` → 治理。
+- 详细说明见 `Files/PROJECT_CONTEXT.md`「信息架构：两个轴」。
+
 在本目录运行 `npm install`、`npm run build`。构建完成后，直接打开 `dist/index.html`；页面通过 Hash 路由切换，刷新不会请求服务端。`npm run dev` 可用于本地开发。
 
 ## 代码结构
@@ -16,7 +23,7 @@ src/
 │  └─ hooks/
 ├─ shared/        跨页面复用：components/（按钮、徽章、卡片、能力卡片、开关、告警条…）和 styles/（设计变量、基础样式、通用组件样式）
 ├─ features/      一个功能一个文件夹：页面、专用组件、专用样式
-│  └─ shell / directory / create / build / evaluation / release / monitor / trace / settings / library / playbook / design-system / placeholder
+│  └─ shell / directory / create / build / evaluation / release / monitor / trace / settings / library（资产中心）/ operations（监控与成本）/ governance（治理）/ playbook / design-system / placeholder
 └─ types/domain.ts
 ```
 
@@ -49,7 +56,7 @@ src/
 
 - 生产骨架是产品设计时考虑的点，直接融入页面流程；界面上不显示骨架编号、「生产骨架」区块或「主角」标签，也没有能力视图切换。每个功能只标 MVP / 二期。
 - 能力卡片用 `src/shared/components/Capability.tsx` 的 `Capability` 包裹：自带 MVP / 二期徽章；二期整块置灰不可点。
-- 各页能力：构建页（依赖锁定、版本 diff）、评测页（隔离环境、上线门槛、批量评测）、发布与实验页（生产就绪检查、发布策略、流量指向、AB 报告、放量与回退）、Trace 与 bad case 页、Agent 设置页（运行保障、告警、护栏、成本）、能力组件库（知识与工具版本）。
+- 各页能力：构建页（依赖锁定、版本 diff）、评测页（隔离环境、上线门槛、批量评测）、发布与实验页（生产就绪检查、发布策略、流量指向、AB 报告、放量与回退）、观测页（监控、Trace 与 bad case 两个标签页）、Agent 设置页（运行保障、告警、护栏、成本）；平台级：资产中心（知识、工具、评测集、模型、Prompt 模板的版本与引用）、监控与成本（跨 Agent 运行表、团队预算、限流与降级一览）、治理（角色与授权、护栏覆盖、审计日志）。
 - 门槛与就绪检查逻辑在 `src/core/rules/gate.ts`；灰度、放量、回退操作在 `src/core/store/actions/releaseActions.ts`；相关 mock 按功能放在 `src/data/base/`。
 - 推荐演示路径：内部制度问答助手 v4 构建保存 → 调试 → 评测 → 发布页看就绪检查（缺告警与审批）→ 设置页开启告警 → 提交并模拟审批 → 比例灰度发布 → 放量 → 回退到 v3（显示耗时）。穿搭灵感可直接演示「回退到 v12」，生态守护 v8 演示门槛阻断。
 

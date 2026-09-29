@@ -35,7 +35,7 @@ export function BuildPage({ agent }: { agent: Agent }) {
 function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersion }) {
   const { state, saveConfig, createDraft, markDebugged } = useDemo();
   const draftLock = usePlaybookLock('plain-draft', agent.id);
-  /** 知识库选项：来自能力组件库，新发布的知识版本会立即出现在这里。 */
+  /** 知识库选项：来自资产中心，新发布的知识版本会立即出现在这里。 */
   const knowledgeOptions = [...knowledgeBasesFor(state).flatMap(kb => kb.versions.map(item => `${kb.name} ${item.id}`)), '暂不接入'];
   const { select } = useSelectedVersion(agent);
   const [form, setForm] = useState<AgentConfig>(() => structuredClone(version.config));
