@@ -16,17 +16,37 @@ export interface WorkflowStep {
   description: string;
 }
 
-/** 记忆：会话内保留最近几轮（0 = 不记忆），长期偏好跨会话保存（脱敏标签） */
-export interface AgentMemory { turns: number; preferences: boolean }
+/** 记忆变量：一维、单个的用户或应用信息（例如常穿尺码） */
+export interface MemoryVariable { name: string; desc: string; defaultValue: string }
+/** 记忆表：多维、大量的结构化记录（例如历史售后单），支持按字段问数 */
+export interface MemoryTable { name: string; fields: string }
+/**
+ * 记忆：turns = 参考对话轮数（0 = 每轮独立）；variables / tables 由 Agent 定义；
+ * fragments = 记忆片段，自动总结用户信息、偏好、计划，跨会话生效（脱敏，用户可清除）
+ */
+export interface AgentMemory { turns: number; variables: MemoryVariable[]; tables: MemoryTable[]; fragments: boolean }
+/** 对话体验：开场白、推荐问、追问（回答后给出追问建议） */
+export type FollowUpMode = '关闭' | '自动生成';
+export interface AgentDialog { opening: string; suggestions: string[]; followUp: FollowUpMode }
+/** 知识检索设置 */
+export interface RetrievalSetting { topK: number; threshold: number }
 
 export interface AgentConfig {
   prompt: string;
   model: string;
   /** 备用模型：主模型超时或出错时切换（触发条件在设置页「降级策略」）；'不启用' 表示没有备用模型 */
   fallbackModel: string;
+  /** 最大思考次数：规划 → 调用工具 → 观察 的最多轮数，越多越准也越慢 */
+  maxThinking: number;
+  /** 一个版本挂 1 个知识库（写作「名称 版本」）；'暂不接入' 表示不挂 */
   knowledge: string;
+  retrieval: RetrievalSetting;
+  /** 数据库（资产中心 key）；一个版本最多挂 1 个；null 表示不挂 */
+  database: string | null;
+  /** 工具写作「名称 vX」，同一个工具只能挂一个版本 */
   tools: string[];
   memory: AgentMemory;
+  dialog: AgentDialog;
   outputFormat: string;
   steps: WorkflowStep[];
 }
@@ -214,8 +234,8 @@ export interface Intervention {
 /*      没被引用的版本可以原地修改；被引用时只能改基本信息（负责人、描述等）。 */
 /* ------------------------------------------------------------------ */
 
-export type AssetKind = 'tools' | 'models' | 'prompts' | 'evalsets';
-/** 工具、模型的新版本要经过平台审核；评测集、Prompt 模板保存即发布 */
+export type AssetKind = 'tools' | 'models' | 'prompts' | 'evalsets' | 'databases';
+/** 工具、模型的新版本要经过平台审核（工具只在「本团队」可见时免审）；评测集、Prompt 模板、数据库保存即发布 */
 export type AssetVersionStatus = '已发布' | '审核中';
 export interface AssetParam { name: string; type: string; required: string; desc: string }
 export interface ToolContent { endpoint: string; protocol: 'HTTP' | '内部 RPC'; instruction: string; auth: string; timeout: string; qps: string; access: '只读' | '写操作'; dataLevel: string; callers: string; params: AssetParam[]; sample: string }
@@ -224,6 +244,9 @@ export interface PromptVariable { name: string; desc: string; source: string }
 export interface PromptContent { kind: string; scene: string; structure: string; body: string; variables: PromptVariable[] }
 /** 评测集版本内容：基础样本之外追加的样本（预置评测集的原始样本来自 datasetsFor） */
 export interface EvalsetContent { dimensions: string[]; scoring: string[]; addedCases: EvalCase[] }
+/** 数据库：上传表格或连接业务库；版本对应表结构，数据实时查询 */
+export interface DbTable { name: string; fields: string; rows: number }
+export interface DatabaseContent { source: '上传表格' | '连接业务库'; tables: DbTable[]; dataLevel: string; access: '只读' }
 export interface AssetVersion<C> { id: string; status: AssetVersionStatus; at: string; by: string; note: string; content: C }
 export interface AssetRecord<C> {
   /** 工具用名称、模型用「名称 · 接入方式」、评测集用「agentId:datasetId」作为 key，和 Agent 配置里的引用写法一致 */
@@ -245,10 +268,11 @@ export interface AssetState {
   prompts: AssetRecord<PromptContent>[];
   /** 只存被修改过或新建的评测集；预置评测集按 datasetsFor 实时生成 */
   evalsets: AssetRecord<EvalsetContent>[];
+  databases: AssetRecord<DatabaseContent>[];
 }
 
 export interface DemoState {
-  schema: 7;
+  schema: 8;
   agents: Agent[];
   ops: Record<string, AgentOps>;
   /** 已发布的知识库新版本（覆盖 mock），以及页面上新建的知识库 */

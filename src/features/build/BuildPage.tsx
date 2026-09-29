@@ -73,7 +73,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
 
   const aside = <DebugChat presets={debugPresets(agent)} initialQuestion={debugged || !editable ? agent.lastDebugQuestion : ''}
     target={!editable ? `只读快照 ${version.id}` : dirty ? `${version.id} 的草稿（未保存）` : `候选版本 ${version.id}`}
-    debugged={editable ? debugged : true} memoryTurns={form.memory.turns} model={form.model}
+    debugged={editable ? debugged : true} memoryTurns={form.memory.turns} model={form.model} dialog={form.dialog}
     readOnlyNote={editable ? undefined : `调试只读快照不影响生命周期状态。`}
     onRun={async question => { const snapshot = form; flush(); await new Promise(resolve => window.setTimeout(resolve, 950)); markDebugged(agent.id, version.id, question, editable ? snapshot : undefined); }} />;
 
@@ -105,7 +105,7 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
     <button type="button" className="snapshot-toggle" aria-expanded={snapshotOpen} onClick={() => setSnapshotOpen(value => !value)}>
       {snapshotOpen ? <ChevronDown size={icon.large} aria-hidden="true" /> : <ChevronRight size={icon.large} aria-hidden="true" />}
       <span><strong>版本快照与对比 · {version.id}</strong>
-        <span className="meta">锁定 {version.config.model.split(' · ')[0]} · {version.config.knowledge} · 工具 {version.config.tools.length} 个 · {memoryText(version.config)}{deps.changed.length ? ` · ${deps.changed.length} 项依赖有上游更新` : ''}{dirty ? ' · 以已保存的快照为准，不含未保存的草稿' : ''}</span></span>
+        <span className="meta">锁定 {version.config.model.split(' · ')[0]} · {version.config.knowledge}{version.config.database ? ` · 数据库 ${version.config.database}` : ''} · 工具 {version.config.tools.length} 个 · {memoryText(version.config)}{deps.changed.length ? ` · ${deps.changed.length} 项依赖有上游更新` : ''}{dirty ? ' · 以已保存的快照为准，不含未保存的草稿' : ''}</span></span>
     </button>
     {snapshotOpen && <div className="snapshot-body">
       <DependencyLock version={version} />

@@ -4,7 +4,7 @@
  */
 import { ChevronDown, ChevronRight, Info, Play, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { DebugPreset } from '../../types/domain';
+import type { AgentDialog, DebugPreset } from '../../types/domain';
 import { Button } from '../../shared/components/Buttons';
 import { icon } from '../../shared/styles/tokens';
 
@@ -16,8 +16,10 @@ function match(presets: DebugPreset[], question: string) {
 
 type Turn = { id: number; question: string; result: ReturnType<typeof match>; context: number; model: string };
 
-export function DebugChat({ presets, initialQuestion, target, debugged, memoryTurns, model, readOnlyNote, onRun }: {
+export function DebugChat({ presets, initialQuestion, target, debugged, memoryTurns, model, readOnlyNote, dialog, onRun }: {
   presets: DebugPreset[];
+  /** 草稿里的对话体验：开场白、推荐问、追问 */
+  dialog: AgentDialog;
   /** 上次调试的问题：工作副本已调试过时，恢复这一轮对话 */
   initialQuestion: string;
   /** 调试对象，例如「草稿（未保存）」「候选版本 v13」 */
@@ -28,7 +30,7 @@ export function DebugChat({ presets, initialQuestion, target, debugged, memoryTu
   readOnlyNote?: string;
   onRun: (question: string) => Promise<void>;
 }) {
-  const [question, setQuestion] = useState(presets[0].question);
+  const [question, setQuestion] = useState(dialog.suggestions.find(Boolean) ?? presets[0].question);
   const [turns, setTurns] = useState<Turn[]>(() => initialQuestion ? [{ id: 0, question: initialQuestion, result: match(presets, initialQuestion), context: 0, model }] : []);
   const [running, setRunning] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -37,6 +39,10 @@ export function DebugChat({ presets, initialQuestion, target, debugged, memoryTu
 
   /** 输入框为空时重跑上一问：改完配置后快速回归同一个问题 */
   const lastQuestion = turns.length ? turns[turns.length - 1].question : '';
+  /** 追问建议：还没问过的预设问题里取两条（演示数据；真实环境由模型按对话生成） */
+  const asked = new Set(turns.map(turn => turn.question));
+  const followUps = dialog.followUp === '自动生成' ? presets.map(item => item.question).filter(item => !asked.has(item)).slice(0, 2) : [];
+  const chips = dialog.suggestions.filter(Boolean);
   const run = async () => {
     const text = question.trim() || lastQuestion;
     if (!text || running) return;
@@ -55,11 +61,12 @@ export function DebugChat({ presets, initialQuestion, target, debugged, memoryTu
       <span>调试对象：<strong>{target}</strong></span>
       <span className={debugged ? 'debug-state ok' : 'debug-state'}>{debugged ? '已调试' : '未调试'}</span>
     </div>
-    <p className="meta debug-memory">{memoryTurns ? `会话记忆：保留最近 ${memoryTurns} 轮，追问会带上前文` : '未开启会话记忆：每轮独立回答'} · {model}</p>
+    <p className="meta debug-memory">{memoryTurns ? `参考最近 ${memoryTurns} 轮对话，追问会带上前文` : '不参考历史对话：每轮独立回答'} · {model}</p>
     {readOnlyNote && <p className="meta">{readOnlyNote}</p>}
 
     <div className="debug-thread" ref={listRef} aria-live="polite">
-      {!turns.length && !running && <p className="debug-empty">从下方选一个预设问题或自己输入，回答会展示每一步的中间结果和耗时。</p>}
+      {dialog.opening && <div className="debug-turn"><div className="bubble bubble-agent bubble-opening"><span className="meta">开场白</span><p>{dialog.opening}</p></div></div>}
+      {!turns.length && !running && !dialog.opening && <p className="debug-empty">从下方选一个问题或自己输入，回答会展示每一步的中间结果和耗时。</p>}
       {turns.map(turn => <div className="debug-turn" key={turn.id}>
         <div className="bubble bubble-user">{turn.question}</div>
         <div className="bubble bubble-agent">
@@ -70,12 +77,15 @@ export function DebugChat({ presets, initialQuestion, target, debugged, memoryTu
             <button type="button" onClick={() => setExpanded(value => ({ ...value, [key]: !value[key] }))} aria-expanded={Boolean(expanded[key])}>{expanded[key] ? <ChevronDown size={icon.small} /> : <ChevronRight size={icon.small} />}<span>{step.step}</span><small>{step.duration}</small></button>
             <p>{step.summary}</p>{expanded[key] && <div className="debug-detail">{step.detail}</div>}</div>; })}</div>
         </div>
+        {turn === turns[turns.length - 1] && !running && followUps.length > 0 && <div className="follow-ups" data-demo="follow-ups"><span className="meta">追问建议</span>{followUps.map(item => <button type="button" key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div>}
       </div>)}
       {running && <div className="debug-turn"><div className="bubble bubble-user">{running}</div><div className="debug-loading"><span /><p>正在按步骤执行…</p></div></div>}
     </div>
 
     <div className="debug-compose">
-      <div className="preset-questions"><span className="meta">预设问题</span>{presets.map(item => <button type="button" key={item.question} className={question === item.question ? 'selected' : ''} onClick={() => setQuestion(item.question)}>{item.question}</button>)}</div>
+      <div className="preset-questions">{chips.length
+        ? <><span className="meta">推荐问</span>{chips.map(item => <button type="button" key={item} className={question === item ? 'selected' : ''} onClick={() => setQuestion(item)}>{item}</button>)}</>
+        : <><span className="meta">预设问题</span>{presets.map(item => <button type="button" key={item.question} className={question === item.question ? 'selected' : ''} onClick={() => setQuestion(item.question)}>{item.question}</button>)}</>}</div>
       <label className="sr-only" htmlFor="debug-input">调试问题</label>
       <textarea id="debug-input" rows={2} value={question} placeholder="输入问题，Enter 发送，Shift + Enter 换行" onChange={event => setQuestion(event.target.value)}
         onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void run(); } }} />

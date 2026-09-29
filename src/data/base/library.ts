@@ -53,10 +53,11 @@ export const pendingEntries: Record<string, PendingEntry[]> = {
   aftersale: [{ title: '《退货政策》2.1 十五天无理由退货（2026-09 修订）', from: '2026-09-01 00:00', to: null, submittedBy: '知识运营 · 赵敏 · 2026-09-28 17:20 提交' }],
 };
 
-/** 资产中心的五个二级目录：左侧导航和资产中心页面共用 */
+/** 资产中心的六个二级目录：左侧导航和资产中心页面共用 */
 export const assetSections = [
   { id: 'knowledge', label: '知识库', description: '按团队管理的知识库。知识带版本和生效期；Agent 版本快照只引用具体版本，上游更新不会改变线上行为。' },
-  { id: 'tools', label: '工具', description: '已登记的公司内部工具，构建页可多选接入；接口变更必须发新版本，Agent 快照锁定所用版本。' },
+  { id: 'databases', label: '数据库', description: '结构化数据（上传表格或连接业务库的只读视图）。用户问数值、计算、统计类问题时，Agent 查表回答；一个 Agent 版本最多挂 1 个数据库。' },
+  { id: 'tools', label: '工具', description: '已登记的公司内部工具，构建页按需添加，同一个工具只挂一个版本；接口变更必须发新版本。只对本团队可见的工具保存即发布，对全公司开放要经平台审核。' },
   { id: 'evalsets', label: '评测集', description: '每个 Agent 的评测页从这里选评测集；bad case 工作台加入的样本会汇成「bad case 回归集」，下一轮评测自动带上。' },
   { id: 'models', label: '模型', description: '只有登记在这里的模型可以被 Agent 选用；版本快照锁定具体权重，模型升级需要新建候选版本并重新评测。' },
   { id: 'prompts', label: 'Prompt 模板', description: '从已上线 Agent 中沉淀的 Prompt 结构，新建 Agent 时套用，再按业务改写。' },

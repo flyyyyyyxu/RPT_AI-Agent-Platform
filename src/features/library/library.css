@@ -77,6 +77,8 @@
 .evalset-table .c-set { width: 20%; } .evalset-table .c-owner { width: 22%; } .evalset-table .c-count { width: 8%; } .evalset-table .c-dim { width: 26%; } .evalset-table .c-source { width: 12%; } .evalset-table .c-go { width: 12%; }
 .models-table .c-name { width: 22%; } .models-table .c-cap { width: 14%; } .models-table .c-ctx { width: 9%; } .models-table .c-price { width: 15%; } .models-table .c-p95 { width: 10%; } .models-table .c-level { width: 18%; } .models-table .c-agents { width: 12%; }
 .models-table th.numeric, .models-table td.numeric { padding-right: var(--space-6); }
+.databases-table .c-name { width: 26%; } .databases-table .c-source { width: 11%; } .databases-table .c-tables { width: 15%; } .databases-table .c-level { width: 14%; } .databases-table .c-owner { width: 12%; } .databases-table .c-refs { width: 22%; }
+.databases-table td small { display: block; }
 .prompts-table .c-name { width: 26%; } .prompts-table .c-ver { width: 9%; } .prompts-table .c-structure { width: 40%; } .prompts-table .c-owner { width: 25%; }
 @media (max-width: 1023px) {
   .asset-table { min-width: calc(var(--space-12) * 17); }

@@ -91,11 +91,12 @@ export function KnowledgeTab() {
 const chunkOptions = ['按标题层级', '按段落', '固定长度'];
 const effectOptions = ['版本发布即生效', '按文档里的生效日期'];
 /** 新建知识库：上传文档解析后直接发布 v1（还没有 Agent 引用，之后的修改走版本草稿） */
-function KnowledgeCreate({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+/** 构建页「添加知识库 → 上传文档」也复用这里：defaults 预填团队和负责人，onCreated 同时给出「名称 v1」供挂到草稿 */
+export function KnowledgeCreate({ onClose, onCreated, defaults }: { onClose: () => void; onCreated: (id: string, label: string) => void; defaults?: { team: string; owner: string } }) {
   const { state, createKnowledgeBase } = useDemo();
   const [name, setName] = useState('');
-  const [team, setTeam] = useState(teamOptions[0]);
-  const [owner, setOwner] = useState('');
+  const [team, setTeam] = useState(defaults?.team ?? teamOptions[0]);
+  const [owner, setOwner] = useState(defaults?.owner ?? '');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState('本团队');
   const [source, setSource] = useState('上传文档');
@@ -113,7 +114,7 @@ function KnowledgeCreate({ onClose, onCreated }: { onClose: () => void; onCreate
       versions: [{ id: 'v1', publishedAt: at, usedBy: [], note: `由 ${files.length} 份文档解析生成（${chunk}）` }],
       entries: titles.map(title => ({ title, versions: ['v1'], from: at, to: null })) };
     createKnowledgeBase(kb);
-    onCreated(id);
+    onCreated(id, `${kb.name} v1`);
   };
   return <Drawer label="新建知识库" eyebrow="资产中心 · 知识库" title="新建知识库" onClose={onClose} demo="kb-form"
     footer={<><span className={`foot-note ${missing ? 'is-missing' : ''}`}>{missing ? `还差一步：${missing}` : '文档解析后生成 v1；之后的修改通过「基于 v1 新建版本」进行'}</span><Button onClick={onClose}>取消</Button><Button variant="primary" disabled={Boolean(missing)} onClick={submit}>创建并发布 v1</Button></>}>

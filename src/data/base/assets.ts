@@ -3,7 +3,7 @@
  * 评测集的初始数据来自 evaluation.ts 的 datasetProfiles，只有被修改或新建后才写进演示状态。
  * 所有数字均为演示数据。
  */
-import type { AssetParam, AssetRecord, AssetState, EvalCase, ModelContent, PromptContent, ToolContent } from '../../types/domain';
+import type { AssetParam, AssetRecord, AssetState, DatabaseContent, EvalCase, ModelContent, PromptContent, ToolContent } from '../../types/domain';
 
 const p = (name: string, type: string, required: string, desc: string): AssetParam => ({ name, type, required, desc });
 const tool = (partial: Partial<ToolContent> & Pick<ToolContent, 'endpoint' | 'instruction' | 'params' | 'sample'>): ToolContent =>
@@ -86,7 +86,26 @@ export const initialPrompts: AssetRecord<PromptContent>[] = [
   ] },
 ];
 
-export const initialAssets: AssetState = { tools: initialTools, models: initialModels, prompts: initialPrompts, evalsets: [] };
+/** 数据库：结构化数据（上传表格或连接业务库）；版本对应表结构，查询的是实时数据。Agent 版本最多挂 1 个。 */
+const db = (tables: DatabaseContent['tables'], source: DatabaseContent['source'] = '连接业务库', dataLevel = '可处理用户数据'): DatabaseContent => ({ source, tables, dataLevel, access: '只读' });
+export const initialDatabases: AssetRecord<DatabaseContent>[] = [
+  { key: '单品标签库', name: '单品标签库', team: '社区内容', owner: '陈思远', description: '单品的风格、版型、适合身材与季节标签，推荐时按标签过滤', visibility: '社区内容', versions: [
+    { id: 'v2', status: '已发布', at: '2026-09-10 10:00', by: '陈思远', note: '新增「适合身材」字段', content: db([{ name: 'items', fields: '单品 ID、品类、风格、版型、适合身材、季节', rows: 182400 }, { name: 'color_palette', fields: '配色 ID、主色、辅色、适合场合', rows: 640 }]) },
+    { id: 'v1', status: '已发布', at: '2026-08-01 10:00', by: '陈思远', note: '初始版本', content: db([{ name: 'items', fields: '单品 ID、品类、风格、版型、季节', rows: 150200 }]) },
+  ] },
+  { key: '处罚梯度表', name: '处罚梯度表', team: '内容安全', owner: '周可', description: '违规类别 × 历史违规次数 → 处置动作，判定后查表给出处置建议', visibility: '内容安全', versions: [
+    { id: 'v1', status: '已发布', at: '2026-08-20 10:00', by: '周可', note: '初始版本', content: db([{ name: 'penalty_ladder', fields: '违规类别、违规次数、处置动作、申诉窗口', rows: 96 }], '上传表格', '仅内部数据') },
+  ] },
+  { key: '售后工单表', name: '售后工单表', team: '客户服务', owner: '王宁', description: '用户的历史售后工单，回答「上次的退款到哪了」这类问题', visibility: '本团队', versions: [
+    { id: 'v1', status: '已发布', at: '2026-09-01 10:00', by: '王宁', note: '接入售后工单库（只读视图）', content: db([{ name: 'aftersale_tickets', fields: '工单号、订单号、问题类型、处理状态、退款金额、更新时间', rows: 2380000 }]) },
+  ] },
+  { key: '差旅标准表', name: '差旅标准表', team: '企业服务', owner: '李一宁', description: '按城市等级和职级的住宿、补贴标准，数值类问题直接查表', visibility: '全公司', versions: [
+    { id: 'v1', status: '已发布', at: '2026-09-15 10:00', by: '李一宁', note: '初始版本', content: db([{ name: 'travel_standard', fields: '城市等级、职级、住宿上限、餐补、交通补贴', rows: 48 }], '上传表格', '可处理员工数据') },
+  ] },
+];
+
+export const initialAssets: AssetState = { tools: initialTools, models: initialModels, prompts: initialPrompts, evalsets: [], databases: initialDatabases };
+export const databaseSources: DatabaseContent['source'][] = ['上传表格', '连接业务库'];
 
 /** 评测集默认的维度与评分方式（预置评测集第一次被修改时用它生成 v1） */
 export const evalsetDefaults: Record<string, { dimensions: string[]; scoring: string[]; owner: string; at: string }> = {

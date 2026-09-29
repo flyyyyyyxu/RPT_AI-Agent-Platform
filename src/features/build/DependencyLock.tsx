@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, GitBranchPlus, Lock } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
 import { knowledgeBasesFor, upstreamFor } from '../../core/data-access/scenarioData';
-import { modelChoices } from '../../core/data-access/assets';
+import { latestPublished, modelChoices } from '../../core/data-access/assets';
 import { Button } from '../../shared/components/Buttons';
 import { getCandidate, isEditable, isEvaluated, nextVersionId } from '../../core/rules/versions';
 import { modelLocks } from '../../data';
@@ -22,10 +22,12 @@ export function useDependencies(config: AgentConfig) {
   const kbs = knowledgeBasesFor(state);
   const models = modelChoices(state, [config.model, config.fallbackModel]);
   const weights = (key: string) => { const found = models.find(item => item.key === key); return found?.weights ? `${found.record?.name.toLowerCase()} · ${/^\d/.test(found.weights) ? `权重 ${found.weights}` : found.weights}` : modelLocks[key] ?? '固定权重'; };
+  const dbLock = (key: string) => { const record = state.assets.databases.find(item => item.key === key); const latest = record && latestPublished(record); return latest ? `表结构 ${latest.id} · 只读查询实时数据` : '资产中心已找不到'; };
   const rows = [
     { kind: '模型版本', name: config.model, lock: weights(config.model), change: null },
     ...(config.fallbackModel !== NO_FALLBACK ? [{ kind: '备用模型', name: config.fallbackModel, lock: weights(config.fallbackModel), change: null }] : []),
     { kind: /政策/.test(config.knowledge) ? '政策版本' : '知识源版本', name: config.knowledge, lock: config.knowledge === '暂不接入' ? '—' : `快照 ${config.knowledge}`, change: upstreamFor(config.knowledge, kbs) },
+    ...(config.database ? [{ kind: '数据库', name: config.database, lock: dbLock(config.database), change: null }] : []),
     ...config.tools.map(tool => ({ kind: '工具版本', name: tool, lock: `接口 ${tool.split(' ').pop()}`, change: upstreamFor(tool, kbs, state.assets.tools) })),
   ];
   const changed = rows.filter(row => row.change);

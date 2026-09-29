@@ -1,11 +1,13 @@
 /**
  * 资产中心 · 工具：列表（合并版本信息）、详情抽屉、新建 / 发布新版本 / 修改当前版本。
- * 工具的新版本要经过平台安全审核；Agent 版本快照锁定「工具名 vX」，所以被引用的版本只能改基本信息。
+ * 审核规则：只对本团队可见的工具保存即发布；对全公司开放（或需审批）的新工具、新版本要经过平台安全审核。
+ * Agent 版本快照锁定「工具名 vX」，所以被引用的版本只能改基本信息。
+ * ToolForm 也在构建页「添加工具 → 上传工具」里复用：保存后入库，已发布的直接挂到草稿。
  */
 import { useState } from 'react';
 import { AlertTriangle, Pencil, Plus, TestTube2, Trash2 } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
-import { latestPublished, nextAssetVersion, pendingVersion, refText, toolRefs } from '../../core/data-access/assets';
+import { latestPublished, needsReview, nextAssetVersion, pendingVersion, refText, toolRefs } from '../../core/data-access/assets';
 import { nowStamp } from '../../core/rules/clock';
 import { Button } from '../../shared/components/Buttons';
 import { Card } from '../../shared/components/Content';
@@ -78,7 +80,7 @@ function ToolDetail({ tool, onClose, onEdit }: { tool: ToolRecord; onClose: () =
     footer={!choosing && <><Button onClick={() => setChoosing(true)}><Pencil size={icon.small} />修改</Button><Button onClick={() => setTested(true)}><TestTube2 size={icon.small} />测试调用</Button><Button variant="primary" onClick={onClose}>关闭</Button></>}>
     {pending && latest && <PendingBanner version={pending.id} reviewer="平台安全" onApprove={approve} onWithdraw={withdraw} />}
     {pending && !latest && <PendingBanner version={pending.id} reviewer="平台安全" onApprove={approve} />}
-    {choosing && <EditChoice current={shown.id} next={nextAssetVersion(tool.versions[0].id)} refs={refText(latestRefs)} pending={pending?.id} reviewNote="提交后需要平台安全审核。" onCancel={() => setChoosing(false)} onChoose={onEdit} />}
+    {choosing && <EditChoice current={shown.id} next={nextAssetVersion(tool.versions[0].id)} refs={refText(latestRefs)} pending={pending?.id} reviewNote={needsReview(tool.visibility) ? '对全公司开放的工具，新版本需要平台安全审核。' : '仅本团队可见，保存即发布。'} onCancel={() => setChoosing(false)} onChoose={onEdit} />}
     {tested && <ResultBox>测试调用 {c.sample || `${c.params[0]?.name ?? 'input'}=示例值 → 200 · 92ms`}（演示数据）</ResultBox>}
     <Stats items={[['最新版本', latest?.id ?? '—'], ['在用版本', [...new Set(refs.map(ref => ref.pinned))].join('、') || '—'], ['被引用', `${refs.length} 个 Agent 版本`], ['超时 / QPS', `${c.timeout} / ${c.qps}`]]} />
     <Block title="调用说明（模型据此决定何时调用）"><p className="asset-quote">{c.instruction}</p></Block>
@@ -89,17 +91,17 @@ function ToolDetail({ tool, onClose, onEdit }: { tool: ToolRecord; onClose: () =
   </Drawer>;
 }
 
-function ToolForm({ tool, how, onClose, onSaved }: { tool?: ToolRecord; how?: EditHow; onClose: () => void; onSaved: (key: string) => void }) {
+export function ToolForm({ tool, how, defaults, onClose, onSaved }: { tool?: ToolRecord; how?: EditHow; defaults?: { team: string; owner: string; visibility: string }; onClose: () => void; onSaved: (key: string, status: '已发布' | '审核中') => void }) {
   const { state, saveAsset } = useDemo();
   const base = tool ? (latestPublished(tool) ?? tool.versions[0]) : null;
   const next = tool ? nextAssetVersion(tool.versions[0].id) : 'v1';
   const refs = tool && base ? toolRefs(state, tool.name).filter(ref => ref.pinned === base.id) : [];
   const lockReason = how === 'in-place' && refs.length ? `${base!.id} 已被 ${refText(refs)} 引用，改这里会改变线上行为；请发布新版本` : undefined;
   const [name, setName] = useState(tool?.name ?? '');
-  const [team, setTeam] = useState(tool?.team ?? teamOptions[0]);
-  const [owner, setOwner] = useState(tool?.owner ?? '');
+  const [team, setTeam] = useState(tool?.team ?? defaults?.team ?? teamOptions[0]);
+  const [owner, setOwner] = useState(tool?.owner ?? defaults?.owner ?? '');
   const [description, setDescription] = useState(tool?.description ?? '');
-  const [visibility, setVisibility] = useState(tool?.visibility ?? visibilityOptions[0]);
+  const [visibility, setVisibility] = useState(tool?.visibility ?? defaults?.visibility ?? visibilityOptions[0]);
   const [content, setContent] = useState<ToolContent>(structuredClone(base?.content ?? blankContent));
   const [note, setNote] = useState('');
   const [tested, setTested] = useState(false);
@@ -110,20 +112,22 @@ function ToolForm({ tool, how, onClose, onSaved }: { tool?: ToolRecord; how?: Ed
   const missing = !name.trim() ? '填写工具名称' : !tool && state.assets.tools.some(item => item.key === name.trim()) ? '已有同名工具，请换一个名称或在该工具上发布新版本'
     : !content.endpoint.trim() ? '填写接口标识' : !content.instruction.trim() ? '填写调用说明' : !owner.trim() ? '填写负责人'
     : mode === 'new-version' && !note.trim() ? '填写版本说明' : needsTest && !tested ? '先测试调用，确认接口可用' : undefined;
+  const review = needsReview(visibility);
+  const status = review ? '审核中' as const : '已发布' as const;
   const submit = () => {
     const at = nowStamp();
     const meta = { team, owner: owner.trim(), description: description.trim(), visibility };
-    if (mode === 'create') saveAsset('tools', { key: name.trim(), name: name.trim(), ...meta, created: true, versions: [{ id: 'v1', status: '审核中', at, by: owner.trim(), note: note.trim() || '新建工具', content }] });
-    else if (mode === 'new-version') saveAsset('tools', { ...tool!, ...meta, versions: [{ id: next, status: '审核中', at, by: owner.trim(), note: note.trim(), content }, ...tool!.versions] });
+    if (mode === 'create') saveAsset('tools', { key: name.trim(), name: name.trim(), ...meta, created: true, versions: [{ id: 'v1', status, at, by: owner.trim(), note: note.trim() || '新建工具', content }] });
+    else if (mode === 'new-version') saveAsset('tools', { ...tool!, ...meta, versions: [{ id: next, status, at, by: owner.trim(), note: note.trim(), content }, ...tool!.versions] });
     else saveAsset('tools', { ...tool!, ...meta, versions: tool!.versions.map(item => item.id === base!.id && !lockReason ? { ...item, content } : item) });
-    onSaved(tool?.key ?? name.trim());
+    onSaved(tool?.key ?? name.trim(), mode === 'in-place' ? '已发布' : status);
   };
   const title = mode === 'create' ? '新建工具' : mode === 'new-version' ? `发布新版本 · ${tool!.name} ${next}` : `修改 · ${tool!.name} ${base!.id}`;
-  const footNote = mode === 'create' ? '提交后由平台安全审核，通过后以 v1 上线' : mode === 'new-version' ? `提交后 ${next} 进入审核；${base!.id} 照常可用` : lockReason ? '只保存基本信息，不产生新版本' : `直接修改 ${base!.id}，不产生新版本`;
+  const footNote = mode === 'create' ? (review ? '对全公司开放：提交后由平台安全审核，通过后以 v1 上线' : '仅本团队可见：保存即发布 v1') : mode === 'new-version' ? (review ? `提交后 ${next} 进入审核；${base!.id} 照常可用` : `仅本团队可见：保存即发布 ${next}`) : lockReason ? '只保存基本信息，不产生新版本' : `直接修改 ${base!.id}，不产生新版本`;
   const L = lockReason;
   return <Drawer label={title} eyebrow="资产中心 · 工具" title={title} onClose={onClose} demo="tool-form"
     footer={<><span className={`foot-note ${missing ? 'is-missing' : ''}`}>{missing ? `还差一步：${missing}` : footNote}</span><Button onClick={onClose}>取消</Button>{needsTest && <Button onClick={() => setTested(true)}><TestTube2 size={icon.small} />测试调用</Button>}
-      <Button variant="primary" disabled={Boolean(missing)} onClick={submit}>{mode === 'in-place' ? '保存修改' : '提交审核'}</Button></>}>
+      <Button variant="primary" disabled={Boolean(missing)} onClick={submit}>{mode === 'in-place' ? '保存修改' : review ? '提交审核' : `发布 ${next}`}</Button></>}>
     {L && <ResultBox tone="warn">{L}</ResultBox>}
     <FormSection index={1} title="基本信息">
       <FormGrid>
@@ -159,7 +163,7 @@ function ToolForm({ tool, how, onClose, onSaved }: { tool?: ToolRecord; how?: Ed
       <FormGrid>
         <Field label="数据等级" locked={Boolean(L)}><SelectInput label="数据等级" value={content.dataLevel} options={dataLevelOptions} disabled={Boolean(L)} onChange={value => patch({ dataLevel: value })} /></Field>
         <Field label="可调用团队" hint="留空表示全公司"><input aria-label="可调用团队" value={content.callers} onChange={event => setContent(current => ({ ...current, callers: event.target.value }))} placeholder="例如 客户服务" /></Field>
-        <Field label="可见范围"><SelectInput label="可见范围" value={visibility} options={visibilityOptions} onChange={setVisibility} /></Field>
+        <Field label="可见范围" hint="仅本团队可见时保存即发布；对全公司开放需平台审核"><SelectInput label="可见范围" value={visibility} options={visibilityOptions.includes(visibility) ? visibilityOptions : [visibility, ...visibilityOptions]} onChange={setVisibility} /></Field>
       </FormGrid>
     </FormSection>
     {mode !== 'in-place' && <FormSection index={5} title="版本说明"><Field label="这次改了什么" required={mode === 'new-version'} wide><input aria-label="版本说明" value={note} onChange={event => setNote(event.target.value)} placeholder={mode === 'create' ? '选填，例如 初始版本' : '例如 新增退款原因字段'} /></Field></FormSection>}

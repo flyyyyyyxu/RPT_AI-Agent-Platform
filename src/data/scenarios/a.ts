@@ -4,11 +4,11 @@ import { outfitConfig, snap } from '../base/configs';
 import { okGuard } from '../base/trace';
 import { baseAgent } from './seed';
 
-/** 本周迭代的目标配置：新增「图文笔记检索」步骤（笔记检索 v4），「代我修改」直接写入这份配置。 */
+/** 本周迭代的目标配置：笔记检索升级到 v4（同一个工具只挂一个版本），新增「图文笔记检索」步骤用 v4 的图片向量参数；「代我修改」直接写入这份配置。 */
 export const paV13Config = snap(outfitConfig, {
   model: 'Qwen3-235B · 公司托管',
   fallbackModel: 'Qwen3-32B · 公司托管',
-  tools: ['笔记检索 v3', '笔记检索 v4', '用户画像查询 v1'],
+  tools: ['笔记检索 v4', '用户画像查询 v1'],
   steps: [outfitConfig.steps[0], outfitConfig.steps[1], { id: 'step-2b', name: '图文笔记检索', type: '工具调用', description: '笔记检索 v4：按图片向量补充召回同款' }, outfitConfig.steps[2], outfitConfig.steps[3]],
 });
 const paAb: AbProfile = {
@@ -27,8 +27,8 @@ const paTraces: TraceRecord[] = [
       { kind: '输入', name: '接收请求', ms: 6, depth: 0, detail: 'scene=date, style=french · bucket=13 → v13（会话粘性）' },
       { kind: '工具调用', name: '用户画像查询 v1', ms: 58, depth: 1, detail: '偏好：法式、低饱和配色' },
       { kind: '检索', name: '风格知识检索', ms: 80, depth: 1, detail: '召回 5 条风格规则', evidence: [{ entry: '法式约会 · 规则 #F-112', version: '穿搭风格库 2026-09' }] },
-      { kind: '工具调用', name: '笔记检索 v3', ms: 262, depth: 1, detail: '召回 42 篇，过滤后 9 篇' },
-      { kind: '工具调用', name: '图文笔记检索 v4', ms: 380, depth: 1, detail: '图片向量召回 120 篇 → 重排 12 篇', isNew: true, error: 'v13 新增步骤，串行执行，单步 380ms，把 P95 推高到 1.2s' },
+      { kind: '工具调用', name: '笔记检索 v4 · 文本召回', ms: 262, depth: 1, detail: '召回 42 篇，过滤后 9 篇' },
+      { kind: '工具调用', name: '图文笔记检索（笔记检索 v4 · 图片向量）', ms: 380, depth: 1, detail: '图片向量召回 120 篇 → 重排 12 篇', isNew: true, error: 'v13 新增步骤，串行执行，单步 380ms，把 P95 推高到 1.2s' },
       { kind: '生成', name: 'Qwen3-235B 生成灵感卡片', ms: 392, depth: 1, detail: '3 张卡片 · 640 tokens' },
       { kind: '护栏检查', name: '网关护栏', ms: 18, depth: 1, detail: okGuard },
       { kind: '输出', name: '返回结果', ms: 4, depth: 0, detail: '总耗时 1.20s，超过 1s 门槛' },

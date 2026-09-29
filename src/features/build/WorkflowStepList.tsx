@@ -6,7 +6,8 @@ import { icon } from '../../shared/styles/tokens';
 
 const stepTypes: WorkflowStepType[] = ['模型调用', '检索', '工具调用', '代码节点'];
 
-export function WorkflowStepList({ steps, onChange, readOnly = false }: { steps: WorkflowStep[]; onChange: (steps: WorkflowStep[]) => void; readOnly?: boolean }) {
+/** hideAdd：构建页用模块标题右上角的 ＋ 添加步骤 */
+export function WorkflowStepList({ steps, onChange, readOnly = false, hideAdd = false }: { steps: WorkflowStep[]; onChange: (steps: WorkflowStep[]) => void; readOnly?: boolean; hideAdd?: boolean }) {
   const update = (index: number, patch: Partial<WorkflowStep>) => onChange(steps.map((step, itemIndex) => itemIndex === index ? { ...step, ...patch } : step));
   const move = (index: number, offset: number) => { const next = [...steps]; const [item] = next.splice(index, 1); next.splice(index + offset, 0, item); onChange(next); };
   const remove = (index: number) => onChange(steps.filter((_, itemIndex) => itemIndex !== index));
@@ -22,7 +23,7 @@ export function WorkflowStepList({ steps, onChange, readOnly = false }: { steps:
     </span>}
     <input className="workflow-description" aria-label={`步骤 ${index + 1} 说明`} value={step.description} readOnly={readOnly} onChange={event => update(index, { description: event.target.value })} />
   </div>)}
-    {!readOnly && <Button onClick={add}><Plus size={icon.small} />添加步骤</Button>}
+    {!readOnly && !hideAdd && <Button onClick={add}><Plus size={icon.small} />添加步骤</Button>}
     <div className="canvas-entry phase2-block" title="二期建设" aria-disabled="true"><ScopeBadge phase="二期" /><strong>画布编排</strong><span>在可视化画布中连接节点</span></div>
   </div>;
 }

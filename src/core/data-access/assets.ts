@@ -88,3 +88,18 @@ export function modelChoices(state: DemoState, inUse: string[]): ModelChoice[] {
 export function promptChoices(state: DemoState) {
   return state.assets.prompts.flatMap(record => { const latest = latestPublished(record); return latest ? [{ record, version: latest }] : []; });
 }
+
+/** 审核规则：只在「本团队」可见的工具保存即发布；对全公司或需审批范围开放的要经平台审核 */
+export const needsReview = (visibility: string) => visibility !== '本团队';
+
+/** 数据库：Agent 版本快照里写的是数据库名；锁定的是表结构版本（最新已发布） */
+export function databaseRefs(state: DemoState, key: string): AssetRef[] {
+  const record = state.assets.databases.find(item => item.key === key);
+  const pinned = record ? latestPublished(record)?.id ?? '—' : '—';
+  return state.agents.flatMap(agent => agent.versions.filter(version => version.config.database === key).map(version => ({ agent, version, pinned })));
+}
+
+/** 添加弹窗里的候选资产：对该团队可见、至少有一个已发布版本 */
+export function visibleRecords<C>(records: AssetRecord<C>[], team: string) {
+  return records.filter(record => latestPublished(record) && visibleTo(record.visibility, record.team, team));
+}

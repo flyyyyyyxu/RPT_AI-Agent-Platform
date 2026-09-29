@@ -201,7 +201,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   const { page, context, errors } = await newPage(browser);
   const navText = (await page.locator('.sidebar-links').innerText()).replace(/\s+/g, ' ');
   check('导航：工作台 / 资产中心 / 监控与成本 / 治理 / 模板广场（二期）', ['工作台', '资产中心', '监控与成本', '治理', '模板广场'].every(label => navText.includes(label)) && !navText.includes('评测中心') && !navText.includes('平台共享'), navText);
-  check('导航：资产中心下常驻五个二级目录', (await page.locator('.nav-subgroup .nav-sub-item').allInnerTexts()).join('|') === '知识库|工具|评测集|模型|Prompt 模板');
+  check('导航：资产中心下常驻六个二级目录', (await page.locator('.nav-subgroup .nav-sub-item').allInnerTexts()).join('|') === '知识库|数据库|工具|评测集|模型|Prompt 模板');
   check('导航：模板广场置灰不可点', await page.locator('.nav-item-phase2[aria-disabled=true]').count() === 1);
   await go(page, '/library', 400);
   check('旧入口：能力组件库跳到资产中心 · 知识库', page.url().endsWith('#/assets/knowledge'), page.url());
@@ -215,7 +215,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   check('旧入口：评测中心跳到资产中心 · 评测集', page.url().endsWith('#/assets/evalsets') && await page.locator('.evalset-table tbody tr').count() >= 8, page.url());
   await go(page, '/assets?tab=models', 300);
   check('旧入口：?tab= 地址跳到对应二级目录', page.url().endsWith('#/assets/models'), page.url());
-  for (const [tab, rows] of [['tools', 7], ['models', 4], ['prompts', 8]]) {
+  for (const [tab, rows] of [['tools', 7], ['models', 4], ['prompts', 8], ['databases', 4]]) {
     await go(page, `/assets/${tab}`, 300);
     check(`资产中心：${tab} 列表 ${rows} 行`, await page.locator('.asset-table tbody tr').count() === rows);
   }
@@ -268,7 +268,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   check('工具：审核通过后最新版本 v5，在用版本仍是 v4', (await orderRow.innerText()).includes('v5 已发布') && (await orderRow.innerText()).includes('v4'));
   await go(page, '/agents/c/build', 500);
   check('联动：工具发布 v5 后，构建页提示依赖已变化', (await page.locator('[data-demo=dep-banner]').innerText()).includes('订单查询 v5'));
-  check('联动：构建页工具选项出现 v5', (await page.locator('.tool-row', { hasText: '订单查询' }).innerText()).includes('v5'));
+  check('联动：构建页工具版本选项出现 v5', (await page.locator('.tool-card', { hasText: '订单查询' }).locator('select').innerText()).includes('v5'));
   await go(page, '/assets/tools', 400);
   // 未被引用的工具可以原地修改全部内容
   await page.locator('.asset-name', { hasText: 'OA 休假余额查询' }).click(); await inDrawer('修改').click();
@@ -346,7 +346,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
 /* ---------------- 构建页三栏：草稿自动保存、免保存调试、优化 / 模板、记忆与备用模型、版本快照折叠 ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
-  const v4 = async () => page.evaluate(() => JSON.parse(localStorage.getItem('agent-platform-demo-v7')).agents.find(a => a.id === 'general').versions.find(v => v.id === 'v4'));
+  const v4 = async () => page.evaluate(() => JSON.parse(localStorage.getItem('agent-platform-demo-v8')).agents.find(a => a.id === 'general').versions.find(v => v.id === 'v4'));
   await go(page, '/agents/general/build', 600);
   const box = async selector => (await page.locator(selector).first().boundingBox())?.x ?? -1;
   check('构建：Prompt / 能力配置 / 调试三栏从左到右', await box('[data-demo=prompt]') < await box('[data-demo=config]') && await box('[data-demo=config]') < await box('.debug-chat'));
@@ -358,13 +358,13 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   await page.locator('[data-demo=debug-run] button').click(); await page.waitForTimeout(1300);
   v = await v4();
   check('构建：未保存也能调试，调试记在草稿上', v.draft?.debugged === true && !v.configured);
-  check('构建：调试对话显示一轮问答', await page.locator('.debug-turn .bubble-agent').count() === 1);
+  check('构建：调试对话显示开场白和一轮问答', await page.locator('.bubble-opening').count() === 1 && await page.locator('.debug-turn .bubble-agent:not(.bubble-opening)').count() === 1);
+  check('构建：开启追问时回答后给出追问建议', await page.locator('[data-demo=follow-ups] button').count() === 2);
   await page.getByRole('button', { name: '优化' }).click(); await page.waitForTimeout(300);
   check('构建：优化给出逐行 diff', await page.locator('[data-demo=prompt-optimize] .diff-line.add').count() >= 2);
   await page.getByRole('button', { name: '采纳建议' }).click(); await page.waitForTimeout(900);
   check('构建：采纳后 Prompt 更新，草稿需要重新调试', (await page.locator('.prompt-editor').inputValue()).includes('不透露') && (await v4()).draft?.debugged === false);
-  await page.locator('[data-group=memory] .config-group-head').click();
-  await page.locator('[data-group=memory] select').selectOption('10'); await page.waitForTimeout(100);
+  await page.getByLabel('参考对话轮数数值').fill('10'); await page.waitForTimeout(100);
   await page.locator('[data-demo=debug-run] button').click(); await page.waitForTimeout(1300);
   await page.getByRole('button', { name: /保存为候选版本 v4/ }).click(); await page.waitForTimeout(600);
   v = await v4();
@@ -379,7 +379,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   await go(page, '/agents/general/build', 500);
   check('构建：离开再回来草稿还在', (await page.locator('.prompt-editor').inputValue()).includes('{{role}}'));
   await page.locator('.snapshot-toggle').click(); await page.waitForTimeout(200);
-  check('构建：展开后显示依赖锁定和版本 diff（含备用模型与记忆）', await page.locator('.dep-list').count() === 1 && (await page.locator('.diff-sections').innerText()).includes('备用：') && (await page.locator('.diff-sections').innerText()).includes('会话记忆 10 轮'));
+  check('构建：展开后显示依赖锁定和版本 diff（含备用模型与记忆）', await page.locator('.dep-list').count() === 1 && (await page.locator('.diff-sections').innerText()).includes('备用：') && (await page.locator('.diff-sections').innerText()).includes('参考 10 轮'));
   await go(page, '/agents/general/settings', 400);
   check('联动：设置页降级策略显示各版本的备用模型', (await page.locator('body').innerText()).includes('v3 → Qwen3-32B'));
   check('构建：无页面错误', errors.length === 0, errors.join('; '));
@@ -423,7 +423,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   check('干预：监控页提示有干预生效中', await page.locator('[data-demo=intervention-banner]').count() === 1);
   // 准备一个修复版本 v22：在 bad case 回归集上评测过、灰度 50%，下一次放量即全量
   await page.evaluate(() => {
-    const key = 'agent-platform-demo-v7';
+    const key = 'agent-platform-demo-v8';
     const state = JSON.parse(localStorage.getItem(key));
     const agent = state.agents.find(a => a.id === 'c');
     const base = agent.versions.find(v => v.id === 'v21');
@@ -438,6 +438,51 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   const audit = await page.locator('.audit-table').innerText();
   check('干预：创建和自动失效都写入操作记录', audit.includes('创建线上干预 iv-001') && audit.includes('iv-001 自动失效'));
   check('干预：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 构建页 · 能力配置：＋ 添加（资产中心搜索 / 上传入库）、同一工具只挂一个版本、数据库、批量模式 ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  const draft = async () => page.evaluate(() => { const v = JSON.parse(localStorage.getItem('agent-platform-demo-v8')).agents.find(a => a.id === 'general').versions.find(x => x.id === 'v4'); return (v.draft ?? v).config; });
+  await go(page, '/agents/general/build', 600);
+  check('能力：工具只显示已添加的 1 个', await page.locator('[data-group=tools] .tool-card').count() === 1);
+  await page.locator('[data-demo=add-tool] button').click(); await page.waitForTimeout(200);
+  check('能力：添加弹窗列出资产中心的工具，已添加的标「已添加」', (await page.locator('.add-list li', { hasText: '员工身份查询' }).innerText()).includes('已添加') && !(await page.locator('.add-dialog').innerText()).includes('账号历史查询'));
+  await page.locator('.add-list li', { hasText: 'OA 休假余额查询' }).getByRole('button', { name: '添加' }).click(); await page.waitForTimeout(900);
+  check('能力：添加后挂最新版本', (await draft()).tools.includes('OA 休假余额查询 v1'));
+  await page.locator('[data-demo=add-tool] button').click(); await page.waitForTimeout(200);
+  await page.locator('.add-list li', { hasText: '笔记检索' }).getByRole('button', { name: '添加' }).click(); await page.waitForTimeout(200);
+  await page.getByLabel('笔记检索 版本').selectOption('v3'); await page.waitForTimeout(900);
+  const tools = (await draft()).tools;
+  check('能力：同一个工具只挂一个版本，切版本是替换', tools.includes('笔记检索 v3') && !tools.includes('笔记检索 v4'));
+  // 上传工具：本团队可见，保存即发布并挂到草稿
+  await page.locator('[data-demo=add-tool] button').click(); await page.waitForTimeout(200);
+  await page.getByRole('button', { name: '上传工具' }).click(); await page.waitForTimeout(300);
+  await page.getByLabel('工具名称').fill('报销进度查询'); await page.getByLabel('接口标识').fill('oa.expense.status'); await page.getByLabel('调用说明').fill('员工询问报销进度时调用');
+  await page.locator('.side-drawer').getByRole('button', { name: '测试调用' }).click();
+  await page.locator('.side-drawer').getByRole('button', { name: '发布 v1' }).click(); await page.waitForTimeout(900);
+  check('能力：上传的工具入库并挂到草稿', (await draft()).tools.includes('报销进度查询 v1') && (await page.locator('.cap-notice').innerText()).includes('入库'));
+  // 数据库：最多 1 个；创建后入库
+  await page.locator('[data-demo=add-database] button').click(); await page.waitForTimeout(200);
+  check('能力：数据库弹窗写明只能添加 1 个', (await page.locator('.add-dialog-limit').innerText()).includes('1 个数据库'));
+  await page.locator('.add-list li', { hasText: '差旅标准表' }).getByRole('button', { name: '选用' }).click(); await page.waitForTimeout(900);
+  check('能力：选用数据库后写入草稿', (await draft()).database === '差旅标准表');
+  await page.locator('[data-demo=add-database] button').click(); await page.waitForTimeout(200);
+  await page.getByRole('button', { name: '创建数据库' }).first().click(); await page.waitForTimeout(300);
+  await page.getByLabel('数据库名称').fill('休假额度表'); await page.locator('.side-drawer').getByRole('button', { name: '使用示例表格' }).click();
+  await page.locator('.side-drawer').getByRole('button', { name: '创建并发布 v1' }).click(); await page.waitForTimeout(900);
+  check('能力：新建的数据库替换当前数据库', (await draft()).database === '休假额度表');
+  // 记忆、推荐问
+  await page.locator('[data-group=tables] .cap-add').click(); await page.getByLabel('表名').fill('请假记录'); await page.waitForTimeout(900);
+  check('能力：记忆表写入草稿', (await draft()).memory.tables.some(t => t.name === '请假记录'));
+  await go(page, '/assets/tools', 400);
+  check('联动：上传的工具出现在资产中心，本团队可见即已发布', (await page.locator('.tools-table tbody tr', { hasText: '报销进度查询' }).innerText()).includes('v1'));
+  await go(page, '/assets/databases', 400);
+  check('联动：新建的数据库出现在资产中心', await page.locator('.databases-table tbody tr').count() === 5);
+  await go(page, '/agents/b/build', 500);
+  check('能力：批量模式下记忆和对话整组停用并写明原因', (await page.locator('.cap-disabled').allInnerTexts()).length === 2);
+  check('能力：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 
