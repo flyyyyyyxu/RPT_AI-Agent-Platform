@@ -1,0 +1,37 @@
+/* 新建 Agent。 */
+.create-agent-page { max-width: calc(var(--layout-max) - var(--layout-sidebar) - var(--layout-sidebar)); margin-inline: auto; }
+.create-agent-page > .back-link { display: inline-flex; align-items: center; gap: var(--space-1); margin-bottom: var(--space-4); }
+.create-method-tabs { display: flex; gap: var(--space-1); margin-bottom: var(--space-4); padding: var(--space-1); background: var(--color-border); border-radius: var(--radius-control); width: fit-content; }
+.create-method-tabs button { min-height: var(--space-8); padding: var(--space-2) var(--space-4); border: var(--border-thin) solid transparent; border-radius: var(--radius-badge); background: transparent; color: var(--color-secondary); }
+.create-method-tabs button.active { background: var(--color-card); color: var(--color-text); border-color: var(--color-coral); font-weight: var(--weight-semibold); box-shadow: var(--shadow-card); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.field-span { grid-column: 1 / -1; }
+.scenario-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.scenario-card { min-width: 0; min-height: calc(var(--space-12) + var(--space-12)); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-card); background: var(--color-card); color: var(--color-secondary); text-align: left; }
+.scenario-card strong { color: var(--color-text); }
+.scenario-card span { font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.scenario-card.selected { border-color: var(--color-coral); background: var(--color-coralLight); box-shadow: var(--shadow-card); }
+.scenario-card.selected svg { color: var(--color-coral); }
+.form-actions { display: flex; justify-content: flex-end; margin-top: var(--space-6); }
+.form-grid + .form-actions, .scenario-grid + .form-actions { margin-top: var(--space-6); }
+@media (max-width: 767px) {
+  .form-grid, .scenario-grid { grid-template-columns: 1fr; }
+}
+/* 新建 Agent：模拟生成过程与结果预览 */
+.generation-panel { display: grid; gap: var(--space-4); margin-top: var(--space-6); padding: var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-card); background: var(--color-page); }
+.generation-stages { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.generation-stages li { display: flex; align-items: center; gap: var(--space-2); color: var(--color-disabled); }
+.generation-stages li.active { color: var(--color-indigo); }
+.generation-stages li.done { color: var(--color-greenText); }
+.stage-dot { width: var(--space-4); height: var(--space-4); border: var(--border-thin) solid var(--color-disabled); border-radius: var(--radius-badge); }
+.generated-config { padding: var(--space-4); border-radius: var(--radius-control); background: var(--color-card); border: var(--border-thin) solid var(--color-border); }
+.generated-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+.generated-config dl { display: grid; gap: var(--space-2); margin: 0; }
+.generated-config dl > div { display: grid; grid-template-columns: calc(var(--space-12) + var(--space-8)) minmax(0, 1fr); gap: var(--space-3); }
+.generated-config dt { color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.generated-config dd { margin: 0; min-width: 0; }
+.generated-config pre { margin: 0; white-space: pre-wrap; font-family: var(--font-mono); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.form-actions { gap: var(--space-3); flex-wrap: wrap; }
+@media (max-width: 767px) {
+  .generated-config dl > div { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+}

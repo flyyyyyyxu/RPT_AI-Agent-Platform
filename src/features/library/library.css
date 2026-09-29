@@ -1,0 +1,24 @@
+/* 能力组件库：知识库版本、生效期、新版本草稿。 */
+.page-stack > .capability, .page-stack > .phase2-row, .page-stack > .card { margin-top: var(--space-4); }
+/* ① 能力组件库 */
+.library-tabs { margin-bottom: var(--space-4); }
+.kb-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 4.5), 1fr)); gap: var(--space-3); }
+.kb-card { display: grid; gap: var(--space-1); text-align: left; padding: var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); color: var(--color-text); }
+.kb-card.selected { border-color: var(--color-coral); background: var(--color-coralLight); }
+.kb-card small { color: var(--color-muted); }
+.version-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.version-chips button { display: grid; gap: 0; text-align: left; padding: var(--space-2) var(--space-3); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); color: var(--color-text); font-family: var(--font-mono); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.version-chips button small { font-family: var(--font-body); }
+.version-chips button.selected { border-color: var(--color-coral); background: var(--color-coralLight); font-weight: var(--weight-bold); }
+.entry-table .col-entry { width: 38%; }
+.entry-table .col-time { width: 17%; }
+.entry-table .col-state { width: 13%; }
+.entry-table .col-used { width: 15%; }
+.page-stack { display: grid; }
+.page-stack > .section-heading:first-child { margin-top: 0; }
+@media (max-width: 767px) {
+  .entry-table { min-width: calc(var(--space-12) * 13); }
+}
+.time-input { width: 100%; min-height: var(--space-8); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); padding: 0 var(--space-2); font-family: var(--font-latin); font-size: var(--type-metaSize); color: var(--color-text); background: var(--color-card); }
+.time-input:focus { border-color: var(--color-coral); outline: none; }
+.kb-draft-table td { height: auto; padding-block: var(--space-2); }

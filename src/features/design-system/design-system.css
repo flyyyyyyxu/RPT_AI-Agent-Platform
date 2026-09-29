@@ -1,0 +1,47 @@
+/* 设计规范样板页。 */
+.button-samples, .badge-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.sample-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: var(--space-4); }
+.sample-grid .card { min-width: 0; }
+.sample-grid h3:not(:first-child) { margin-top: var(--space-6); }
+.badge-row { margin: var(--space-3) 0 var(--space-6); }
+.token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--layout-sidebar) - var(--space-12)), 1fr)); gap: var(--space-4); }
+.token-item { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.token-item strong, .token-item code { display: block; }
+.token-item strong { font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.token-item code { color: var(--color-muted); }
+.color-swatch { flex: none; width: var(--space-8); height: var(--space-8); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-badge); }
+.type-samples { display: grid; gap: var(--space-2); margin: var(--space-4) 0; }
+.type-samples h1, .type-samples h2, .type-samples p { margin: 0; }
+.type-samples small { display: block; }
+.type-samples code { color: var(--color-indigo); }
+.space-samples { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-4) 0; }
+.space-samples > div { display: grid; gap: var(--space-1); align-items: end; }
+.space-bar { display: block; height: var(--space-3); background: var(--color-indigo); border-radius: var(--radius-badge); }
+.shadow-samples { display: flex; gap: var(--space-4); margin-top: var(--space-6); }
+.shadow-samples span { padding: var(--space-3); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.shadow-samples span + span { box-shadow: var(--shadow-hover); }
+.token-rule-card p { margin-top: var(--space-2); }
+.mini-phase2 { padding: var(--space-4); margin-top: var(--space-4); border: var(--border-thin) dashed var(--color-disabled); border-radius: var(--radius-card); }
+.mini-phase2 strong { display: block; margin-top: var(--space-2); }
+.feedback-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.feedback-grid + .feedback { margin-top: var(--space-4); }
+.compare-content { display: grid; gap: var(--space-3); }
+.compare-content p { display: flex; justify-content: space-between; }
+.chart-track { position: relative; }
+.chart-bar { height: var(--space-3); border-radius: var(--radius-badge); }
+.chart-threshold { position: absolute; left: 75%; top: calc(-1 * var(--space-1)); bottom: calc(-1 * var(--space-1)); border-left: var(--border-thick) dashed var(--color-orange); }
+.diff-deleted, .diff-added { display: block; padding: var(--space-2); border-radius: var(--radius-badge); white-space: normal; }
+.diff-deleted { background: var(--color-errorLight); color: var(--color-error); }
+.diff-added { background: var(--color-greenLight); color: var(--color-greenText); }
+.trace-tree { display: grid; gap: var(--space-2); margin-top: var(--space-4); font-family: var(--font-mono); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.trace-tree > div { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--color-page); border-radius: var(--radius-control); }
+.trace-tree > .trace-depth-one { margin-left: var(--space-4); }
+.trace-tree > .trace-depth-two { margin-left: var(--space-8); }
+.trace-tree .trace-error { background: var(--color-errorLight); color: var(--color-error); }
+.trace-error > span:first-child { display: flex; align-items: center; gap: var(--space-1); }
+.trace-duration { position: relative; padding-left: var(--space-4); white-space: nowrap; }
+.trace-duration::before { content: ''; position: absolute; left: 0; top: 50%; width: var(--space-3); height: var(--space-1); transform: translateY(-50%); background: var(--color-indigo); border-radius: var(--radius-badge); }
+.trace-error .trace-duration::before { background: var(--color-error); }
+@media (max-width: 767px) {
+  .sample-grid, .feedback-grid { grid-template-columns: 1fr; }
+}

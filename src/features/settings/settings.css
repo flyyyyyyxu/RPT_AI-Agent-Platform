@@ -1,0 +1,24 @@
+/* Agent 设置页：护栏、告警、成本与预算。 */
+.inline-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 4), 1fr)); gap: var(--space-4); }
+.inline-fields .field-label input, .inline-fields .field-label select { min-height: var(--space-12); }
+.field-hint { font-weight: var(--weight-regular); }
+.guard-list { display: grid; gap: var(--space-2); }
+.guard-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4); align-items: center; padding: var(--space-3) var(--space-4); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); }
+.guard-row p { font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.guard-row.hero-row { border-left: var(--layout-featureBar) solid var(--color-indigo); background: var(--color-indigoLight); }
+.guard-row-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.gateway-flow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--type-metaSize); line-height: var(--type-metaLine); color: var(--color-secondary); }
+.gateway-flow span { padding: var(--space-1) var(--space-2); border-radius: var(--radius-badge); border: var(--border-thin) solid var(--color-border); background: var(--color-page); }
+.gateway-flow span.gateway { border-color: var(--color-indigo); color: var(--color-indigo); background: var(--color-indigoLight); font-weight: var(--weight-semibold); }
+.budget-bar { height: var(--space-3); background: var(--color-page); border-radius: var(--radius-badge); overflow: hidden; position: relative; }
+.budget-bar span { display: block; height: 100%; background: var(--color-indigo); border-radius: var(--radius-badge); }
+.budget-bar span.over { background: var(--color-orange); }
+.budget-bar i { position: absolute; top: 0; bottom: 0; border-left: var(--border-thick) dashed var(--color-orange); }
+.cost-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 2.5), 1fr)); gap: var(--space-3); }
+.cost-split div { padding: var(--space-3); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); display: grid; gap: var(--space-1); }
+.cost-split strong { font-family: var(--font-latin); }
+.saved-hint { display: inline-flex; align-items: center; gap: var(--space-1); }
+.basic-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-12) * 4), 1fr)); gap: var(--space-4); margin: 0; }
+.basic-info div { display: grid; gap: var(--space-1); }
+.basic-info dt { font-size: var(--type-metaSize); line-height: var(--type-metaLine); color: var(--color-muted); }
+.basic-info dd { margin: 0; font-weight: var(--weight-semibold); }

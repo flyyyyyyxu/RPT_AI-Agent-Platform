@@ -1,0 +1,31 @@
+/* 监控页：指标卡、趋势图、调用日志。 */
+.monitor-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.chart-title-row { display: flex; justify-content: space-between; gap: var(--space-4); align-items: flex-start; }
+.chart-title-row .chart-legend { margin: 0; }
+.chart-canvas { margin-top: var(--space-2); }
+.chart-canvas svg { display: block; width: 100%; height: auto; }
+.chart-canvas text { fill: var(--color-muted); font-family: var(--font-latin); font-size: var(--type-metaSize); }
+.chart-canvas .chart-value { fill: var(--color-indigo); font-weight: var(--weight-semibold); }
+.call-log-table code { color: var(--color-indigo); }
+@media (max-width: 1279px) {
+  .monitor-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .monitor-metrics { grid-template-columns: 1fr; }
+  .chart-title-row { flex-direction: column; }
+}
+.monitor-metrics .card { height: 100%; }
+.trend-chart .chart-legend { margin: var(--space-4) 0 0; }
+.chart-grid { stroke: var(--color-border); stroke-width: var(--border-thin); }
+.chart-canvas .chart-tick { fill: var(--color-muted); }
+.series-line { fill: none; stroke: var(--color-indigo); stroke-width: var(--border-thick); stroke-linejoin: round; stroke-linecap: round; }
+.series-point { fill: var(--color-card); stroke: var(--color-indigo); stroke-width: var(--border-thick); }
+.call-log-table { min-width: calc(var(--layout-asideMax) + var(--space-12)); }
+.call-log-table .col-time { width: 28%; }
+.call-log-table .col-trace { width: 20%; }
+.call-log-table .col-version { width: 12%; }
+.call-log-table .col-status { width: 14%; }
+.call-log-table .col-latency, .call-log-table .col-tokens { width: 13%; }
+@container (max-width: 720px) {
+  .monitor-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

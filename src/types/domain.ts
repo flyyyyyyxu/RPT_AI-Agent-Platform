@@ -107,11 +107,6 @@ export interface MonitorProfile {
   logs: { time: string; trace: string; status: '成功' | '失败'; latency: string; tokens: string }[];
 }
 
-export interface AgentProfile {
-  debug: DebugPreset[];
-  datasets: EvalDataset[];
-}
-
 /* ------------------------------------------------------------------ */
 /* 生产骨架（① – ⑩）                                                    */
 /* ------------------------------------------------------------------ */

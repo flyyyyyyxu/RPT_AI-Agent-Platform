@@ -1,0 +1,28 @@
+/* 基础样式：重置、字体层级、焦点、减少动态效果、通用工具类。只引用 tokens.ts 里的设计变量。 */
+@tailwind utilities;
+:root { color-scheme: light; font-family: var(--font-body); font-size: var(--type-bodySize); line-height: var(--type-bodyLine); color: var(--color-text); background: var(--color-page); font-variant-numeric: tabular-nums; }
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; margin: 0; }
+body { background: var(--color-page); }
+button, input, select { font: inherit; }
+button, select { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+button, a, select { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; text-decoration: none; }
+svg { flex: none; stroke-width: var(--icon-stroke); }
+h1, h2, h3, p { margin-top: 0; }
+h1 { font-size: var(--type-pageSize); line-height: var(--type-pageLine); font-weight: var(--type-pageWeight); letter-spacing: var(--type-pageTracking); }
+h2 { font-size: var(--type-sectionSize); line-height: var(--type-sectionLine); font-weight: var(--type-sectionWeight); }
+h3 { font-size: var(--type-bodySize); line-height: var(--type-bodyLine); font-weight: var(--weight-semibold); }
+p { color: var(--color-secondary); margin-bottom: 0; }
+small, .meta { font-size: var(--type-metaSize); line-height: var(--type-metaLine); color: var(--color-muted); }
+code { font-family: var(--font-mono); font-size: var(--type-metaSize); }
+:focus-visible { outline: var(--border-thick) solid var(--color-coral); outline-offset: var(--space-1); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.spin { color: var(--color-indigo); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 767px) {
+  :root { --mobile-topbar-height: calc(var(--space-12) + var(--space-12) - var(--space-2)); }
+}

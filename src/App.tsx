@@ -1,19 +1,20 @@
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
-import { lifecycleSteps } from './data/mock';
-import { DemoProvider, useDemo } from './app/DemoProvider';
-import { AppShell } from './layouts/AppShell';
-import { AgentDirectory, PlatformPlaceholder } from './pages/PlatformPlaceholder';
-import { AgentStepPlaceholder } from './pages/AgentStepPlaceholder';
-import { BuildPage } from './pages/BuildPage';
-import { CreateAgentPage } from './pages/CreateAgentPage';
-import { EvaluationPage } from './pages/EvaluationPage';
-import { MonitorPage } from './pages/MonitorPage';
-import { ReleasePage } from './pages/ReleasePage';
-import { DesignSystemPage } from './pages/DesignSystemPage';
-import { LibraryPage } from './pages/LibraryPage';
-import { TracePage } from './pages/TracePage';
-import { AgentSettingsPage } from './pages/AgentSettingsPage';
-import { Feedback } from './components/feedback/Feedback';
+import { lifecycleSteps } from './data';
+import { DemoProvider, useDemo } from './core/store/DemoProvider';
+import { AppShell } from './features/shell/AppShell';
+import { AgentDirectory } from './features/directory/DirectoryPage';
+import { PlatformPlaceholder } from './features/placeholder/PlatformPlaceholder';
+import { AgentStepPlaceholder } from './features/placeholder/AgentStepPlaceholder';
+import { BuildPage } from './features/build/BuildPage';
+import { CreateAgentPage } from './features/create/CreateAgentPage';
+import { EvaluationPage } from './features/evaluation/EvaluationPage';
+import { MonitorPage } from './features/monitor/MonitorPage';
+import { ReleasePage } from './features/release/ReleasePage';
+import { DesignSystemPage } from './features/design-system/DesignSystemPage';
+import { LibraryPage } from './features/library/LibraryPage';
+import { TracePage } from './features/trace/TracePage';
+import { AgentSettingsPage } from './features/settings/AgentSettingsPage';
+import { Feedback } from './shared/components/Feedback';
 
 function AgentRoute() {
   const { agentId, stepId } = useParams();

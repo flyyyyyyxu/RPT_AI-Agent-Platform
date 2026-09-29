@@ -127,7 +127,7 @@ B6 图标与文案
   全局提供「重置演示」按钮，一键恢复初始数据
 - 所有颜色、字号、间距只能引用 B1 的设计变量，不许写死数值
 - 字体通过 Google Fonts 引入；图标使用 Lucide
-- mock 数据集中放在一个 data 文件里
+- mock 数据放在 `src/data`：`base/` 按功能拆分，`scenarios/` 按演示剧本拆分，统一从 `src/data/index.ts` 导出；页面、组件和逻辑层只从这个入口引用
 - 构建产物是静态文件，可以直接部署到静态托管打开，不需要启动服务端
 
 ## 部署约束（保证随时能打包成单个 HTML）
@@ -138,3 +138,11 @@ B6 图标与文案
 - 图片优先用内联 SVG 或小图，避免单文件体积过大
 - 字体：Google Fonts 加载失败时回退到系统字体（PingFang SC、Microsoft YaHei、sans-serif）
 - 本地存储：所有读写都包在 try/catch 里，不可用时页面照常工作
+
+## 代码组织
+- 按功能分文件夹：`src/features/<功能>/` 放该功能的页面、专用组件和专用样式
+- 跨页面复用的组件和样式放 `src/shared/`：设计变量、基础样式、按钮、徽章、能力卡片等
+- 与界面无关的状态、规则和取数放 `src/core/`：`store/` 演示状态与操作，`rules/` 版本、门槛、生命周期、演示时钟，`data-access/` 统一取数（演示剧本在这里替换数据）
+- mock 数据放 `src/data/`（见技术约束）
+- 依赖方向：features → shared → core → data → types，只允许从左往右引用；功能之间尽量不互相引用，例外是公共外壳 `features/shell` 和剧本锁定 `features/playbook/playbooks`
+- 改完运行 `npm run smoke`（三条剧本 + 回归检查）；涉及样式时运行 `npm run snapshot:compare`，与改动前的基准截图比对
