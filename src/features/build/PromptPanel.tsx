@@ -14,7 +14,7 @@ import { Button } from '../../shared/components/Buttons';
 import { Drawer } from '../../shared/components/Drawer';
 import { icon } from '../../shared/styles/tokens';
 
-export function PromptPanel({ config, readOnly, onChange }: { config: AgentConfig; readOnly: boolean; onChange: (prompt: string) => void }) {
+export function PromptPanel({ config, readOnly, focused, onChange }: { config: AgentConfig; readOnly: boolean; focused?: boolean; onChange: (prompt: string) => void }) {
   const { state } = useDemo();
   const [suggestion, setSuggestion] = useState<ReturnType<typeof optimizePrompt> | null>(null);
   const [picking, setPicking] = useState(false);
@@ -26,9 +26,9 @@ export function PromptPanel({ config, readOnly, onChange }: { config: AgentConfi
   const optimize = () => { setNotice(null); setSuggestion(optimizePrompt(config)); };
   const adopt = () => { if (!suggestion) return; onChange(suggestion.suggestion); setNotice(`已采纳 ${suggestion.applied.length} 条优化建议，草稿已自动保存；建议重新调试确认效果。`); setSuggestion(null); };
 
-  return <div className="build-panel prompt-panel">
+  return <div className={`build-panel prompt-panel ${focused ? 'is-focus' : ''}`}>
     <div className="build-panel-head">
-      <div><h3>角色指令</h3></div>
+      <div><h3>角色指令{focused && <span className="focus-tag">本轮调优</span>}</h3></div>
       {!readOnly && <div className="build-panel-actions">
         <Button onClick={optimize} disabled={Boolean(suggestion)}><Sparkles size={icon.small} />优化</Button>
         <Button onClick={() => setPicking(true)}><FileText size={icon.small} />套用模板</Button>

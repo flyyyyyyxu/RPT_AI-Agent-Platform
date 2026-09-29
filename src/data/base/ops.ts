@@ -23,5 +23,6 @@ export function defaultOps(profile: ProfileId): AgentOps {
     badcases: {},
     callers: structuredClone(callersFor[base]),
     interventions: [],
+    goals: [],
   };
 }

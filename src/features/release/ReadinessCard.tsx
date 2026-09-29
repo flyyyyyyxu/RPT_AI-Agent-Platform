@@ -25,7 +25,7 @@ export function ReadinessCard({ candidate, experiment, checks, approvalPending, 
         <span className="check-actions">
           {item.key === 'approval' && !item.done && !item.optional && <>{approvalPending ? <Button onClick={onApprove} disabled={approving}>{approving ? <LoaderCircle size={icon.small} className="spin" /> : null}模拟审批通过</Button> : <Button onClick={onSubmitApproval}>提交审批</Button>}</>}
           {item.key !== 'approval' && !item.done && item.link && <Link className="button button-secondary" to={item.link.to}>{item.link.label}</Link>}
-          {item.done ? <StatusBadge status={item.warn ? '警告' : '通过'} /> : item.optional ? <span className="meta">全量前需要</span> : <StatusBadge status={item.key === 'approval' && approvalPending ? '待审批' : '未完成'} />}
+          {item.done ? <StatusBadge status={item.warn ? '警告' : '通过'} /> : item.optional ? <span className="meta">{item.hint ?? '全量前需要'}</span> : <StatusBadge status={item.key === 'approval' && approvalPending ? '待审批' : '未完成'} />}
         </span></li>)}</ul>}
     {children}
   </Capability>;

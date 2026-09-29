@@ -21,3 +21,6 @@ export function lifecycleState(agent: Agent): Record<string, StepState> {
     trace: online ? '可查看' : '未开始',
   };
 }
+
+/** 发布过的 Agent，第一步是「构建与调优」：每一轮都从观测发现的问题出发；从没发布过的叫「构建」 */
+export const buildStepLabel = (agent: Agent) => agent.versions.some(version => version.everOnline) ? '构建与调优' : '构建';

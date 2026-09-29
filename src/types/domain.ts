@@ -208,6 +208,27 @@ export interface AgentOps {
   callers: CallerRecord[];
   /** 线上干预：由 bad case 生成的临时止血措施 */
   interventions: Intervention[];
+  /** 调优：本轮及历史的优化目标 */
+  goals: OptimizationGoal[];
+}
+
+/**
+ * 优化目标（调优）：观测或评测发现问题后「发起优化」生成，挂到当前候选版本（没有候选版本时挂到下一个新建的候选版本）。
+ * 构建页显示「本轮优化目标」，评测页核对是否达成，发布页的生产就绪检查提示是否已验证。
+ */
+export type OptimizationSource = 'bad case' | '告警' | 'AB 实验' | '评测门槛';
+export type TuneTarget = ProblemStage | '编排';
+export interface OptimizationGoal {
+  id: string; source: OptimizationSource; sourceId: string;
+  /** 问题描述 */
+  title: string; traceId?: string;
+  /** 调优对象：决定构建页展开并高亮哪个模块 */
+  targets: TuneTarget[];
+  metrics: string[];
+  verify: string;
+  createdAt: string; createdBy: string;
+  /** 挂在哪个候选版本上；null = 等下一个新建的候选版本 */
+  version: string | null;
 }
 
 /** 调用方登记：谁在调用这个 Agent、按线上指向还是锁定某个版本调用 */
@@ -272,7 +293,7 @@ export interface AssetState {
 }
 
 export interface DemoState {
-  schema: 8;
+  schema: 9;
   agents: Agent[];
   ops: Record<string, AgentOps>;
   /** 已发布的知识库新版本（覆盖 mock），以及页面上新建的知识库 */

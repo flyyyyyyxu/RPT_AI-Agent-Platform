@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Activity, RotateCcw, Rocket } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
 import { readinessChecks } from '../../core/rules/gate';
+import { goalState, goalsOfVersion } from '../../core/rules/optimization';
 import { getCandidate, getExperiment, getVersion, isEvaluated, previousOnline } from '../../core/rules/versions';
 import { nowStamp } from '../../core/rules/clock';
 import { ConfirmAction } from '../../shared/components/Buttons';
@@ -13,6 +14,8 @@ import { EnvironmentCards } from './EnvironmentCards';
 import { VersionHistory } from './VersionHistory';
 import { AbReport } from './AbReport';
 import { AlertBanners } from '../../shared/components/AlertBanners';
+import { StartOptimization } from '../optimize/Optimization';
+import { seedFromAlert } from '../../core/rules/optimization';
 import { ReadinessCard } from './ReadinessCard';
 import { AccessCard } from './AccessCard';
 import { StrategyCard } from './StrategyCard';
@@ -56,7 +59,13 @@ export function ReleasePage({ agent }: { agent: Agent }) {
   const shadow = experiment?.status === '影子运行' ? experiment : null;
   const target = candidate ?? shadow;
   const approvalOptional = Boolean(candidate && strategy === 'shadow');
-  const checks = readinessChecks(agent, ops, target, { approvalOptional });
+  /** 本轮优化目标：只提示、不阻断发布（目标可能随调优调整，最终以门槛和审批为准） */
+  const goals = target ? goalsOfVersion(agent, ops, target.id) : [];
+  const unmet = goals.filter(goal => goalState(agent, ops, goal) !== '已达成');
+  const checks = [...readinessChecks(agent, ops, target, { approvalOptional }),
+    ...(goals.length ? [{ key: 'goals', label: '本轮优化目标已验证', done: !unmet.length, optional: unmet.length > 0, hint: '建议完成',
+      detail: unmet.length ? `${unmet.length} / ${goals.length} 个目标还没达成：${unmet.map(goal => goal.metrics[0]).join('；')}` : `${goals.length} 个优化目标在评测中全部达成，灰度期继续看线上指标`,
+      link: { to: `/agents/${agent.id}/evaluation`, label: '去评测核对' } }] : [])];
   const missing = checks.filter(item => !item.done && !item.optional);
   const baseReason = !target ? '没有候选版本，请先在构建页新建草稿'
     : !target.configured ? '候选版本尚未保存（在构建页「保存为候选版本」）'
@@ -176,7 +185,7 @@ export function ReleasePage({ agent }: { agent: Agent }) {
 
     <SectionHeading eyebrow="发布与实验" title="受控发布、实验与回退" description="上线前逐项检查；上线后按比例放量、用业务指标说话；出问题分钟级回退。" />
     {feedback}
-    <AlertBanners agent={agent} />
+    <AlertBanners agent={agent} action={alert => <StartOptimization agent={agent} demo={`optimize-${alert.id}`} seed={seedFromAlert(agent, alert)} />} />
     {experiment ? <>{trafficBlock}{releaseBlock}</> : <>{releaseBlock}{trafficBlock}</>}
     <Phase2Row items={[
       { title: '按指标自动熔断', description: '灰度期间核心指标跌破阈值时，自动把流量切回线上版本并告警。' },

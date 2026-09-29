@@ -6,6 +6,8 @@ import { DemoTag, IntegrationNote, VersionBadge } from '../../shared/components/
 import { Capability } from '../../shared/components/Capability';
 import { Feedback } from '../../shared/components/Feedback';
 import { icon } from '../../shared/styles/tokens';
+import { StartOptimization } from '../optimize/Optimization';
+import { seedFromAb } from '../../core/rules/optimization';
 
 /* ---------------- ④ AB 实验报告 ---------------- */
 /** 符号单位（%、ms、s、pp）紧贴数字；中文量词（条、分）前留一个空格。 */
@@ -42,7 +44,8 @@ export function AbReport({ agent, experiment }: { agent: Agent; experiment: Agen
           <div className="ab-delta"><span className={`metric-change ${significant ? good ? 'positive' : 'negative' : 'neutral'}`}>{delta === 0 ? <Minus size={icon.small} aria-hidden="true" /> : delta > 0 ? <ArrowUp size={icon.small} aria-hidden="true" /> : <ArrowDown size={icon.small} aria-hidden="true" />}{withUnit(signed(delta, metric.decimals), deltaUnit(metric.unit))}</span>
             <span className="meta ab-ci">95% CI [{signed(metric.ci[0], metric.decimals)}, {signed(metric.ci[1], metric.decimals)}]{/^[a-z%]+$/i.test(deltaUnit(metric.unit)) ? '' : ' '}{deltaUnit(metric.unit)}</span>
             <span className={`sig ${significant ? 'yes' : ''}`}>{significant ? '显著' : '不显著'}</span>
-            {metric.threshold !== undefined && <span className={`gate-chip ${overThreshold ? 'fail' : 'pass'}`}>{overThreshold ? <AlertCircle size={icon.small} aria-hidden="true" /> : <CheckCircle2 size={icon.small} aria-hidden="true" />}{overThreshold ? '超过门槛' : '门槛内'} {metric.higherIsBetter ? '≥' : '≤'} {formatValue(metric.threshold, metric.unit, metric.decimals)}</span>}</div>
+            {metric.threshold !== undefined && <span className={`gate-chip ${overThreshold ? 'fail' : 'pass'}`}>{overThreshold ? <AlertCircle size={icon.small} aria-hidden="true" /> : <CheckCircle2 size={icon.small} aria-hidden="true" />}{overThreshold ? '超过门槛' : '门槛内'} {metric.higherIsBetter ? '≥' : '≤'} {formatValue(metric.threshold, metric.unit, metric.decimals)}</span>}
+            {(overThreshold || (significant && !good)) && <StartOptimization agent={agent} demo={`optimize-ab-${metric.label}`} seed={seedFromAb(agent, metric, experiment.id)} />}</div>
         </div>;
       })}</div>
       <p className="ab-conclusion">{ab.conclusion}</p>

@@ -41,7 +41,7 @@ const PB_KB = /政策库 2026-10 版/;
 const PC_KB = /售后知识 v35/;
 const PB_FIXED = (ctx: PlaybookCtx) => { const v = version(ctx, 'v8'); return Boolean(v && onKnowledge(ctx, 'v8', PB_KB) && !v.config.prompt.includes(pbOldClause) && v.configured); };
 
-export const pageNames: Record<string, string> = { build: '构建页', evaluation: '评测页', release: '发布与实验页', monitor: '观测 · 监控页', trace: '观测 · Trace 页', settings: '设置页', '/assets/knowledge': '资产中心 · 知识库' };
+export const pageNames: Record<string, string> = { build: '构建与调优页', evaluation: '评测页', release: '发布与实验页', monitor: '观测 · 监控页', trace: '观测 · Trace 页', settings: '设置页', '/assets/knowledge': '资产中心 · 知识库' };
 export const pagePath = (playbook: Playbook, page: string) => page.startsWith('/') ? page : `/agents/${playbook.agentId}/${page}`;
 
 const DEBUG_NEXT = '点右侧调试台的「运行调试」。窄屏先点「展开调试台」。';

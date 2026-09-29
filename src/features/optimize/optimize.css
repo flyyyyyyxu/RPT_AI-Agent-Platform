@@ -1,0 +1,45 @@
+/* 调优闭环：发起优化、本轮优化目标 */
+.goal-chip { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-badge); background: var(--color-indigoLight); color: var(--color-indigo); font-size: var(--type-metaSize); line-height: var(--type-metaLine); text-decoration: none; white-space: nowrap; }
+.goal-form { display: grid; gap: var(--space-4); }
+.goal-source { display: grid; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-control); background: var(--color-page); }
+.goal-form input { width: 100%; min-height: var(--space-8); padding: var(--space-2) var(--space-3); border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); color: var(--color-text); font-weight: var(--weight-regular); }
+.goal-metric-rows { display: grid; gap: var(--space-2); }
+.goal-metric-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; }
+.goal-form .field-hint { font-weight: var(--weight-regular); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.goal-card { display: grid; gap: var(--space-3); padding: var(--space-4); border: var(--border-thin) solid var(--color-indigo); border-radius: var(--radius-card); background: var(--color-card); }
+.goal-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.goal-card-head > svg { color: var(--color-indigo); }
+.goal-card-head .meta { margin-left: auto; }
+.goal-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4); padding-top: var(--space-3); border-top: var(--border-thin) solid var(--color-border); }
+.goal-item dl { display: grid; gap: var(--space-2); margin: 0; }
+.goal-item dl > div { display: grid; grid-template-columns: calc(var(--space-12) + var(--space-6)) minmax(0, 1fr); gap: var(--space-3); }
+.goal-item dt { color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-bodyLine); }
+.goal-item dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.goal-item ul { margin: 0; padding-left: var(--space-4); }
+.goal-target { padding: 0 var(--space-2); border-radius: var(--radius-badge); background: var(--color-coralLight); color: var(--color-text); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.goal-item-side { display: grid; align-content: start; justify-items: end; gap: var(--space-2); }
+.goal-state { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-2); border-radius: var(--radius-badge); font-size: var(--type-metaSize); line-height: var(--type-metaLine); white-space: nowrap; background: var(--color-page); color: var(--color-secondary); }
+.goal-state.tone-pass { background: var(--color-greenLight); color: var(--color-greenText); }
+.goal-state.tone-fail { background: var(--color-errorLight); color: var(--color-error); }
+.goal-state.tone-info { background: var(--color-indigoLight); color: var(--color-indigo); }
+/* 生命周期导航：观测之后的回环 */
+.lifecycle-loop { flex: 0 0 auto; display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: var(--border-thin) dashed var(--color-indigo); border-radius: var(--radius-control); background: var(--color-indigoLight); color: var(--color-indigo); text-decoration: none; }
+.lifecycle-loop .step-copy strong { color: var(--color-indigo); }
+.lifecycle-loop .step-copy small { color: var(--color-indigo); }
+.lifecycle-loop .loop-count { display: grid; place-items: center; min-width: var(--space-6); height: var(--space-6); padding: 0 var(--space-1); border-radius: var(--radius-badge); background: var(--color-indigo); color: var(--color-card); font-size: var(--type-metaSize); }
+/* 构建页里被本轮目标点到的模块 */
+.cap-module.is-focus, .prompt-panel.is-focus { box-shadow: inset var(--border-thick) 0 0 var(--color-indigo); }
+.cap-module.is-focus { margin-left: calc(var(--space-4) * -1); padding-left: var(--space-4); background: color-mix(in srgb, var(--color-indigoLight) 50%, transparent); }
+.focus-tag { margin-left: var(--space-2); padding: 0 var(--space-2); border-radius: var(--radius-badge); background: var(--color-indigo); color: var(--color-card); font-size: var(--type-metaSize); line-height: var(--type-metaLine); font-weight: var(--weight-regular); }
+@media (max-width: 1439px) {
+  .lifecycle-loop .step-copy small { display: none; }
+}
+@media (max-width: 767px) {
+  .goal-item { grid-template-columns: minmax(0, 1fr); }
+  .goal-item-side { justify-items: start; }
+  .goal-item dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+.gate-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
+.alert-banner > .goal-chip, .alert-banner > span[data-demo] { flex: none; align-self: center; }
+.ab-delta .button-wrap, .ab-delta .goal-chip { justify-self: start; }
+.workspace-main > .goal-card { margin-bottom: var(--space-4); }

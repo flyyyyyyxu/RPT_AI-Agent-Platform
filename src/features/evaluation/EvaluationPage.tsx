@@ -1,4 +1,5 @@
 import { Database, FileCheck2, FlaskConical, GitBranchPlus, Info } from 'lucide-react';
+import { GoalCard } from '../optimize/Optimization';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDemo } from '../../core/store/DemoProvider';
@@ -65,6 +66,7 @@ export function EvaluationPage({ agent }: { agent: Agent }) {
     <Card><span className="eyebrow">已完成</span><h3>{candidate.evaluatedDatasets.length} / {datasets.length} 个评测集</h3><p className="meta">完成任意一个评测集即可发布。配置修改后评测结果会失效，需要重新运行。</p></Card>{isolationCard}</>;
 
   return <AgentShell agent={agent} stepId="evaluation" aside={aside}><SectionHeading eyebrow="评测" title={`验证候选版本 ${candidate.id}`} description="选择评测集，运行后查看总分、逐条对比和回答差异。" aside={<div className="heading-badges"><IsolationNote /><ScopeBadge phase="MVP" /></div>} />
+    <GoalCard agent={agent} versionId={candidate.id} mode="evaluation" />
     {candidate.draft && <div className="alert-banner" role="status"><Info size={icon.large} aria-hidden="true" /><div><strong>构建页有未保存的草稿</strong><p>评测运行的是已保存的 {candidate.id} 快照，不包含草稿里的修改（自动保存于 {candidate.draft.savedAt}）。要评测草稿，先在构建页「保存为候选版本 {candidate.id}」。</p></div><Link className="button button-secondary" to={`/agents/${agent.id}/build`}>前往构建页</Link></div>}
     <Card><div className="dataset-list" role="radiogroup" aria-label="评测集列表">{datasets.map(item => {
       const itemDone = candidate.evaluatedDatasets.includes(item.id);

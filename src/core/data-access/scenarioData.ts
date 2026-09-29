@@ -30,7 +30,11 @@ export function gateFor(agent: Agent, version: AgentVersion | null): GateProfile
 export function datasetsFor(agent: Agent, version: AgentVersion | null, ops: AgentOps, assets?: AssetState): EvalDataset[] {
   let datasets = datasetProfiles[baseOf(agent.profile)];
   if (agent.profile === 'pb') { const s = pbState(version); if (s !== 'legacy') datasets = pbDatasets(s === 'fixed'); }
-  const added = badcasesFor(agent).filter(item => item.evalCase && ops.badcases[item.id]?.inEvalSet).map(item => item.evalCase!);
+  // 没有预置回归样本的 bad case，按问题摘要生成一条（演示数据）
+  const added = badcasesFor(agent).filter(item => ops.badcases[item.id]?.inEvalSet).map(item => item.evalCase ?? {
+    name: `${item.id} ${item.summary}`, input: item.detail, expected: '按当前有效的规则回答，不再出现该问题',
+    oldScore: 40, newScore: 90, oldAnswer: `（${item.version}）${item.summary}`, newAnswer: '修复后的回答符合当前规则（演示数据）',
+  });
   const all = added.length ? [{ id: 'badcase', name: 'bad case 回归集', description: '由 bad case 工作台加入的样本', cases: added }, ...datasets] : datasets;
   if (!assets) return all;
   const latest = (record: AssetRecord<EvalsetContent>) => record.versions.find(item => item.status === '已发布');

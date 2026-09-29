@@ -5,6 +5,8 @@ import { evaluateGate, formatGateValue } from '../../core/rules/gate';
 import type { Agent, AgentVersion } from '../../types/domain';
 import { DemoTag, VersionBadge } from '../../shared/components/Badges';
 import { icon } from '../../shared/styles/tokens';
+import { StartOptimization } from '../optimize/Optimization';
+import { seedFromGate } from '../../core/rules/optimization';
 
 export const opLabel = { '>=': '≥', '<=': '≤' } as const;
 
@@ -22,5 +24,6 @@ export function GateSummary({ agent, version }: { agent: Agent; version: AgentVe
     <p>{detail}</p>
     {gate.evaluated && <div className="gate-chips">{gate.rules.map(rule => <span key={rule.id} className={`gate-chip ${rule.pass ? 'pass' : 'fail'}`}>{rule.pass ? <CheckCircle2 size={icon.small} aria-hidden="true" /> : <AlertCircle size={icon.small} aria-hidden="true" />}{rule.metric} {formatGateValue(rule.value, rule.unit)}</span>)}
       <span className={`gate-chip ${gate.failedRedlines.length ? 'fail' : 'pass'}`}>{gate.failedRedlines.length ? <AlertCircle size={icon.small} aria-hidden="true" /> : <CheckCircle2 size={icon.small} aria-hidden="true" />}红线样本 {gate.redlines.length - gate.failedRedlines.length}/{gate.redlines.length}</span></div>}
+    {gate.evaluated && !gate.passed && <div className="gate-actions"><StartOptimization agent={agent} demo="optimize-gate" seed={seedFromGate(agent, version.id, gate.failedRules, gate.failedRedlines.length)} /><span className="meta">生成本轮优化目标，去 Trace 定位后回到构建与调优修改</span></div>}
   </div></div>;
 }

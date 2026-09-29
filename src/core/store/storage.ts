@@ -1,9 +1,9 @@
 import type { DemoState } from '../../types/domain';
 
 /** 数据结构变化时必须同步提升版本号，旧存档会被直接丢弃，避免读到不兼容的数据导致白屏。 */
-const SCHEMA = 8;
+const SCHEMA = 9;
 const KEY = `agent-platform-demo-v${SCHEMA}`;
-const LEGACY_KEYS = ['agent-platform-demo-v1', 'agent-platform-demo-v2', 'agent-platform-demo-v3', 'agent-platform-demo-v4', 'agent-platform-demo-v5', 'agent-platform-demo-v6', 'agent-platform-demo-v7'];
+const LEGACY_KEYS = ['agent-platform-demo-v1', 'agent-platform-demo-v2', 'agent-platform-demo-v3', 'agent-platform-demo-v4', 'agent-platform-demo-v5', 'agent-platform-demo-v6', 'agent-platform-demo-v7', 'agent-platform-demo-v8'];
 
 const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
 

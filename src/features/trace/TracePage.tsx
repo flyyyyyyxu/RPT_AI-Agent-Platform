@@ -77,7 +77,7 @@ export function TracePage({ agent }: { agent: Agent }) {
       </div>
     </Capability></div>
 
-    <BadCaseBoard cases={cases} labelOf={labelOf} setLabel={setLabel} onShowTrace={showTrace} interventionOf={interventionOf} onIntervene={agent.productionVersion ? setIntervening : null} />
+    <BadCaseBoard agent={agent} cases={cases} labelOf={labelOf} setLabel={setLabel} onShowTrace={showTrace} interventionOf={interventionOf} onIntervene={agent.productionVersion ? setIntervening : null} />
     <InterventionList agent={agent} ops={ops} onRevoke={revoke} />
     {intervening && <InterventionDrawer agent={agent} ops={ops} badcase={intervening} onClose={() => setIntervening(null)} onCreate={createIntervention} />}
     <Phase2Row items={[

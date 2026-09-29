@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Boxes, ChevronLeft, ChevronRight, Gauge, LayoutGrid, Menu, RotateCcw, ShieldCheck, Store, X } from 'lucide-react';
 import { useDemo } from '../../core/store/DemoProvider';
 import { assetSections } from '../../data';
+import { buildStepLabel } from '../../core/rules/lifecycle';
 import { Button } from '../../shared/components/Buttons';
 import { DemoBadge, ScopeBadge } from '../../shared/components/Badges';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
@@ -36,7 +37,7 @@ function Breadcrumbs() {
   const agent = parts[0] === 'agents' ? state.agents.find(item => item.id === parts[1]) : undefined;
   const steps: Record<string, string> = { build: '构建', evaluation: '评测', release: '发布与实验', monitor: '观测 · 监控', trace: '观测 · Trace 与 bad case', settings: '设置' };
   const trail: { label: string; to?: string }[] =
-    parts[0] === 'agents' ? [{ label: 'Agent 目录', to: '/' }, ...(pathname === '/agents/new' ? [{ label: '新建 Agent' }] : agent ? [{ label: agent.name, to: `/agents/${agent.id}/build` }, { label: steps[parts[2] ?? 'build'] ?? '构建' }] : [])]
+    parts[0] === 'agents' ? [{ label: 'Agent 目录', to: '/' }, ...(pathname === '/agents/new' ? [{ label: '新建 Agent' }] : agent ? [{ label: agent.name, to: `/agents/${agent.id}/build` }, { label: (parts[2] ?? 'build') === 'build' ? buildStepLabel(agent) : steps[parts[2]] ?? buildStepLabel(agent) }] : [])]
     : parts[0] === 'assets' ? [{ label: '资产中心', to: assets.to }, { label: assetSections.find(item => item.id === parts[1])?.label ?? '知识库' }]
     : pathname === '/design-system' ? [{ label: '设计规范' }]
     : [{ label: navigation.find(item => item.to === pathname)?.label ?? '工作台' }];
@@ -52,6 +53,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { reset } = useDemo();
   const playbook = usePlaybookPanel();
   const location = useLocation();
+  // 换页回到顶部：用 layout effect，保证在剧本浮层把目标元素滚到可见位置（普通 effect）之前执行
+  useLayoutEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
   const navigate = useNavigate();
   const navLink = ({ to, label, icon: Icon }: typeof workbench) => <NavLink key={to} to={to} end={to === '/'} title={collapsed ? label : undefined} onClick={() => setMobileOpen(false)} className={({ isActive }) => `nav-item ${(isActive || (to === '/' && location.pathname.startsWith('/agents'))) ? 'active' : ''}`}><Icon size={icon.large} aria-hidden="true" /><span>{label}</span></NavLink>;
   const inAssets = location.pathname.startsWith('/assets');

@@ -9,6 +9,13 @@ const same = (a: AgentConfig, b: AgentConfig) => JSON.stringify(a) === JSON.stri
 export interface CreateAgentInput { name: string; mode: string; profile: ProfileId; config: AgentConfig; team: string }
 
 export function versionActions({ state, setState, updateAgent }: StoreKit) {
+  /** 新建候选版本时，把还没挂上版本的优化目标挂上去（本轮优化目标） */
+  const attachGoals = (agentId: string, versionId: string) => setState(previous => {
+    const ops = previous.ops[agentId];
+    if (!ops?.goals?.some(goal => goal.version === null)) return previous;
+    return { ...previous, ops: { ...previous.ops, [agentId]: { ...ops, goals: ops.goals.map(goal => goal.version === null ? { ...goal, version: versionId } : goal) } } };
+  });
+
   const createAgent = ({ name, mode, profile, config, team }: CreateAgentInput): Agent => {
     const agent: Agent = {
       id: `agent-${Date.now()}`, name, owner: '李一宁', team, level: '原型', mode, costThisMonth: 0,
@@ -50,6 +57,7 @@ export function versionActions({ state, setState, updateAgent }: StoreKit) {
     const source = agent.versions.find(version => version.id === fromVersionId) ?? agent.versions[0];
     const id = nextVersionId(agent);
     updateAgent(agentId, current => ({ ...current, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note: `基于 ${source.id} 修改`, config: structuredClone(source.config), everOnline: false, configured: false, debugged: false, evaluatedDatasets: [] }, ...current.versions] }));
+    attachGoals(agentId, id);
     return id;
   };
 
@@ -80,6 +88,7 @@ export function versionActions({ state, setState, updateAgent }: StoreKit) {
     const source = agent.versions.find(version => version.id === fromVersionId) ?? agent.versions[0];
     const id = nextVersionId(agent);
     updateAgent(agentId, current => ({ ...current, versions: [{ id, status: '草稿', updatedAt: nowStamp(), note, config: { ...structuredClone(source.config), ...patch }, everOnline: false, configured: true, debugged: false, evaluatedDatasets: [] }, ...current.versions] }));
+    attachGoals(agentId, id);
     return id;
   };
 

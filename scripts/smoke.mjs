@@ -70,6 +70,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   await evaluate(page);
   await expectStep(page, '发布按钮被禁用');
   check('B：评测页显示门槛阻断', (await page.locator('[data-demo=gate-summary]').innerText()).includes('发布已阻断'));
+  check('调优：门槛阻断时评测页提供「发起优化」', await page.locator('[data-demo=optimize-gate] button').count() === 1);
   await gotoStep(page);
   check('B：发布被门槛阻断', (await page.locator('.publish-bar .button-reason').allInnerTexts()).join('').includes('上线门槛已通过'));
   await next(page); await expectStep(page, 'Trace：引用了旧条款');
@@ -346,7 +347,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
 /* ---------------- 构建页三栏：草稿自动保存、免保存调试、优化 / 模板、记忆与备用模型、版本快照折叠 ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
-  const v4 = async () => page.evaluate(() => JSON.parse(localStorage.getItem('agent-platform-demo-v8')).agents.find(a => a.id === 'general').versions.find(v => v.id === 'v4'));
+  const v4 = async () => page.evaluate(() => JSON.parse(localStorage.getItem('agent-platform-demo-v9')).agents.find(a => a.id === 'general').versions.find(v => v.id === 'v4'));
   await go(page, '/agents/general/build', 600);
   const box = async selector => (await page.locator(selector).first().boundingBox())?.x ?? -1;
   check('构建：Prompt / 能力配置 / 调试三栏从左到右', await box('[data-demo=prompt]') < await box('[data-demo=config]') && await box('[data-demo=config]') < await box('.debug-chat'));
@@ -423,7 +424,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   check('干预：监控页提示有干预生效中', await page.locator('[data-demo=intervention-banner]').count() === 1);
   // 准备一个修复版本 v22：在 bad case 回归集上评测过、灰度 50%，下一次放量即全量
   await page.evaluate(() => {
-    const key = 'agent-platform-demo-v8';
+    const key = 'agent-platform-demo-v9';
     const state = JSON.parse(localStorage.getItem(key));
     const agent = state.agents.find(a => a.id === 'c');
     const base = agent.versions.find(v => v.id === 'v21');
@@ -444,7 +445,7 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
 /* ---------------- 构建页 · 能力配置：＋ 添加（资产中心搜索 / 上传入库）、同一工具只挂一个版本、数据库、批量模式 ---------------- */
 {
   const { page, context, errors } = await newPage(browser);
-  const draft = async () => page.evaluate(() => { const v = JSON.parse(localStorage.getItem('agent-platform-demo-v8')).agents.find(a => a.id === 'general').versions.find(x => x.id === 'v4'); return (v.draft ?? v).config; });
+  const draft = async () => page.evaluate(() => { const v = JSON.parse(localStorage.getItem('agent-platform-demo-v9')).agents.find(a => a.id === 'general').versions.find(x => x.id === 'v4'); return (v.draft ?? v).config; });
   await go(page, '/agents/general/build', 600);
   check('能力：工具只显示已添加的 1 个', await page.locator('[data-group=tools] .tool-card').count() === 1);
   await page.locator('[data-demo=add-tool] button').click(); await page.waitForTimeout(200);
@@ -483,6 +484,45 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   await go(page, '/agents/b/build', 500);
   check('能力：批量模式下记忆和对话整组停用并写明原因', (await page.locator('.cap-disabled').allInnerTexts()).length === 2);
   check('能力：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 调优闭环：构建与调优、下一轮、发起优化、本轮优化目标 ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  const ops = async id => page.evaluate(agentId => JSON.parse(localStorage.getItem('agent-platform-demo-v9')).ops[agentId] ?? null, id);
+  await go(page, '/agents/c/trace', 600);
+  check('调优：发布过的 Agent 第一步叫「构建与调优」', (await page.locator('.lifecycle-item strong').first().innerText()) === '构建与调优');
+  check('调优：观测后面有「下一轮」回环', (await page.locator('[data-demo=loop]').innerText()).includes('发起优化'));
+  check('调优：未标注问题环节时不显示「发起优化」', await page.locator('[data-demo="optimize-bc-4415"]').count() === 0);
+  await page.locator('[data-demo="stage-bc-4415"] button', { hasText: '知识' }).click();
+  await page.locator('[data-demo="optimize-bc-4415"] button').click(); await page.waitForTimeout(300);
+  check('调优：表单预填调优对象和目标指标', await page.locator('.goal-form .asset-chips button.on').innerText() === '知识' && (await page.getByLabel('目标指标 1').inputValue()).includes('bc-4415'));
+  await page.getByRole('button', { name: '确认并去调优' }).click(); await page.waitForTimeout(800);
+  check('调优：确认后进入构建与调优，面包屑同步', page.url().endsWith('#/agents/c/build') && (await page.locator('.breadcrumbs').innerText()).includes('构建与调优'));
+  check('调优：没有候选版本时目标等待挂载', (await page.locator('[data-demo=goal-card]').innerText()).includes('待开始'));
+  check('调优：发起优化时 bad case 自动加入回归集', (await ops('c')).badcases['bc-4415'].inEvalSet === true);
+  check('调优：「下一轮」显示进行中的目标数', (await page.locator('[data-demo=loop] .loop-count').innerText()) === '1');
+  await page.locator('[data-demo=dep-upgrade] button').click(); await page.waitForTimeout(900);
+  check('调优：新建候选版本时目标挂到 v22', (await ops('c')).goals[0].version === 'v22' && (await page.locator('[data-demo=goal-card]').innerText()).includes('调优中'));
+  check('调优：调优对象对应的模块高亮', await page.locator('[data-group=knowledge].is-focus').count() === 1);
+  await page.locator('[data-demo=debug-run] button').click(); await page.waitForTimeout(1300);
+  await go(page, '/agents/c/evaluation', 500);
+  await page.locator('.dataset-list button', { hasText: 'bad case 回归集' }).click();
+  await page.getByRole('button', { name: '运行评测', exact: true }).click(); await page.waitForTimeout(1600);
+  check('调优：评测页核对目标', (await page.locator('[data-demo=goal-card]').innerText()).includes('优化目标核对'));
+  const goalState = await page.locator('[data-demo=goal-card] .goal-state').innerText();
+  await go(page, '/agents/c/release', 500);
+  check('调优：发布页生产就绪检查有「本轮优化目标已验证」', (await page.locator('[data-demo=check-goals]').innerText()).includes('本轮优化目标'), goalState);
+  await go(page, '/governance', 400);
+  check('调优：发起优化写入操作记录', (await page.locator('.audit-table').innerText()).includes('发起优化 og-001'));
+  await go(page, '/agents/a/release', 500);
+  check('调优：AB 报告里变差的指标可以发起优化', await page.locator('[data-demo="optimize-ab-P95 延迟"] button').count() === 1);
+  // 从没发布过的 Agent：第一步叫「构建」，没有「下一轮」
+  await page.evaluate(() => { const key = 'agent-platform-demo-v9'; const state = JSON.parse(localStorage.getItem(key)); const agent = state.agents.find(a => a.id === 'general'); agent.productionVersion = null; agent.versions.forEach(v => { v.everOnline = false; if (v.status === '线上' || v.status === '历史') v.status = '待发布'; }); agent.versions = agent.versions.slice(0, 1); localStorage.setItem(key, JSON.stringify(state)); });
+  await page.reload(); await go(page, '/agents/general/build', 500);
+  check('调优：没发布过的 Agent 第一步叫「构建」', (await page.locator('.lifecycle-item strong').first().innerText()) === '构建' && await page.locator('[data-demo=loop]').count() === 0);
+  check('调优：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 

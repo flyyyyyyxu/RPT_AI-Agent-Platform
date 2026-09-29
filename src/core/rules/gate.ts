@@ -20,7 +20,8 @@ export function evaluateGate(agent: Agent, ops: AgentOps, version: AgentVersion 
   return { evaluated, rules, redlines: profile.redlines, failedRules, failedRedlines, passed, blocking: evaluated && !passed && ops.forceBlock };
 }
 
-export interface ReadinessItem { key: string; label: string; done: boolean; warn?: boolean; optional?: boolean; detail: string; link?: { to: string; label: string } }
+/** optional：不阻断发布；hint 是未完成时的提示文字（默认「全量前需要」） */
+export interface ReadinessItem { key: string; label: string; done: boolean; warn?: boolean; optional?: boolean; hint?: string; detail: string; link?: { to: string; label: string } }
 
 /** 发布前「生产就绪检查」。任一项未完成时发布按钮禁用。 */
 export function readinessChecks(agent: Agent, ops: AgentOps, candidate: AgentVersion | null, options: { approvalOptional?: boolean } = {}): ReadinessItem[] {

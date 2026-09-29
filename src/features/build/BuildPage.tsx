@@ -28,6 +28,9 @@ import { CapabilityPanel, memoryText } from './CapabilityPanel';
 import { DependencyAlert, DependencyLock, useDependencies } from './DependencyLock';
 import { VersionDiff } from './VersionDiff';
 import './build.css';
+import { buildStepLabel } from '../../core/rules/lifecycle';
+import { goalsOfVersion } from '../../core/rules/optimization';
+import { GoalCard } from '../optimize/Optimization';
 
 const same = (a: AgentConfig, b: AgentConfig) => JSON.stringify(a) === JSON.stringify(b);
 const AUTOSAVE_MS = 600;
@@ -39,7 +42,11 @@ export function BuildPage({ agent }: { agent: Agent }) {
 }
 
 function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersion }) {
-  const { saveConfig, saveDraft, createDraft, markDebugged } = useDemo();
+  const { saveConfig, saveDraft, createDraft, markDebugged, opsOf } = useDemo();
+  /** 本轮优化目标：候选版本上看挂在它上面的；只读快照且还没有候选版本时，看等待挂载的 */
+  const goalVersionId = isEditable(version) ? version.id : getCandidate(agent) ? undefined : null;
+  const goals = goalVersionId === undefined ? [] : goalsOfVersion(agent, opsOf(agent), goalVersionId);
+  const focus = [...new Set(goals.flatMap(goal => goal.targets))];
   const draftLock = usePlaybookLock('plain-draft', agent.id);
   const { select } = useSelectedVersion(agent);
   const editable = isEditable(version);
@@ -84,12 +91,13 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
   const steps = editable && <span className="build-progress"><span className={!dirty && version.configured ? 'done' : ''}>① 保存</span><span className={debugged ? 'done' : ''}>② 调试</span><span className={evaluated && !dirty ? 'done' : ''}>③ 评测</span></span>;
 
   const lead = <>
-    <SectionHeading eyebrow="构建" title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`}
+    <SectionHeading eyebrow={buildStepLabel(agent)} title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`}
       description={editable ? '左边写角色指令，中间配能力，右边随时调试草稿；确认后保存为候选版本，再去评测。' : '已上线或历史版本是不可修改的快照，包含模型、Prompt、编排、工具和知识版本。'}
       aside={<div className="heading-badges"><StatusBadge status={version.status} /><ScopeBadge phase="MVP" /></div>} />
     {!editable && <div className="snapshot-banner"><Lock size={icon.large} /><div><strong>{version.id} 是只读快照</strong><p>{candidate ? `已有候选版本 ${candidate.id}，请在候选版本上继续修改。` : `如需修改，请基于 ${version.id} 新建草稿 ${nextVersionId(agent)}；线上指向不受影响。`}</p></div>
       {candidate ? <Link className="button button-secondary" to={`/agents/${agent.id}/build`}>前往候选版本 {candidate.id}</Link>
         : <span data-demo="new-draft"><Button variant="primary" disabled={Boolean(draftLock)} reason={draftLock} onClick={() => select(createDraft(agent.id, version.id))}><GitBranchPlus size={icon.small} />基于 {version.id} 新建草稿 {nextVersionId(agent)}</Button></span>}</div>}
+    {goalVersionId !== undefined && <GoalCard agent={agent} versionId={goalVersionId} mode="build" />}
     <DependencyAlert agent={agent} version={version} config={editable ? form : version.config} dirty={dirty} onCreated={select} />
     {editable && <div className="build-bar">
       <div className="form-status">{status}{steps}</div>
@@ -116,8 +124,8 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
 
   return <AgentShell agent={agent} stepId="build" aside={aside} lead={lead} footer={footer} layout="build" asideLabel="调试台">
     <div className="build-grid">
-      <div className="build-col" data-demo="prompt"><PromptPanel config={form} readOnly={!editable} onChange={prompt => patch({ prompt })} /></div>
-      <div className="build-col" data-demo="config"><CapabilityPanel agent={agent} config={form} readOnly={!editable} patch={patch} /></div>
+      <div className="build-col" data-demo="prompt"><PromptPanel config={form} readOnly={!editable} focused={focus.includes('Prompt')} onChange={prompt => patch({ prompt })} /></div>
+      <div className="build-col" data-demo="config"><CapabilityPanel agent={agent} config={form} readOnly={!editable} focus={focus} patch={patch} /></div>
     </div>
   </AgentShell>;
 }

@@ -11,7 +11,7 @@ import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Plus, ShieldChe
 import { useDemo } from '../../core/store/DemoProvider';
 import { latestPublished, modelChoices, visibleRecords } from '../../core/data-access/assets';
 import { knowledgeBasesFor } from '../../core/data-access/scenarioData';
-import type { Agent, AgentConfig, AgentSettings, FollowUpMode } from '../../types/domain';
+import type { Agent, AgentConfig, AgentSettings, FollowUpMode, TuneTarget } from '../../types/domain';
 import { Switch } from '../../shared/components/controls';
 import { WorkflowStepList } from './WorkflowStepList';
 import { AddDialog } from './AddDialog';
@@ -37,10 +37,10 @@ function Section({ title, disabled, children }: { title: string; disabled?: stri
 }
 
 /** 小模块：左侧折叠标题，右侧是 ＋ / 开关 / 下拉等操作 */
-function Module({ id, title, hint, action, open, onToggle, readOnly, children }: { id: string; title: string; hint?: string; action?: ReactNode; open: boolean; onToggle: () => void; readOnly: boolean; children: ReactNode }) {
-  return <div className={`cap-module ${open ? 'open' : ''}`} data-group={id}>
+function Module({ id, title, hint, action, open, onToggle, readOnly, focused, children }: { id: string; title: string; hint?: string; action?: ReactNode; open: boolean; onToggle: () => void; readOnly: boolean; focused?: boolean; children: ReactNode }) {
+  return <div className={`cap-module ${open ? 'open' : ''} ${focused ? 'is-focus' : ''}`} data-group={id}>
     <div className="cap-module-head">
-      <button type="button" className="cap-module-toggle" aria-expanded={open} onClick={onToggle}>{open ? <ChevronDown size={icon.small} aria-hidden="true" /> : <ChevronRight size={icon.small} aria-hidden="true" />}<strong>{title}</strong></button>
+      <button type="button" className="cap-module-toggle" aria-expanded={open} onClick={onToggle}>{open ? <ChevronDown size={icon.small} aria-hidden="true" /> : <ChevronRight size={icon.small} aria-hidden="true" />}<strong>{title}</strong>{focused && <span className="focus-tag">本轮调优</span>}</button>
       {!readOnly && action && <span className="cap-module-action">{action}</span>}
     </div>
     {hint && !open && <p className="cap-module-hint">{hint}</p>}
@@ -53,12 +53,16 @@ const AddButton = ({ label, onClick, disabled }: { label: string; onClick: () =>
 const RemoveButton = ({ label, onClick }: { label: string; onClick: () => void }) =>
   <button type="button" className="icon-button" onClick={onClick} aria-label={label} title={label}><Trash2 size={icon.small} /></button>;
 
-export function CapabilityPanel({ agent, config, readOnly, patch }: { agent: Agent; config: AgentConfig; readOnly: boolean; patch: (value: Partial<AgentConfig>) => void }) {
+/** 本轮优化目标的调优对象 → 要展开并高亮的模块 */
+const focusModules: Record<TuneTarget, string[]> = { Prompt: [], 知识: ['knowledge', 'database'], 模型: ['model'], 工具: ['tools'], 编排: ['steps', 'tools'], 策略: ['model', 'output'] };
+
+export function CapabilityPanel({ agent, config, readOnly, focus = [], patch }: { agent: Agent; config: AgentConfig; readOnly: boolean; focus?: TuneTarget[]; patch: (value: Partial<AgentConfig>) => void }) {
+  const focused = new Set(focus.flatMap(target => focusModules[target]));
   const { state, opsOf } = useDemo();
   const settings = opsOf(agent).settings;
   const batch = settings.execMode === '批量';
   const noSession = batch ? '执行模式是「批量」，没有会话：记忆和对话体验不生效。' : undefined;
-  const [open, setOpen] = useState<Record<string, boolean>>({ model: true, tools: true, steps: true, knowledge: true, database: true, variables: true, tables: true, fragments: false, opening: true, suggestions: true, followUp: false, output: false });
+  const [open, setOpen] = useState<Record<string, boolean>>(() => { const base: Record<string, boolean> = { model: true, tools: true, steps: true, knowledge: true, database: true, variables: true, tables: true, fragments: false, opening: true, suggestions: true, followUp: false, output: false }; focused.forEach(id => { base[id] = true; }); return base; });
   const toggle = (id: string) => setOpen(value => ({ ...value, [id]: !value[id] }));
   const expand = (id: string) => setOpen(value => ({ ...value, [id]: true }));
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -94,7 +98,7 @@ export function CapabilityPanel({ agent, config, readOnly, patch }: { agent: Age
     {notice && <p className="shared-note cap-notice"><CheckCircle2 size={icon.small} aria-hidden="true" />{notice}</p>}
 
     <Section title="模型">
-      <Module id="model" title="模型" open={open.model} onToggle={() => toggle('model')} readOnly={readOnly} hint={`${config.model.split(' · ')[0]}${config.fallbackModel !== NO_FALLBACK ? ` · 备用 ${config.fallbackModel.split(' · ')[0]}` : ''} · 思考 ${config.maxThinking} 次 · 参考 ${config.memory.turns} 轮`}>
+      <Module id="model" focused={focused.has('model')} title="模型" open={open.model} onToggle={() => toggle('model')} readOnly={readOnly} hint={`${config.model.split(' · ')[0]}${config.fallbackModel !== NO_FALLBACK ? ` · 备用 ${config.fallbackModel.split(' · ')[0]}` : ''} · 思考 ${config.maxThinking} 次 · 参考 ${config.memory.turns} 轮`}>
         <label className="field-label">主模型<span className="select-field"><select value={config.model} onChange={event => patch({ model: event.target.value, fallbackModel: event.target.value === config.fallbackModel ? NO_FALLBACK : config.fallbackModel })}>{models.map(item => <option key={item.key} value={item.key}>{item.key}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></span>
           {main?.record ? <span className="meta field-hint">权重 {main.weights} · 上下文 {main.record.versions[0].content.context} · P95 {main.record.versions[0].content.p95} · 输入 ¥{main.record.versions[0].content.priceIn} / 输出 ¥{main.record.versions[0].content.priceOut} 每百万 tokens</span> : <span className="meta field-hint">资产中心已找不到这个模型，建议更换</span>}</label>
         <label className="field-label">备用模型<span className="select-field"><select value={config.fallbackModel} onChange={event => patch({ fallbackModel: event.target.value })}>{[NO_FALLBACK, ...models.filter(item => item.key !== config.model).map(item => item.key)].map(item => <option key={item}>{item}</option>)}</select><ChevronDown size={icon.small} aria-hidden="true" /></span>
@@ -107,7 +111,7 @@ export function CapabilityPanel({ agent, config, readOnly, patch }: { agent: Age
     </Section>
 
     <Section title="技能">
-      <Module id="tools" title="工具" open={open.tools} onToggle={() => toggle('tools')} readOnly={readOnly} hint={config.tools.length ? `${config.tools.length} 个：${config.tools.join('、')}` : '未添加工具'}
+      <Module id="tools" focused={focused.has('tools')} title="工具" open={open.tools} onToggle={() => toggle('tools')} readOnly={readOnly} hint={config.tools.length ? `${config.tools.length} 个：${config.tools.join('、')}` : '未添加工具'}
         action={<span data-demo="add-tool"><AddButton label="添加工具" onClick={() => setDialog('tools')} /></span>}>
         {config.tools.length ? <div className="cap-cards">{config.tools.map(value => { const record = recordOf(value); const versions = record ? record.versions.filter(item => item.status === '已发布').map(item => item.id) : []; const pinned = value.slice(toolName(value).length + 1); const latest = versions[0];
           return <div className="cap-card tool-card" key={value}>
@@ -118,14 +122,14 @@ export function CapabilityPanel({ agent, config, readOnly, patch }: { agent: Age
           : <p className="cap-empty">还没有添加工具。点右上角 ＋ 从资产中心搜索，或上传新工具。</p>}
         <p className="meta">同一个工具只能挂一个版本，要换版本在这里切换；模型根据工具的调用说明决定何时调用。</p>
       </Module>
-      <Module id="steps" title="执行步骤" open={open.steps} onToggle={() => toggle('steps')} readOnly={readOnly} hint={`${config.steps.length} 步`}
+      <Module id="steps" focused={focused.has('steps')} title="执行步骤" open={open.steps} onToggle={() => toggle('steps')} readOnly={readOnly} hint={`${config.steps.length} 步`}
         action={<AddButton label="添加步骤" onClick={() => { patch({ steps: [...config.steps, { id: `step-${Date.now()}`, name: '新步骤', type: '模型调用', description: '填写这一步的处理说明' }] }); expand('steps'); }} />}>
         <WorkflowStepList steps={config.steps} readOnly={readOnly} hideAdd onChange={steps => patch({ steps })} />
       </Module>
     </Section>
 
     <Section title="知识">
-      <Module id="knowledge" title="知识库" open={open.knowledge} onToggle={() => toggle('knowledge')} readOnly={readOnly} hint={config.knowledge === NO_KNOWLEDGE ? '未添加知识库' : config.knowledge}
+      <Module id="knowledge" focused={focused.has('knowledge')} title="知识库" open={open.knowledge} onToggle={() => toggle('knowledge')} readOnly={readOnly} hint={config.knowledge === NO_KNOWLEDGE ? '未添加知识库' : config.knowledge}
         action={<span data-demo="add-knowledge"><AddButton label="添加知识库" onClick={() => setDialog('knowledge')} /></span>}>
         {config.knowledge !== NO_KNOWLEDGE ? <>
           <div className="cap-card">
@@ -140,7 +144,7 @@ export function CapabilityPanel({ agent, config, readOnly, patch }: { agent: Age
           <p className="meta">选的是知识库的具体版本；知识运营发布新版本后不会自动切换，页面上方会提示升级。一个版本只挂 1 个知识库。</p>
         </> : <p className="cap-empty">未添加知识库。上传文本、FAQ 或表格型知识后，回答时可以引用知识并给出出处。</p>}
       </Module>
-      <Module id="database" title="数据库" open={open.database} onToggle={() => toggle('database')} readOnly={readOnly} hint={config.database ?? '未添加数据库'}
+      <Module id="database" focused={focused.has('database')} title="数据库" open={open.database} onToggle={() => toggle('database')} readOnly={readOnly} hint={config.database ?? '未添加数据库'}
         action={<span data-demo="add-database"><AddButton label="添加数据库" onClick={() => setDialog('database')} /></span>}>
         {config.database ? <div className="cap-card">
           <div className="cap-card-main"><strong>{config.database}</strong><span className="meta">{databaseLatest ? `表结构 ${databaseLatest.id} · ${databaseLatest.content.tables.map(table => table.name).join('、')} · ${databaseLatest.content.access}` : '资产中心已找不到这个数据库'}</span></div>
@@ -191,7 +195,7 @@ export function CapabilityPanel({ agent, config, readOnly, patch }: { agent: Age
     </Section>
 
     <Section title="输出与安全">
-      <Module id="output" title="输出格式与护栏" open={open.output} onToggle={() => toggle('output')} readOnly={readOnly} hint={config.outputFormat}>
+      <Module id="output" focused={focused.has('output')} title="输出格式与护栏" open={open.output} onToggle={() => toggle('output')} readOnly={readOnly} hint={config.outputFormat}>
         <label className="field-label">输出格式<input value={config.outputFormat} readOnly={readOnly} onChange={event => patch({ outputFormat: event.target.value })} /></label>
         <div className="guard-summary"><span className="meta">护栏（Agent 级，对所有版本生效）</span>
           <div className="guard-chips">{guards.map(([key, on]) => <span key={key} className={`guard-chip ${on ? 'on' : ''}`}>{on && <ShieldCheck size={icon.small} aria-hidden="true" />}{guardLabels[key]}{on ? '' : ' · 未开启'}</span>)}</div>
