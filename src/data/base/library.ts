@@ -1,4 +1,4 @@
-/** 资产中心：知识库（带版本与生效期）、工具目录、Prompt 模板、知识运营提交的待入库条目。模型和评测集分别复用 build.ts、evaluation.ts 的数据。 */
+/** 资产中心 · 知识库：知识库（带版本与生效期）、知识运营提交的待入库条目；toolCatalog 供构建页选择工具。工具、模型、Prompt 模板的版本化记录见 assets.ts。 */
 import type { KnowledgeBase, PendingEntry } from '../../types/domain';
 
 /* ① 资产中心：知识库（带版本与生效期）和工具（带版本） */
@@ -63,9 +63,3 @@ export const assetSections = [
 ] as const;
 export type AssetSectionId = typeof assetSections[number]['id'];
 
-/* Prompt 模板：从已上线 Agent 中沉淀的结构，新 Agent 在构建页套用后再改 */
-export const promptTemplates = [
-  { name: '带引用的知识问答', version: 'v3', scene: '知识检索 + 多轮问答', structure: '角色 → 只依据有效知识 → 给出条款来源 → 无依据时明确说明', owner: '平台团队', usedBy: ['内部制度问答助手', '电商售后答疑 Agent'] },
-  { name: '结构化分类判定', version: 'v2', scene: '批量判定 + 人工复核', structure: '角色 → 依据政策条款 → 输出类别 / 理由 / 依据 JSON → 低置信度标记复核', owner: '内容安全 · 周可', usedBy: ['生态守护 Agent'] },
-  { name: '场景推荐生成', version: 'v1', scene: '在线推荐 + 引用内容', structure: '角色 → 场景与偏好变量 → 生成 N 套方案 → 引用候选内容 → 不做功效承诺', owner: '社区内容 · 陈思远', usedBy: ['社区穿搭灵感 Agent'] },
-];

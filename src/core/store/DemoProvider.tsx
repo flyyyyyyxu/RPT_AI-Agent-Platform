@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { initialDemoState } from '../../data';
 import type { DemoState } from '../../types/domain';
 import { syncClock } from '../rules/clock';
+import { assetActions } from './actions/assetActions';
 import { knowledgeActions } from './actions/knowledgeActions';
 import { opsActions } from './actions/opsActions';
 import { playbookActions } from './actions/playbookActions';
@@ -23,7 +24,7 @@ function useDemoStore() {
   const kit = createKit(state, setState);
   const ops = opsActions(kit);
   const reset = () => { clearDemo(); const next = fresh(); syncClock(next); setState(next); };
-  return { state, reset, ...ops, ...versionActions(kit), ...releaseActions(kit, ops), ...knowledgeActions(kit), ...playbookActions(kit) };
+  return { state, reset, ...ops, ...versionActions(kit), ...releaseActions(kit, ops), ...knowledgeActions(kit), ...assetActions(kit), ...playbookActions(kit) };
 }
 
 type DemoContextValue = ReturnType<typeof useDemoStore>;

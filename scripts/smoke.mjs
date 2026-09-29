@@ -214,9 +214,9 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   check('旧入口：评测中心跳到资产中心 · 评测集', page.url().endsWith('#/assets/evalsets') && await page.locator('.evalset-table tbody tr').count() >= 8, page.url());
   await go(page, '/assets?tab=models', 300);
   check('旧入口：?tab= 地址跳到对应二级目录', page.url().endsWith('#/assets/models'), page.url());
-  for (const [tab, label] of [['tools', '工具版本'], ['models', '模型目录'], ['prompts', '模板目录']]) {
+  for (const [tab, rows] of [['tools', 7], ['models', 4], ['prompts', 8]]) {
     await go(page, `/assets/${tab}`, 300);
-    check(`资产中心：${label}`, await page.locator('.capability h3', { hasText: label }).count() === 1);
+    check(`资产中心：${tab} 列表 ${rows} 行`, await page.locator('.asset-table tbody tr').count() === rows);
   }
   await go(page, '/operations', 400);
   check('监控与成本：每个 Agent 一行', await page.locator('.ops-table tbody tr').count() === 4);
@@ -231,6 +231,92 @@ const approve = async page => { await gotoStep(page); await page.getByRole('butt
   check('工作台：目录表格列为 Agent / 线上版本 / 进行中 / 运行健康 / 业务核心指标 / 本月成本', (await page.locator('.agent-table thead th').allInnerTexts()).slice(0, 6).join('|') === 'Agent|线上版本|进行中|运行健康|业务核心指标 · 近 7 日|本月成本');
   check('工作台：三个剧本 Agent 使用完整名称', (await page.locator('.agent-name-link strong').allInnerTexts()).join('|').includes('社区穿搭灵感 Agent|生态守护 Agent|电商售后答疑 Agent'));
   check('平台页：无页面错误', errors.length === 0, errors.join('; '));
+  await context.close();
+}
+
+/* ---------------- 资产中心：详情、新建、修改（发布新版本 / 修改当前版本） ---------------- */
+{
+  const { page, context, errors } = await newPage(browser);
+  const drawer = page.locator('.side-drawer');
+  const inDrawer = name => drawer.getByRole('button', { name, exact: true });
+  const crumbs = async () => (await page.locator('.breadcrumbs .crumb').allInnerTexts()).map(item => item.trim()).join(' > ');
+  // 面包屑
+  await go(page, '/agents/c/build', 400);
+  check('面包屑：Agent 页面从 Agent 目录开始', (await crumbs()).startsWith('Agent 目录 > 电商售后答疑 Agent'), await crumbs());
+  await go(page, '/operations', 300);
+  check('面包屑：监控与成本只显示页面名', await crumbs() === '监控与成本', await crumbs());
+
+  // 工具：被引用的版本只能改基本信息；发布新版本要审核
+  await go(page, '/assets/tools', 400);
+  await page.locator('.asset-name', { hasText: '订单查询' }).click(); await page.waitForTimeout(300);
+  check('工具：点名称打开详情抽屉', await page.locator('[data-demo=tool-detail]').count() === 1);
+  await inDrawer('修改').click(); await page.waitForTimeout(200);
+  check('工具：修改前先选修改方式', await page.locator('.edit-option').count() === 2 && (await page.locator('.edit-option', { hasText: '修改当前版本' }).innerText()).includes('已被引用'));
+  await page.locator('.edit-option', { hasText: '修改当前版本' }).click(); await inDrawer('继续').click(); await page.waitForTimeout(300);
+  check('工具：被引用时原地修改会锁定接口字段', await page.getByLabel('接口标识').isDisabled() && !(await page.getByLabel('负责人').isDisabled()));
+  await inDrawer('取消').click(); await page.waitForTimeout(300);
+  await inDrawer('修改').click(); await inDrawer('继续').click(); await page.waitForTimeout(300);
+  check('工具：发布新版本表单标题为 v5', (await drawer.locator('h2').innerText()).includes('v5'));
+  await page.getByLabel('版本说明').fill('新增退款原因字段');
+  check('工具：未测试调用不能提交', await drawer.getByRole('button', { name: '提交审核' }).isDisabled());
+  await inDrawer('测试调用').click(); await drawer.getByRole('button', { name: '提交审核' }).click(); await page.waitForTimeout(400);
+  check('工具：提交后详情显示 v5 审核中', (await page.locator('.pending-banner').innerText()).includes('v5 审核中'));
+  await inDrawer('模拟审核通过').click(); await page.waitForTimeout(300);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  const orderRow = page.locator('.tools-table tbody tr', { hasText: '订单查询' });
+  check('工具：审核通过后最新版本 v5，在用版本仍是 v4', (await orderRow.innerText()).includes('v5 已发布') && (await orderRow.innerText()).includes('v4'));
+  // 未被引用的工具可以原地修改全部内容
+  await page.locator('.asset-name', { hasText: 'OA 休假余额查询' }).click(); await inDrawer('修改').click();
+  await page.locator('.edit-option', { hasText: '修改当前版本' }).click(); await inDrawer('继续').click(); await page.waitForTimeout(300);
+  check('工具：未被引用时可原地修改全部内容', !(await page.getByLabel('接口标识').isDisabled()));
+  await inDrawer('取消').click(); await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  // 新建工具
+  await page.locator('[data-demo=tool-create] button').click(); await page.waitForTimeout(300);
+  await page.getByLabel('工具名称').fill('退款进度查询'); await page.getByLabel('接口标识').fill('refund.progress.get');
+  await page.getByLabel('调用说明').fill('用户询问退款进度时调用'); await page.getByLabel('负责人').fill('王宁');
+  await inDrawer('测试调用').click(); await drawer.getByRole('button', { name: '提交审核' }).click(); await page.waitForTimeout(400);
+  check('工具：新建后列表多一行，状态审核中', await page.locator('.tools-table tbody tr').count() === 8 && (await page.locator('.tools-table tbody tr', { hasText: '退款进度查询' }).innerText()).includes('v1 审核中'));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+
+  // 评测集：新建后出现在 Agent 评测页
+  await go(page, '/assets/evalsets', 400);
+  await page.locator('[data-demo=evalset-create] button').click(); await page.waitForTimeout(300);
+  await page.getByLabel('评测集名称').fill('大促售后样本集'); await page.getByLabel('归属 Agent').selectOption({ label: '内部制度问答助手' });
+  await inDrawer('使用示例文件').click(); await drawer.getByRole('button', { name: '保存为 v1' }).click(); await page.waitForTimeout(400);
+  check('评测集：新建后列表多一行', await page.locator('.evalset-table tbody tr', { hasText: '大促售后样本集' }).count() === 1);
+  check('评测集：列名为「进入 Agent 配置」', (await page.locator('.evalset-table thead th').last().innerText()).trim() === '进入 Agent 配置');
+  await page.keyboard.press('Escape');
+  await go(page, '/agents/general/evaluation', 500);
+  check('评测集：Agent 评测页可以选到新建的评测集', (await page.locator('body').innerText()).includes('大促售后样本集'));
+
+  // 模型：外部模型的数据等级固定
+  await go(page, '/assets/models', 400);
+  await page.locator('[data-demo=model-create] button').click(); await page.waitForTimeout(300);
+  await drawer.locator('.asset-chips button', { hasText: '公司网关' }).click();
+  check('模型：外部模型的数据等级固定为仅内部数据', await page.getByLabel('数据等级').isDisabled() && (await page.getByLabel('数据等级').inputValue()).startsWith('仅内部数据'));
+  await page.getByLabel('模型名称').fill('GPT-5 mini'); await page.getByLabel('权重版本').fill('网关路由 2026-10');
+  await page.getByLabel('负责人').fill('韩叙'); await page.getByLabel('输入单价').fill('2'); await page.getByLabel('输出单价').fill('8');
+  await inDrawer('连通性测试').click(); await drawer.getByRole('button', { name: '提交接入审批' }).click(); await page.waitForTimeout(400);
+  check('模型：接入后列表多一行，状态审核中', await page.locator('.models-table tbody tr').count() === 5 && (await page.locator('.models-table tbody tr', { hasText: 'GPT-5 mini' }).innerText()).includes('审核中'));
+  await page.keyboard.press('Escape');
+
+  // Prompt 模板：变量自动识别
+  await go(page, '/assets/prompts', 400);
+  await page.locator('[data-demo=prompt-create] button').click(); await page.waitForTimeout(300);
+  await page.getByLabel('模板名称').fill('售后安抚话术'); await page.getByLabel('负责人').fill('王宁');
+  await page.getByLabel('模板正文').fill('先安抚情绪，再回答 {{question}}，引用 {{context}}。');
+  check('Prompt：正文里的变量自动出现在变量说明里', await drawer.locator('.var-row').count() === 2);
+  await drawer.getByRole('button', { name: '保存为 v1' }).click(); await page.waitForTimeout(400);
+  check('Prompt：新建后列表 9 行', await page.locator('.prompts-table tbody tr').count() === 9);
+  await page.keyboard.press('Escape');
+
+  // 知识库：新建后出现在目录里
+  await go(page, '/assets/knowledge', 400);
+  await page.locator('[data-demo=kb-create] button').click(); await page.waitForTimeout(300);
+  await page.getByLabel('知识库名称').fill('售后知识 · 海外站'); await page.getByLabel('所属团队').selectOption({ label: '客户服务' }); await page.getByLabel('负责人').fill('王宁');
+  await inDrawer('使用示例文档').click(); await drawer.getByRole('button', { name: '创建并发布 v1' }).click(); await page.waitForTimeout(400);
+  check('知识库：新建后在目录里选中，显示 v1', (await page.locator('.tree-kb.current').innerText()).includes('售后知识 · 海外站') && (await page.locator('.kb-main .capability h3').first().innerText()).startsWith('v1'));
+  check('资产中心：无页面错误', errors.length === 0, errors.join('; '));
   await context.close();
 }
 

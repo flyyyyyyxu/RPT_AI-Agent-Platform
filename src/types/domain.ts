@@ -168,12 +168,53 @@ export interface AgentOps {
   badcases: Record<string, { stage: ProblemStage | null; inEvalSet: boolean }>;
 }
 
+/* ------------------------------------------------------------------ */
+/* 资产中心：工具、模型、Prompt 模板、评测集都是版本化记录                 */
+/* 规则：已发布的版本可能被 Agent 版本快照锁定，只能「发布新版本」；       */
+/*      没被引用的版本可以原地修改；被引用时只能改基本信息（负责人、描述等）。 */
+/* ------------------------------------------------------------------ */
+
+export type AssetKind = 'tools' | 'models' | 'prompts' | 'evalsets';
+/** 工具、模型的新版本要经过平台审核；评测集、Prompt 模板保存即发布 */
+export type AssetVersionStatus = '已发布' | '审核中';
+export interface AssetParam { name: string; type: string; required: string; desc: string }
+export interface ToolContent { endpoint: string; protocol: 'HTTP' | '内部 RPC'; instruction: string; auth: string; timeout: string; qps: string; access: '只读' | '写操作'; dataLevel: string; callers: string; params: AssetParam[]; sample: string }
+export interface ModelContent { capabilities: string[]; context: string; priceIn: string; priceOut: string; p95: string; dataLevel: string; qps: string }
+export interface PromptVariable { name: string; desc: string; source: string }
+export interface PromptContent { kind: string; scene: string; structure: string; body: string; variables: PromptVariable[] }
+/** 评测集版本内容：基础样本之外追加的样本（预置评测集的原始样本来自 datasetsFor） */
+export interface EvalsetContent { dimensions: string[]; scoring: string[]; addedCases: EvalCase[] }
+export interface AssetVersion<C> { id: string; status: AssetVersionStatus; at: string; by: string; note: string; content: C }
+export interface AssetRecord<C> {
+  /** 工具用名称、模型用「名称 · 接入方式」、评测集用「agentId:datasetId」作为 key，和 Agent 配置里的引用写法一致 */
+  key: string; name: string; team: string; owner: string; description: string; visibility: string;
+  /** 新版本在前 */
+  versions: AssetVersion<C>[];
+  /** 页面上新建的资产 */
+  created?: boolean;
+  /** Prompt 模板：沉淀自哪些 Agent（模板被套用后复制进 Agent 快照，不做实时引用） */
+  usedBy?: string[];
+  /** 模型：接入方式（公司托管 / 公司网关 / 团队微调） */
+  channel?: string;
+  /** 评测集：归属 Agent 与评测集 id */
+  agentId?: string; datasetId?: string;
+}
+export interface AssetState {
+  tools: AssetRecord<ToolContent>[];
+  models: AssetRecord<ModelContent>[];
+  prompts: AssetRecord<PromptContent>[];
+  /** 只存被修改过或新建的评测集；预置评测集按 datasetsFor 实时生成 */
+  evalsets: AssetRecord<EvalsetContent>[];
+}
+
 export interface DemoState {
-  schema: 5;
+  schema: 6;
   agents: Agent[];
   ops: Record<string, AgentOps>;
-  /** 已发布的知识库新版本（覆盖 mock） */
+  /** 已发布的知识库新版本（覆盖 mock），以及页面上新建的知识库 */
   knowledge: Record<string, KnowledgeBase>;
+  /** 资产中心的工具、模型、Prompt 模板、评测集 */
+  assets: AssetState;
   kbDraft: KbDraft | null;
   /**
    * collapsed：演示步骤浮层被用户收起成胶囊，换页、刷新后保持

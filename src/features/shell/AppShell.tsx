@@ -23,16 +23,27 @@ const platformNav = [
 ];
 const navigation = [workbench, ...platformNav];
 
+/**
+ * 面包屑从当前页面所属的一级目录开始：
+ *   Agent 页面：Agent 目录 > Agent 名称 > 步骤（Agent 目录即工作台）
+ *   资产中心：资产中心 > 知识库 / 工具 / …
+ *   监控与成本、治理、设计规范、工作台：只显示页面名
+ */
 function Breadcrumbs() {
   const { pathname } = useLocation();
   const { state } = useDemo();
   const parts = pathname.split('/').filter(Boolean);
   const agent = parts[0] === 'agents' ? state.agents.find(item => item.id === parts[1]) : undefined;
-  const current = pathname === '/design-system' ? '设计规范' : pathname === '/agents/new' ? '新建 Agent' : agent ? ({ build: '构建', evaluation: '评测', release: '发布与实验', monitor: '观测 · 监控', trace: '观测 · Trace 与 bad case', settings: '设置' } as Record<string, string>)[parts[2] ?? 'build']
-    : parts[0] === 'assets' ? assetSections.find(item => item.id === parts[1])?.label ?? '资产中心' : navigation.find(item => item.to === pathname)?.label ?? '工作台';
-  return <nav className="breadcrumbs" aria-label="面包屑"><Link to="/">工作台</Link>{agent && <><ChevronRight aria-hidden="true" /><Link to={`/agents/${agent.id}/build`}>{agent.name}</Link></>}
-    {parts[0] === 'assets' && <><ChevronRight aria-hidden="true" /><Link to={assets.to}>资产中心</Link></>}
-    {(pathname !== '/' || agent) && <><ChevronRight aria-hidden="true" /><span aria-current="page">{current}</span></>}</nav>;
+  const steps: Record<string, string> = { build: '构建', evaluation: '评测', release: '发布与实验', monitor: '观测 · 监控', trace: '观测 · Trace 与 bad case', settings: '设置' };
+  const trail: { label: string; to?: string }[] =
+    parts[0] === 'agents' ? [{ label: 'Agent 目录', to: '/' }, ...(pathname === '/agents/new' ? [{ label: '新建 Agent' }] : agent ? [{ label: agent.name, to: `/agents/${agent.id}/build` }, { label: steps[parts[2] ?? 'build'] ?? '构建' }] : [])]
+    : parts[0] === 'assets' ? [{ label: '资产中心', to: assets.to }, { label: assetSections.find(item => item.id === parts[1])?.label ?? '知识库' }]
+    : pathname === '/design-system' ? [{ label: '设计规范' }]
+    : [{ label: navigation.find(item => item.to === pathname)?.label ?? '工作台' }];
+  return <nav className="breadcrumbs" aria-label="面包屑">{trail.map((item, index) => {
+    const last = index === trail.length - 1;
+    return <span key={`${item.label}-${index}`} className="crumb">{index > 0 && <ChevronRight aria-hidden="true" />}{last || !item.to ? <span aria-current={last ? 'page' : undefined}>{item.label}</span> : <Link to={item.to}>{item.label}</Link>}</span>;
+  })}</nav>;
 }
 
 export function AppShell({ children }: { children: ReactNode }) {

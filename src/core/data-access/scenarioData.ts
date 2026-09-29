@@ -6,7 +6,7 @@ import {
   pbPolicyKb, pcAftersaleKb, pendingEntries, debugProfiles, datasetProfiles, scenarioOverrides, traceProfiles, upstreamChanges,
 } from '../../data';
 import { addMinutes, demoNow } from '../rules/clock';
-import type { AbProfile, Agent, AgentOps, AgentVersion, AlertDef, BadCase, DemoState, EvalDataset, GateProfile, KnowledgeBase, KnowledgeEntry, TraceRecord } from '../../types/domain';
+import type { AbProfile, Agent, AgentOps, AgentVersion, AlertDef, AssetRecord, AssetState, BadCase, DemoState, EvalDataset, EvalsetContent, GateProfile, KnowledgeBase, KnowledgeEntry, TraceRecord } from '../../types/domain';
 
 const scenario = (agent: Agent) => agent.profile === 'pa' || agent.profile === 'pb' || agent.profile === 'pc' ? scenarioOverrides[agent.profile] : null;
 
@@ -23,12 +23,24 @@ export function gateFor(agent: Agent, version: AgentVersion | null): GateProfile
   return gateProfiles[baseOf(agent.profile)];
 }
 
-/** 评测集：B 剧本按修正前后切换；加入评测集的 bad case 汇成「bad case 回归集」。 */
-export function datasetsFor(agent: Agent, version: AgentVersion | null, ops: AgentOps): EvalDataset[] {
+/**
+ * 评测集：B 剧本按修正前后切换；加入评测集的 bad case 汇成「bad case 回归集」。
+ * 传入 assets 时叠加资产中心的修改：预置评测集追加新版本的样本，并加上为该 Agent 新建的评测集。
+ */
+export function datasetsFor(agent: Agent, version: AgentVersion | null, ops: AgentOps, assets?: AssetState): EvalDataset[] {
   let datasets = datasetProfiles[baseOf(agent.profile)];
   if (agent.profile === 'pb') { const s = pbState(version); if (s !== 'legacy') datasets = pbDatasets(s === 'fixed'); }
   const added = badcasesFor(agent).filter(item => item.evalCase && ops.badcases[item.id]?.inEvalSet).map(item => item.evalCase!);
-  return added.length ? [{ id: 'badcase', name: 'bad case 回归集', description: '由 bad case 工作台加入的样本', cases: added }, ...datasets] : datasets;
+  const all = added.length ? [{ id: 'badcase', name: 'bad case 回归集', description: '由 bad case 工作台加入的样本', cases: added }, ...datasets] : datasets;
+  if (!assets) return all;
+  const latest = (record: AssetRecord<EvalsetContent>) => record.versions.find(item => item.status === '已发布');
+  const merged = all.map(dataset => {
+    const record = assets.evalsets.find(item => item.key === `${agent.id}:${dataset.id}`);
+    const published = record && latest(record);
+    return record && published ? { ...dataset, name: record.name, description: record.description, cases: [...dataset.cases, ...published.content.addedCases] } : dataset;
+  });
+  const created = assets.evalsets.filter(item => item.created && item.agentId === agent.id).flatMap(record => { const published = latest(record); return published && record.datasetId ? [{ id: record.datasetId, name: record.name, description: record.description, cases: published.content.addedCases }] : []; });
+  return [...merged, ...created];
 }
 
 export const batchFor = (agent: Agent) => batchPresets[baseOf(agent.profile)];
@@ -71,12 +83,15 @@ export function badcasesFor(agent: Agent): BadCase[] {
 /** 当前知识库列表：剧本 Agent 在场时换成剧本版本，已发布的新版本覆盖 mock。 */
 export function knowledgeBasesFor(state: DemoState): KnowledgeBase[] {
   const profilesInUse = new Set(state.agents.map(agent => agent.profile));
-  return knowledgeBases.map(kb => {
+  const base = knowledgeBases.map(kb => {
     if (state.knowledge[kb.id]) return state.knowledge[kb.id];
     if (kb.id === 'policy' && profilesInUse.has('pb')) return pbPolicyKb;
     if (kb.id === 'aftersale' && profilesInUse.has('pc')) return pcAftersaleKb;
     return kb;
   });
+  /* 资产中心新建的知识库 */
+  const created = Object.values(state.knowledge).filter(kb => !knowledgeBases.some(item => item.id === kb.id));
+  return [...base, ...created];
 }
 export const pendingFor = (kbId: string) => pendingEntries[kbId] ?? [];
 

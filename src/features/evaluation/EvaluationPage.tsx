@@ -26,9 +26,9 @@ const phase2 = [
 const isolationCard = <Card><span className="eyebrow">隔离环境</span><h3>候选版本不发布也能评测</h3><p>评测在独立环境运行：单独的模型配额、只读工具沙箱、下游写接口全部 mock，不接生产流量。本原型的评测结果均为预设 mock 数据。</p></Card>;
 
 export function EvaluationPage({ agent }: { agent: Agent }) {
-  const { markEvaluated, opsOf } = useDemo();
+  const { state, markEvaluated, opsOf } = useDemo();
   const candidate = getCandidate(agent);
-  const datasets = datasetsFor(agent, candidate, opsOf(agent));
+  const datasets = datasetsFor(agent, candidate, opsOf(agent), state.assets);
   const [datasetId, setDatasetId] = useState(datasets[0].id);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);

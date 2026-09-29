@@ -12,6 +12,7 @@ export * from './base/release';
 export * from './base/monitor';
 export * from './base/trace';
 export * from './base/library';
+export * from './base/assets';
 export * from './base/settings';
 export * from './base/ops';
 export * from './scenarios';
