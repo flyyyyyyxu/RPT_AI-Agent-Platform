@@ -10,6 +10,8 @@ const isObject = (value: unknown): value is Record<string, unknown> => Boolean(v
 function isValidState(value: unknown): value is DemoState {
   if (!isObject(value) || value.schema !== SCHEMA || !Array.isArray(value.agents) || !isObject(value.ops) || !isObject(value.knowledge)
     || !isObject(value.assets) || !(['tools', 'models', 'prompts', 'evalsets', 'databases'] as const).every(kind => Array.isArray((value.assets as Record<string, unknown>)[kind]))) return false;
+  // 运营状态缺字段（例如本轮优化目标、线上干预加入前的存档）时丢弃，避免页面读到 undefined
+  if (!Object.values(value.ops).every(ops => isObject(ops) && Array.isArray(ops.goals) && Array.isArray(ops.interventions) && Array.isArray(ops.callers) && isObject(ops.badcases) && Array.isArray(ops.approvals))) return false;
   return value.agents.every(agent => isObject(agent)
     && typeof agent.id === 'string' && typeof agent.name === 'string'
     && Array.isArray(agent.versions) && agent.versions.length > 0

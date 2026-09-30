@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom';
 import { useDemo } from '../../core/store/DemoProvider';
 import { useSelectedVersion } from '../../core/hooks/useSelectedVersion';
 import { getCandidate, isEditable, isEvaluated, nextVersionId } from '../../core/rules/versions';
-import { debugPresets } from '../../core/data-access/scenarioData';
+import { badcasePreset, badcasesFor, debugPresets } from '../../core/data-access/scenarioData';
 import { Button } from '../../shared/components/Buttons';
 import { ScopeBadge, StatusBadge } from '../../shared/components/Badges';
 import { SectionHeading } from '../../shared/components/Content';
@@ -29,7 +29,7 @@ import { DependencyAlert, DependencyLock, useDependencies } from './DependencyLo
 import { VersionDiff } from './VersionDiff';
 import './build.css';
 import { buildStepLabel } from '../../core/rules/lifecycle';
-import { goalsOfVersion } from '../../core/rules/optimization';
+import { goalsOfVersion, targetChanged } from '../../core/rules/optimization';
 import { GoalCard } from '../optimize/Optimization';
 
 const same = (a: AgentConfig, b: AgentConfig) => JSON.stringify(a) === JSON.stringify(b);
@@ -78,7 +78,13 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
   const save = () => { if (timer.current !== null) { window.clearTimeout(timer.current); timer.current = null; } saveConfig(agent.id, version.id, form); };
   const openSnapshot = () => { setSnapshotOpen(true); window.setTimeout(() => document.getElementById('version-snapshot')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); };
 
-  const aside = <DebugChat presets={debugPresets(agent)} initialQuestion={debugged || !editable ? agent.lastDebugQuestion : ''}
+  /* 本轮 bad case 的原话放进调试台：调优对象改过就按期望回答，没改就复现问题 */
+  const cases = badcasesFor(agent);
+  const roundPresets = goals.filter(goal => goal.source === 'bad case').flatMap(goal => {
+    const item = cases.find(entry => entry.id === goal.sourceId);
+    return item ? [badcasePreset(agent, item, goal.targets.every(target => targetChanged(agent, form, target)))] : [];
+  });
+  const aside = <DebugChat presets={[...roundPresets, ...debugPresets(agent)]} roundQuestions={roundPresets.map(item => item.question)} initialQuestion={debugged || !editable ? agent.lastDebugQuestion : ''}
     target={!editable ? `只读快照 ${version.id}` : dirty ? `${version.id} 的草稿（未保存）` : `候选版本 ${version.id}`}
     debugged={editable ? debugged : true} memoryTurns={form.memory.turns} model={form.model} dialog={form.dialog}
     readOnlyNote={editable ? undefined : `调试只读快照不影响生命周期状态。`}
@@ -88,7 +94,8 @@ function BuildWorkspace({ agent, version }: { agent: Agent; version: AgentVersio
     : dirty ? <span className="warning-text">草稿已自动保存{draft ? ` · ${draft.savedAt.slice(11)}` : ''}，尚未写入 {version.id}{evaluated ? '；保存后需要重新评测' : ''}</span>
     : version.configured ? <span className="meta">{version.id} 已保存 · {version.updatedAt}</span>
     : <span className="meta">初始配置尚未保存为候选版本</span>;
-  const steps = editable && <span className="build-progress"><span className={!dirty && version.configured ? 'done' : ''}>① 保存</span><span className={debugged ? 'done' : ''}>② 调试</span><span className={evaluated && !dirty ? 'done' : ''}>③ 评测</span></span>;
+  // 有本轮优化目标时，进度看目标卡里的「本轮进度」，这里不重复显示
+  const steps = editable && !goals.length && <span className="build-progress"><span className={!dirty && version.configured ? 'done' : ''}>① 保存</span><span className={debugged ? 'done' : ''}>② 调试</span><span className={evaluated && !dirty ? 'done' : ''}>③ 评测</span></span>;
 
   const lead = <>
     <SectionHeading eyebrow={buildStepLabel(agent)} title={editable ? `配置候选版本 ${version.id}` : `查看快照 ${version.id}`}

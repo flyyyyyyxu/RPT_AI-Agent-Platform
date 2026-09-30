@@ -35,7 +35,7 @@ export function versionActions({ state, setState, updateAgent }: StoreKit) {
     const { draft: _draft, ...rest } = version;
     if (same(version.config, config)) return { ...rest, configured: true };
     const debugged = Boolean(version.draft && version.draft.debugged && same(version.draft.config, config));
-    return { ...rest, config: structuredClone(config), configured: true, debugged, evaluatedDatasets: [], status: '草稿', updatedAt: nowStamp() };
+    return { ...rest, config: structuredClone(config), configured: true, debugged, evaluatedDatasets: [], evaluatedBadcases: undefined, status: '草稿', updatedAt: nowStamp() };
   }));
 
   /**
@@ -75,9 +75,12 @@ export function versionActions({ state, setState, updateAgent }: StoreKit) {
     });
   });
 
-  const markEvaluated = (agentId: string, versionId: string, datasetId: string) => updateAgent(agentId, agent => updateVersion(agent, versionId, version =>
-    isEditable(version) && version.configured && version.debugged && !version.evaluatedDatasets.includes(datasetId)
-      ? { ...version, evaluatedDatasets: [...version.evaluatedDatasets, datasetId] } : version));
+  /** badcaseIds：在 bad case 回归集上评测时，集里当时有哪些 bad case（之后新加入的需要重新评测） */
+  const markEvaluated = (agentId: string, versionId: string, datasetId: string, badcaseIds?: string[]) => updateAgent(agentId, agent => updateVersion(agent, versionId, version => {
+    if (!isEditable(version) || !version.configured || !version.debugged) return version;
+    const datasets = version.evaluatedDatasets.includes(datasetId) ? version.evaluatedDatasets : [...version.evaluatedDatasets, datasetId];
+    return badcaseIds ? { ...version, evaluatedDatasets: datasets, evaluatedBadcases: badcaseIds } : { ...version, evaluatedDatasets: datasets };
+  }));
 
   /** 依赖升级：基于某个快照创建候选版本并替换为最新依赖（已保存，仍需调试和评测）。 */
   const createUpgradedDraft = (agentId: string, fromVersionId: string, patch: Partial<AgentConfig>, note: string) => {
@@ -96,7 +99,7 @@ export function versionActions({ state, setState, updateAgent }: StoreKit) {
   const applyFix = (agentId: string, versionId: string, config: AgentConfig) => updateAgent(agentId, agent => updateVersion(agent, versionId, version => {
     if (!isEditable(version)) return version;
     const { draft: _draft, ...rest } = version;
-    return { ...rest, config: structuredClone(config), status: '草稿', configured: true, debugged: false, evaluatedDatasets: [], updatedAt: nowStamp() };
+    return { ...rest, config: structuredClone(config), status: '草稿', configured: true, debugged: false, evaluatedDatasets: [], evaluatedBadcases: undefined, updatedAt: nowStamp() };
   }));
 
   return { createAgent, saveConfig, saveDraft, createDraft, markDebugged, markEvaluated, createUpgradedDraft, applyFix };

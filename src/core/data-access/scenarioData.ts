@@ -6,7 +6,7 @@ import {
   pbPolicyKb, pcAftersaleKb, pendingEntries, debugProfiles, datasetProfiles, scenarioOverrides, traceProfiles, upstreamChanges,
 } from '../../data';
 import { addMinutes, demoNow } from '../rules/clock';
-import type { AbProfile, Agent, AgentOps, AgentVersion, AlertDef, AssetRecord, AssetState, BadCase, DemoState, EvalDataset, EvalsetContent, GateProfile, KnowledgeBase, KnowledgeEntry, ToolContent, TraceRecord } from '../../types/domain';
+import type { AbProfile, Agent, AgentOps, DebugPreset, AgentVersion, AlertDef, AssetRecord, AssetState, BadCase, DemoState, EvalDataset, EvalsetContent, GateProfile, KnowledgeBase, KnowledgeEntry, ToolContent, TraceRecord } from '../../types/domain';
 
 const scenario = (agent: Agent) => agent.profile === 'pa' || agent.profile === 'pb' || agent.profile === 'pc' ? scenarioOverrides[agent.profile] : null;
 
@@ -18,22 +18,45 @@ const pbState = (version: AgentVersion | null) => {
 
 export const debugPresets = (agent: Agent) => debugProfiles[baseOf(agent.profile)];
 
+/**
+ * 本轮问题的调试预设：用 bad case 原话调试。fixed = 调优对象对应的配置已经改过（由调用方判断）：
+ * 改过时按期望输出回答（有预置回归样本时用它的新回答），没改时复现当时的输出和异常步骤（演示数据）。
+ */
+export function badcasePreset(agent: Agent, badcase: BadCase, fixed: boolean): DebugPreset {
+  const trace = badcaseTrace(agent, badcase);
+  const answer = fixed ? badcase.evalCase?.newAnswer ?? `预期回答：${badcase.expected}` : badcase.evalCase?.oldAnswer ?? badcase.output;
+  const fmt = (ms: number) => ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${ms}ms`;
+  /* 修好之后：出错的那一步按正常耗时执行、不再报错；生成一步的输出换成新回答，避免步骤和回答对不上 */
+  const steps = (trace?.steps ?? []).filter(step => step.kind !== '输入' && step.kind !== '输出').map(step => {
+    const ms = fixed && step.error ? Math.min(step.ms, 500) : step.ms;
+    if (!fixed) return { step: `${step.kind} · ${step.name}`, duration: fmt(ms), summary: step.error ? `仍复现：${step.error}` : step.detail, detail: step.detail };
+    if (step.error) return { step: `${step.kind} · ${step.name}`, duration: fmt(ms), summary: '已按修改后的配置执行，未再出现异常', detail: `修改前：${step.error}` };
+    if (step.kind === '生成') return { step: `${step.kind} · ${step.name}`, duration: fmt(ms), summary: '按修改后的配置生成回答', detail: `输出：${answer}` };
+    return { step: `${step.kind} · ${step.name}`, duration: fmt(ms), summary: step.detail, detail: step.detail };
+  });
+  const total = (trace?.steps ?? []).reduce((sum, step) => sum + (fixed && step.error ? Math.min(step.ms, 500) : step.ms), 0);
+  return { question: badcase.input, answer, totalDuration: `${(total / 1000).toFixed(2)}s`, steps };
+}
+
 export function gateFor(agent: Agent, version: AgentVersion | null): GateProfile {
   if (agent.profile === 'pb') { const s = pbState(version); if (s !== 'legacy') return pbGate[s]; }
   return gateProfiles[baseOf(agent.profile)];
 }
 
 /**
- * 评测集：B 剧本按修正前后切换；加入评测集的 bad case 汇成「bad case 回归集」。
+ * 评测集：B 剧本按修正前后切换；加入回归集（或纳入本轮优化）的 bad case 汇成「bad case 回归集」。
  * 传入 assets 时叠加资产中心的修改：预置评测集追加新版本的样本，并加上为该 Agent 新建的评测集。
  */
 export function datasetsFor(agent: Agent, version: AgentVersion | null, ops: AgentOps, assets?: AssetState): EvalDataset[] {
   let datasets = datasetProfiles[baseOf(agent.profile)];
   if (agent.profile === 'pb') { const s = pbState(version); if (s !== 'legacy') datasets = pbDatasets(s === 'fixed'); }
   // 没有预置回归样本的 bad case，按问题摘要生成一条（演示数据）
-  const added = badcasesFor(agent).filter(item => ops.badcases[item.id]?.inEvalSet).map(item => item.evalCase ?? {
-    name: `${item.id} ${item.summary}`, input: item.detail, expected: '按当前有效的规则回答，不再出现该问题',
-    oldScore: 40, newScore: 90, oldAnswer: `（${item.version}）${item.summary}`, newAnswer: '修复后的回答符合当前规则（演示数据）',
+  const added = badcasesFor(agent).filter(item => ops.badcases[item.id]?.inEvalSet).map(item => {
+    const expected = ops.badcases[item.id]?.expected?.trim() || item.expected;
+    return item.evalCase ? { ...item.evalCase, expected } : {
+      name: `${item.summary}（来自 ${item.id}）`, input: item.input, expected,
+      oldScore: 40, newScore: 90, oldAnswer: item.output, newAnswer: '修复后的回答符合期望输出（演示数据）',
+    };
   });
   const all = added.length ? [{ id: 'badcase', name: 'bad case 回归集', description: '由 bad case 工作台加入的样本', cases: added }, ...datasets] : datasets;
   if (!assets) return all;
@@ -78,8 +101,28 @@ export function tracesFor(agent: Agent): TraceRecord[] {
   return afterRelease(agent, scenario(agent)?.traces ?? traceProfiles[baseOf(agent.profile)]);
 }
 
+/** bad case 只来自真正服务过流量的版本：草稿 / 待发布版本还没有线上请求 */
 export function badcasesFor(agent: Agent): BadCase[] {
-  return scenario(agent)?.badcases ?? badCaseProfiles[baseOf(agent.profile)];
+  // 版本开始灰度的时间晚于这条 bad case（例如剧本里现场新建并灰度的版本）：那时它还没服务过用户，不会有这条反馈
+  const served = (item: BadCase) => { const version = agent.versions.find(entry => entry.id === item.version); return Boolean(version && (version.everOnline || version.status === '灰度中' || version.status === '影子运行' || version.status === '线上') && (!version.experimentAt || version.experimentAt <= item.time)); };
+  return (scenario(agent)?.badcases ?? badCaseProfiles[baseOf(agent.profile)]).filter(served);
+}
+
+/**
+ * bad case 关联的 Trace：生产 Trace 列表里有就用它；没有时按这类 Agent 的标准链路生成，把出问题的那一步标出来（演示数据）。
+ */
+export function badcaseTrace(agent: Agent, badcase: BadCase): TraceRecord | null {
+  const existing = tracesFor(agent).find(item => item.id === badcase.traceId);
+  if (existing) return existing;
+  const skeleton = traceProfiles[baseOf(agent.profile)].find(item => item.status === '成功');
+  if (!skeleton) return null;
+  const target = skeleton.steps.findIndex(step => step.kind === badcase.step.kind && (!badcase.step.match || step.name.includes(badcase.step.match)));
+  const steps = skeleton.steps.map((step, index) => {
+    if (index === target) return { ...step, detail: badcase.step.detail ?? step.detail, ms: badcase.step.ms ?? step.ms, evidence: badcase.step.evidence ?? step.evidence, error: badcase.step.issue };
+    if (step.kind === '输出') return { ...step, detail: `${badcase.output} · 随后产生${badcase.source}` };
+    return step;
+  });
+  return { id: badcase.traceId, time: addMinutes(badcase.time, -3), summary: badcase.input, version: badcase.version, status: '异常', env: '生产', steps };
 }
 
 /* ---------------- 知识库 ---------------- */

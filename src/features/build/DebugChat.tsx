@@ -16,8 +16,10 @@ function match(presets: DebugPreset[], question: string) {
 
 type Turn = { id: number; question: string; result: ReturnType<typeof match>; context: number; model: string };
 
-export function DebugChat({ presets, initialQuestion, target, debugged, memoryTurns, model, readOnlyNote, dialog, onRun }: {
+export function DebugChat({ presets, roundQuestions = [], initialQuestion, target, debugged, memoryTurns, model, readOnlyNote, dialog, onRun }: {
   presets: DebugPreset[];
+  /** 本轮优化里 bad case 的原话：排在最前面并预填第一条 */
+  roundQuestions?: string[];
   /** 草稿里的对话体验：开场白、推荐问、追问 */
   dialog: AgentDialog;
   /** 上次调试的问题：工作副本已调试过时，恢复这一轮对话 */
@@ -30,7 +32,7 @@ export function DebugChat({ presets, initialQuestion, target, debugged, memoryTu
   readOnlyNote?: string;
   onRun: (question: string) => Promise<void>;
 }) {
-  const [question, setQuestion] = useState(dialog.suggestions.find(Boolean) ?? presets[0].question);
+  const [question, setQuestion] = useState(roundQuestions[0] ?? dialog.suggestions.find(Boolean) ?? presets[0].question);
   const [turns, setTurns] = useState<Turn[]>(() => initialQuestion ? [{ id: 0, question: initialQuestion, result: match(presets, initialQuestion), context: 0, model }] : []);
   const [running, setRunning] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -41,7 +43,7 @@ export function DebugChat({ presets, initialQuestion, target, debugged, memoryTu
   const lastQuestion = turns.length ? turns[turns.length - 1].question : '';
   /** 追问建议：还没问过的预设问题里取两条（演示数据；真实环境由模型按对话生成） */
   const asked = new Set(turns.map(turn => turn.question));
-  const followUps = dialog.followUp === '自动生成' ? presets.map(item => item.question).filter(item => !asked.has(item)).slice(0, 2) : [];
+  const followUps = dialog.followUp === '自动生成' ? presets.map(item => item.question).filter(item => !asked.has(item) && !roundQuestions.includes(item)).slice(0, 2) : [];
   const chips = dialog.suggestions.filter(Boolean);
   const run = async () => {
     const text = question.trim() || lastQuestion;
@@ -83,9 +85,10 @@ export function DebugChat({ presets, initialQuestion, target, debugged, memoryTu
     </div>
 
     <div className="debug-compose">
+      {roundQuestions.length > 0 && <div className="preset-questions round-questions" data-demo="round-questions"><span className="meta">本轮问题</span>{roundQuestions.map(item => <button type="button" key={item} className={question === item ? 'selected' : ''} onClick={() => setQuestion(item)}>{item}</button>)}</div>}
       <div className="preset-questions">{chips.length
         ? <><span className="meta">推荐问</span>{chips.map(item => <button type="button" key={item} className={question === item ? 'selected' : ''} onClick={() => setQuestion(item)}>{item}</button>)}</>
-        : <><span className="meta">预设问题</span>{presets.map(item => <button type="button" key={item.question} className={question === item.question ? 'selected' : ''} onClick={() => setQuestion(item.question)}>{item.question}</button>)}</>}</div>
+        : <><span className="meta">预设问题</span>{presets.filter(item => !roundQuestions.includes(item.question)).map(item => <button type="button" key={item.question} className={question === item.question ? 'selected' : ''} onClick={() => setQuestion(item.question)}>{item.question}</button>)}</>}</div>
       <label className="sr-only" htmlFor="debug-input">调试问题</label>
       <textarea id="debug-input" rows={2} value={question} placeholder="输入问题，Enter 发送，Shift + Enter 换行" onChange={event => setQuestion(event.target.value)}
         onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void run(); } }} />

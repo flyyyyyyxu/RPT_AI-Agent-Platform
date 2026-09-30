@@ -1,4 +1,4 @@
-/* 调优闭环：发起优化、本轮优化目标 */
+/* 调优闭环：纳入本轮优化、本轮优化目标、本轮进度、下一轮抽屉 */
 .goal-chip { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-badge); background: var(--color-indigoLight); color: var(--color-indigo); font-size: var(--type-metaSize); line-height: var(--type-metaLine); text-decoration: none; white-space: nowrap; }
 .goal-form { display: grid; gap: var(--space-4); }
 .goal-source { display: grid; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-control); background: var(--color-page); }
@@ -10,34 +10,83 @@
 .goal-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .goal-card-head > svg { color: var(--color-indigo); }
 .goal-card-head .meta { margin-left: auto; }
-.goal-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4); padding-top: var(--space-3); border-top: var(--border-thin) solid var(--color-border); }
-.goal-item dl { display: grid; gap: var(--space-2); margin: 0; }
-.goal-item dl > div { display: grid; grid-template-columns: calc(var(--space-12) + var(--space-6)) minmax(0, 1fr); gap: var(--space-3); }
-.goal-item dt { color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-bodyLine); }
-.goal-item dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.goal-item ul { margin: 0; padding-left: var(--space-4); }
-.goal-target { padding: 0 var(--space-2); border-radius: var(--radius-badge); background: var(--color-coralLight); color: var(--color-text); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
-.goal-item-side { display: grid; align-content: start; justify-items: end; gap: var(--space-2); }
+.goal-target { padding: 0 var(--space-2); border-radius: var(--radius-badge); background: var(--color-coralLight); color: var(--color-text); font-size: var(--type-metaSize); line-height: var(--type-metaLine); white-space: nowrap; }
 .goal-state { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-2); border-radius: var(--radius-badge); font-size: var(--type-metaSize); line-height: var(--type-metaLine); white-space: nowrap; background: var(--color-page); color: var(--color-secondary); }
 .goal-state.tone-pass { background: var(--color-greenLight); color: var(--color-greenText); }
 .goal-state.tone-fail { background: var(--color-errorLight); color: var(--color-error); }
 .goal-state.tone-info { background: var(--color-indigoLight); color: var(--color-indigo); }
-/* 生命周期导航：观测之后的回环 */
-.lifecycle-loop { flex: 0 0 auto; display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: var(--border-thin) dashed var(--color-indigo); border-radius: var(--radius-control); background: var(--color-indigoLight); color: var(--color-indigo); text-decoration: none; }
+/* 建议动作 */
+.goal-advice { display: grid; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-control); background: var(--color-page); }
+.goal-advice-title { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--type-metaSize); line-height: var(--type-metaLine); font-weight: var(--weight-semibold); color: var(--color-text); }
+.goal-advice-title svg { color: var(--color-indigo); }
+.goal-advice ul { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.goal-advice li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.goal-advice li > span:nth-child(2) { flex: 1 1 calc(var(--space-12) * 6); min-width: 0; }
+/* 目标来自灰度版本时的提示 */
+.goal-note { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); background: var(--color-orangeLight); color: var(--color-orangeText); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+/* 目标行：默认折叠，展开看目标指标和验证方式 */
+.goal-rows { display: grid; margin: 0; padding: 0; list-style: none; border-top: var(--border-thin) solid var(--color-border); }
+.goal-row { border-bottom: var(--border-thin) solid var(--color-border); }
+.goal-row:last-child { border-bottom: 0; }
+.goal-row summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; cursor: pointer; list-style: none; }
+.goal-row summary::-webkit-details-marker { display: none; }
+.goal-row summary::after { content: '展开'; margin-left: auto; color: var(--color-secondary); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
+.goal-row details[open] summary::after { content: '收起'; }
+.goal-row-title { flex: 1 1 calc(var(--space-12) * 5); min-width: 0; font-weight: var(--weight-semibold); }
+.goal-row-targets { display: inline-flex; flex-wrap: wrap; gap: var(--space-1); }
+.goal-row dl { display: grid; gap: var(--space-2); margin: 0 0 var(--space-3); padding: var(--space-3); border-radius: var(--radius-control); background: var(--color-page); }
+.goal-row dl > div { display: grid; grid-template-columns: calc(var(--space-12) + var(--space-6)) minmax(0, 1fr); gap: var(--space-3); }
+.goal-row dt { color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-bodyLine); }
+.goal-row dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.goal-row dd ul { margin: 0; padding-left: var(--space-4); }
+.goal-remove { margin-left: auto; }
+/* 本轮进度 */
+.round-progress-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.round-progress { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.round-step { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1); border-radius: var(--radius-badge); background: var(--color-page); color: var(--color-muted); font-size: var(--type-metaSize); line-height: var(--type-metaLine); white-space: nowrap; }
+.round-index { display: grid; place-items: center; width: var(--space-6); height: var(--space-6); border-radius: var(--radius-badge); background: var(--color-card); border: var(--border-thin) solid var(--color-border); font-family: var(--font-latin); }
+.round-step.is-done { background: var(--color-greenLight); color: var(--color-greenText); }
+.round-step.is-done .round-index { border-color: transparent; background: transparent; }
+.round-step.is-current { background: var(--color-indigoLight); color: var(--color-indigo); font-weight: var(--weight-semibold); }
+.round-step.is-current .round-index { background: var(--color-indigo); border-color: var(--color-indigo); color: var(--color-card); }
+.round-hint { flex: 1 1 calc(var(--space-12) * 5); }
+/* 生命周期导航：观测之后的回环（点开「下一轮」抽屉） */
+.lifecycle-loop { flex: 0 0 auto; display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: var(--border-thin) dashed var(--color-indigo); border-radius: var(--radius-control); background: var(--color-indigoLight); color: var(--color-indigo); text-decoration: none; font: inherit; text-align: left; cursor: pointer; }
+.lifecycle-loop:hover { border-style: solid; }
 .lifecycle-loop .step-copy strong { color: var(--color-indigo); }
 .lifecycle-loop .step-copy small { color: var(--color-indigo); }
 .lifecycle-loop .loop-count { display: grid; place-items: center; min-width: var(--space-6); height: var(--space-6); padding: 0 var(--space-1); border-radius: var(--radius-badge); background: var(--color-indigo); color: var(--color-card); font-size: var(--type-metaSize); }
+.lifecycle-loop .loop-count.is-pending { background: var(--color-card); color: var(--color-indigo); border: var(--border-thin) solid var(--color-indigo); }
+/* 下一轮抽屉 */
+.round-drawer { display: grid; gap: var(--space-6); }
+.round-section { display: grid; gap: var(--space-3); }
+.round-section h3 { margin: 0; font-size: var(--type-bodySize); line-height: var(--type-bodyLine); }
+.round-goals { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.round-goals li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); background: var(--color-page); min-width: 0; }
+.round-goals li > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.problem-queue { display: grid; margin: 0; padding: 0; list-style: none; border: var(--border-thin) solid var(--color-border); border-radius: var(--radius-control); }
+.problem-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-3); border-bottom: var(--border-thin) solid var(--color-border); }
+.problem-row:last-child { border-bottom: 0; }
+.problem-main { display: grid; gap: 0; min-width: 0; }
+.problem-main > div { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.problem-main strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--weight-semibold); }
+.problem-main .meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.problem-actions { display: flex; align-items: center; gap: var(--space-2); }
+.impact { display: inline-flex; align-items: center; justify-content: center; min-width: calc(var(--space-12) + var(--space-2)); padding: 0 var(--space-2); border-radius: var(--radius-badge); font-size: var(--type-metaSize); line-height: var(--type-metaLine); white-space: nowrap; background: var(--color-page); color: var(--color-secondary); }
+.impact.impact-高 { background: var(--color-errorLight); color: var(--color-error); }
+.impact.impact-中 { background: var(--color-orangeLight); color: var(--color-orangeText); }
+.round-notice { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); background: var(--color-greenLight); color: var(--color-greenText); font-size: var(--type-metaSize); line-height: var(--type-metaLine); }
 /* 构建页里被本轮目标点到的模块 */
 .cap-module.is-focus, .prompt-panel.is-focus { box-shadow: inset var(--border-thick) 0 0 var(--color-indigo); }
 .cap-module.is-focus { margin-left: calc(var(--space-4) * -1); padding-left: var(--space-4); background: color-mix(in srgb, var(--color-indigoLight) 50%, transparent); }
 .focus-tag { margin-left: var(--space-2); padding: 0 var(--space-2); border-radius: var(--radius-badge); background: var(--color-indigo); color: var(--color-card); font-size: var(--type-metaSize); line-height: var(--type-metaLine); font-weight: var(--weight-regular); }
-@media (max-width: 1439px) {
+@media (max-width: 1279px) {
   .lifecycle-loop .step-copy small { display: none; }
 }
 @media (max-width: 767px) {
-  .goal-item { grid-template-columns: minmax(0, 1fr); }
-  .goal-item-side { justify-items: start; }
-  .goal-item dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .goal-row dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .problem-row { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+  .problem-row .impact { justify-self: start; }
 }
 .gate-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
 .alert-banner > .goal-chip, .alert-banner > span[data-demo] { flex: none; align-self: center; }

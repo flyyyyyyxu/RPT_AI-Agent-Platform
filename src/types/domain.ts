@@ -77,6 +77,8 @@ export interface AgentVersion {
   configured: boolean;
   debugged: boolean;
   evaluatedDatasets: string[];
+  /** 在「bad case 回归集」上评测时集里有哪些 bad case：判断某条 bad case 是否真的被这个版本回归过 */
+  evaluatedBadcases?: string[];
   /** 未写入快照的工作草稿（只有草稿 / 待发布版本会有） */
   draft?: ConfigDraft;
 }
@@ -154,7 +156,8 @@ export interface MonitorProfile {
 
 export type ReleaseStrategy = 'direct' | 'canary' | 'shadow';
 export type ExecMode = '在线' | '批量' | '会话';
-export type ProblemStage = 'Prompt' | '知识' | '模型' | '工具' | '策略';
+/** 问题环节 = 调优对象：Prompt、知识、模型、工具、编排（工作流）、策略（护栏 / 转人工 / 降级等运行策略） */
+export type ProblemStage = 'Prompt' | '知识' | '模型' | '工具' | '编排' | '策略';
 
 export interface GateRule { id: string; metric: string; op: '>=' | '<='; unit: string; threshold: number; value: number; note: string }
 export interface RedlineSample { name: string; input: string; passed: boolean }
@@ -173,7 +176,28 @@ export interface TraceStep {
 }
 /** afterRelease：这条记录在该版本开始灰度后第几分钟产生；版本还没上线时不显示，time 按实际灰度时间计算 */
 export interface TraceRecord { id: string; time: string; summary: string; version: string; status: '成功' | '异常'; steps: TraceStep[]; env?: '生产' | '隔离评测'; note?: string; afterRelease?: number }
-export interface BadCase { id: string; source: '用户反馈' | '申诉' | '抽检'; time: string; summary: string; detail: string; traceId: string; version: string; /** 加入评测集后生成的样本 */ evalCase?: EvalCase }
+export type BadCaseSource = '用户反馈' | '申诉' | '抽检';
+/**
+ * bad case：一行代表一类问题（同类已合并，similar 为相似条数）。
+ * step：Trace 里出问题的那一步；没有现成 Trace 时按这一步生成 Trace 摘要。
+ * suggest：平台根据 Trace 信号给出的归因建议，人工确认后才写入标注。
+ */
+export interface BadCase {
+  id: string; source: BadCaseSource; time: string; summary: string;
+  /** 反馈 / 申诉 / 抽检备注 */ detail: string;
+  traceId: string; version: string;
+  /** 原始样本：用户原话或被审核的内容 */ input: string;
+  /** Agent 当时的输出 */ output: string;
+  similar: number;
+  step: { kind: TraceStep['kind']; match?: string; issue: string; detail?: string; ms?: number; evidence?: TraceStep['evidence'] };
+  suggest: { stage: ProblemStage; evidence: string };
+  /** 期望输出 / 判定标准（加入回归集时预填） */ expected: string;
+  /** 标注平台已回流的人工归因 */ labeled?: ProblemStage;
+  /** 历史上已关闭的问题 */ closed?: { status: '已修复'; version: string; note: string } | { status: '已忽略'; reason: string; by: string };
+  /** 加入评测集后生成的样本（预置） */ evalCase?: EvalCase;
+}
+/** bad case 的人工处理结果 */
+export interface BadCaseLabel { stage: ProblemStage | null; inEvalSet: boolean; expected?: string; ignored?: { reason: string; at: string; by: string } }
 
 /** afterRelease：告警在该版本开始灰度后第几分钟触发；版本还没上线时不显示 */
 export interface AlertDef { id: string; title: string; detail: string; time: string; version: string; notify: string; resolvedNote: string; afterRelease?: number }
@@ -203,7 +227,7 @@ export interface AgentOps {
   approvedVersion: string | null;
   approvals: ApprovalRecord[];
   settings: AgentSettings;
-  badcases: Record<string, { stage: ProblemStage | null; inEvalSet: boolean }>;
+  badcases: Record<string, BadCaseLabel>;
   /** 接入方式：登记过的调用方 */
   callers: CallerRecord[];
   /** 线上干预：由 bad case 生成的临时止血措施 */
@@ -213,11 +237,11 @@ export interface AgentOps {
 }
 
 /**
- * 优化目标（调优）：观测或评测发现问题后「发起优化」生成，挂到当前候选版本（没有候选版本时挂到下一个新建的候选版本）。
+ * 优化目标（调优）：观测或评测发现问题后「纳入本轮优化」生成，挂到当前候选版本（没有候选版本时挂到下一个新建的候选版本）。
  * 构建页显示「本轮优化目标」，评测页核对是否达成，发布页的生产就绪检查提示是否已验证。
  */
 export type OptimizationSource = 'bad case' | '告警' | 'AB 实验' | '评测门槛';
-export type TuneTarget = ProblemStage | '编排';
+export type TuneTarget = ProblemStage;
 export interface OptimizationGoal {
   id: string; source: OptimizationSource; sourceId: string;
   /** 问题描述 */

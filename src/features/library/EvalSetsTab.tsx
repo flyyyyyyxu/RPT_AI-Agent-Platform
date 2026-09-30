@@ -151,7 +151,7 @@ function EvalsetForm({ row, how, onClose, onSaved }: { row?: Row; how?: EditHow;
       <Chips label="样本来源" options={['上传 CSV', '从 Trace 选取', '从 bad case 加入', '手动录入']} value={[source]} single disabled={Boolean(L)} onChange={value => setSource(value[0])} />
       {source === '上传 CSV' && !L && <div className="upload-row"><input ref={fileRef} type="file" accept=".csv" hidden onChange={event => onFile(event.target.files?.[0])} />
         <Button onClick={() => fileRef.current?.click()}><FileUp size={icon.small} />选择 CSV 文件</Button><Button onClick={useSample}>使用示例文件</Button></div>}
-      {source === '从 Trace 选取' && <ResultBox tone="info">在该 Agent 的「观测 · Trace 与 bad case」里勾选请求，点「加入评测集」后选择这个评测集。</ResultBox>}
+      {source === '从 Trace 选取' && <ResultBox tone="info">在该 Agent 的「观测 · Trace 与 bad case」里勾选 bad case，点「加入回归集」：原话和期望输出作为样本汇入「bad case 回归集」。</ResultBox>}
       {source === '从 bad case 加入' && <ResultBox tone="info">bad case 标注问题环节后可直接加入；未指定评测集时进入「bad case 回归集」。</ResultBox>}
       {source === '手动录入' && <ResultBox tone="info">保存后在详情里逐条添加样本（演示中请用「上传 CSV」）。</ResultBox>}
       {imported && <>

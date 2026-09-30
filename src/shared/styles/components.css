@@ -226,3 +226,5 @@
   .side-drawer-head, .side-drawer-body, .side-drawer-foot { padding-inline: var(--space-4); }
   .side-drawer-foot .foot-note { max-width: 100%; flex-basis: 100%; }
 }
+/* 问题来源标签（bad case、本轮优化目标、下一轮队列共用） */
+.source-tag { font-size: var(--type-metaSize); line-height: var(--type-metaLine); padding: 0 var(--space-2); border-radius: var(--radius-badge); border: var(--border-thin) solid var(--color-border); color: var(--color-secondary); background: var(--color-page); white-space: nowrap; }

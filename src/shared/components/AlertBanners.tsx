@@ -1,19 +1,20 @@
 /** ⑦ ⑧ 告警（来自公司监控平台，演示数据）。 */
 import { BellRing, CheckCircle2 } from 'lucide-react';
 import { alertsFor } from '../../core/data-access/scenarioData';
+import { alertActive } from '../../core/rules/problems';
 import type { ReactNode } from 'react';
 import type { Agent, AlertDef } from '../../types/domain';
 import { DemoTag, IntegrationNote, VersionBadge } from './Badges';
 import { icon } from '../styles/tokens';
 
 /* ---------------- ⑦ ⑧ 告警（来自公司监控平台） ---------------- */
-/** action：生效中的告警上的操作（例如「发起优化」），由页面传入 */
+/** action：生效中的告警上的操作（例如「纳入本轮优化」），由页面传入 */
 export function AlertBanners({ agent, action }: { agent: Agent; action?: (alert: AlertDef) => ReactNode }) {
   const alerts = alertsFor(agent);
   if (!alerts.length) return null;
   return <div className="alert-stack" data-demo="alert">{alerts.map(alert => {
     const version = agent.versions.find(item => item.id === alert.version);
-    const active = Boolean(version && (version.status === '灰度中' || version.status === '影子运行' || version.id === agent.productionVersion));
+    const active = alertActive(agent, alert);
     // 版本从没灰度 / 上线过，就不存在「已恢复」的告警
     if (!active && !version?.experimentAt) return null;
     return active

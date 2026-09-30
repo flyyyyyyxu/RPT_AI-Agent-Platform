@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ArrowLeft, PanelRightClose, PanelRightOpen, RotateCcw, Settings } from 'lucide-react';
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Settings } from 'lucide-react';
 import { lifecycleSteps, observeTabs } from '../../data';
 import type { Agent } from '../../types/domain';
 import { StatusBadge, VersionBadge } from '../../shared/components/Badges';
 import { useSelectedVersion } from '../../core/hooks/useSelectedVersion';
 import { getCandidate } from '../../core/rules/versions';
 import { buildStepLabel, lifecycleState } from '../../core/rules/lifecycle';
-import { openGoals } from '../../core/rules/optimization';
-import { useDemo } from '../../core/store/DemoProvider';
-import '../optimize/optimize.css';
+import { NextRoundButton } from '../optimize/NextRound';
 import { icon } from '../../shared/styles/tokens';
 
 /** 监控、Trace 两个页面同属「观测」这一步 */
@@ -35,8 +33,6 @@ export function AgentShell({ agent, stepId, children, aside, lead, footer, layou
     return () => observer.disconnect();
   }, []);
   const steps = lifecycleSteps.map(step => step.id === 'build' ? { ...step, label: buildStepLabel(agent) } : step);
-  const { opsOf } = useDemo();
-  const goals = openGoals(agent, opsOf(agent));
   const released = agent.versions.some(version => version.everOnline);
   const { selected, select, search } = useSelectedVersion(agent);
   const states = lifecycleState(agent);
@@ -52,8 +48,7 @@ export function AgentShell({ agent, stepId, children, aside, lead, footer, layou
         const state = states[step.id];
         return <NavLink key={step.id} to={`/agents/${agent.id}/${pageOfStep(step.id)}${search}`} className={`lifecycle-item ${current ? 'current' : ''}`} aria-current={current ? 'step' : undefined}><span className={`step-index step-${current ? '当前' : state}`}>{index + 1}</span><span className="step-copy"><strong>{step.label}</strong><small>{current ? `当前${state !== '未开始' ? ` · ${state}` : ''}` : state}</small></span></NavLink>;
       })}
-        {released && <Link to={`/agents/${agent.id}/${goals.length ? 'build' : 'trace'}`} className="lifecycle-loop" data-demo="loop" title="发现 bad case、告警或门槛未过 → 发起下一轮优化，回到构建与调优">
-          <RotateCcw size={icon.large} aria-hidden="true" /><span className="step-copy"><strong>下一轮</strong><small>{goals.length ? `${goals.length} 个优化目标进行中` : '发现 bad case → 发起优化'}</small></span>{goals.length > 0 && <span className="loop-count">{goals.length}</span>}</Link>}
+        {released && <NextRoundButton agent={agent} />}
         <NavLink to={`/agents/${agent.id}/settings${search}`} className={`lifecycle-item lifecycle-settings ${activeStep === 'settings' ? 'current' : ''}`} aria-current={activeStep === 'settings' ? 'page' : undefined}><Settings size={icon.large} aria-hidden="true" /><span className="step-copy"><strong>设置</strong><small>运行策略 · 护栏 · 成本</small></span></NavLink>
       </nav>
       {activeStep === 'observe' && <nav className="observe-tabs" aria-label="观测">{observeTabs.map(tab => <NavLink key={tab.id} to={`/agents/${agent.id}/${tab.id}${search}`} className={tab.id === stepId ? 'active' : ''} aria-current={tab.id === stepId ? 'page' : undefined}>{tab.label}</NavLink>)}</nav>}

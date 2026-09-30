@@ -22,5 +22,5 @@ export function fixesIntervention(agent: Agent, ops: AgentOps, item: Interventio
   const order = (id: string) => agent.versions.findIndex(version => version.id === id);
   const target = agent.versions.find(version => version.id === targetId);
   const newer = order(targetId) !== -1 && order(item.appliesTo) !== -1 && order(targetId) < order(item.appliesTo);
-  return Boolean(target && newer && ops.badcases[item.badcaseId]?.inEvalSet && target.evaluatedDatasets.includes('badcase'));
+  return Boolean(target && newer && ops.badcases[item.badcaseId]?.inEvalSet && target.evaluatedBadcases?.includes(item.badcaseId));
 }

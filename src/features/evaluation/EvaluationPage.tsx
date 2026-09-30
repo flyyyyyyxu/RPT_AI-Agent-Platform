@@ -13,7 +13,7 @@ import { GateSummary } from './GateSummary';
 import { BatchEvaluation } from './BatchEvaluation';
 import { Phase2Row } from '../../shared/components/Capability';
 import { Feedback } from '../../shared/components/Feedback';
-import { datasetsFor } from '../../core/data-access/scenarioData';
+import { badcasesFor, datasetsFor } from '../../core/data-access/scenarioData';
 import { AgentShell } from '../shell/AgentShell';
 import type { Agent } from '../../types/domain';
 import './evaluation.css';
@@ -49,7 +49,10 @@ export function EvaluationPage({ agent }: { agent: Agent }) {
     </AgentShell>;
   }
 
-  const done = candidate.evaluatedDatasets.includes(dataset.id);
+  /* bad case 回归集：评测后又加入了新的 bad case，需要重新评测才算覆盖 */
+  const regressionIds = badcasesFor(agent).filter(item => opsOf(agent).badcases[item.id]?.inEvalSet).map(item => item.id);
+  const isDone = (id: string) => candidate.evaluatedDatasets.includes(id) && (id !== 'badcase' || regressionIds.every(item => candidate.evaluatedBadcases?.includes(item)));
+  const done = isDone(dataset.id);
   const disabledReason = !candidate.configured ? '请先在构建页保存为候选版本' : !candidate.debugged ? '请先在构建页运行一次调试' : undefined;
   const run = () => {
     timers.current.forEach(window.clearTimeout);
@@ -60,18 +63,20 @@ export function EvaluationPage({ agent }: { agent: Agent }) {
     ];
     // 写入评测结果的定时器不随页面卸载取消：离开页面评测照样完成（界面状态更新在卸载后是空操作）
     const versionId = candidate.id; const datasetId = dataset.id;
-    window.setTimeout(() => { setProgress(100); setRunning(false); markEvaluated(agent.id, versionId, datasetId); }, 1150);
+    const ids = datasetId === 'badcase' ? regressionIds : undefined;
+    window.setTimeout(() => { setProgress(100); setRunning(false); markEvaluated(agent.id, versionId, datasetId, ids); }, 1150);
   };
   const aside = <><Card><span className="eyebrow">评测对象</span><h3>{baseline ? <>线上 <VersionBadge version={baseline} /> 对比候选 <VersionBadge version={candidate.id} /></> : <>首次评测 <VersionBadge version={candidate.id} /></>}</h3><p>{baseline ? `相同样本分别运行 ${baseline} 和 ${candidate.id}，按预设规则打分。` : '还没有线上版本，只展示候选版本的得分。'}</p></Card>
-    <Card><span className="eyebrow">已完成</span><h3>{candidate.evaluatedDatasets.length} / {datasets.length} 个评测集</h3><p className="meta">完成任意一个评测集即可发布。配置修改后评测结果会失效，需要重新运行。</p></Card>{isolationCard}</>;
+    <Card><span className="eyebrow">已完成</span><h3>{datasets.filter(item => isDone(item.id)).length} / {datasets.length} 个评测集</h3><p className="meta">完成任意一个评测集即可发布。配置修改后评测结果会失效，需要重新运行。</p></Card>{isolationCard}</>;
 
   return <AgentShell agent={agent} stepId="evaluation" aside={aside}><SectionHeading eyebrow="评测" title={`验证候选版本 ${candidate.id}`} description="选择评测集，运行后查看总分、逐条对比和回答差异。" aside={<div className="heading-badges"><IsolationNote /><ScopeBadge phase="MVP" /></div>} />
     <GoalCard agent={agent} versionId={candidate.id} mode="evaluation" />
     {candidate.draft && <div className="alert-banner" role="status"><Info size={icon.large} aria-hidden="true" /><div><strong>构建页有未保存的草稿</strong><p>评测运行的是已保存的 {candidate.id} 快照，不包含草稿里的修改（自动保存于 {candidate.draft.savedAt}）。要评测草稿，先在构建页「保存为候选版本 {candidate.id}」。</p></div><Link className="button button-secondary" to={`/agents/${agent.id}/build`}>前往构建页</Link></div>}
     <Card><div className="dataset-list" role="radiogroup" aria-label="评测集列表">{datasets.map(item => {
-      const itemDone = candidate.evaluatedDatasets.includes(item.id);
-      return <button key={item.id} className={item.id === dataset.id ? 'selected' : ''} role="radio" aria-checked={item.id === dataset.id} disabled={running} title={running ? '评测运行中，完成后可切换评测集' : undefined} onClick={() => { setDatasetId(item.id); setProgress(0); }}><span className="dataset-icon"><Database size={icon.large} /></span><span><strong>{item.name}</strong><small>{item.cases.length} 条样本 · {item.description}</small></span>{itemDone ? <StatusBadge status="通过" /> : <span className="meta">未运行</span>}</button>;
+      const itemDone = isDone(item.id);
+      return <button key={item.id} className={item.id === dataset.id ? 'selected' : ''} role="radio" aria-checked={item.id === dataset.id} disabled={running} title={running ? '评测运行中，完成后可切换评测集' : undefined} onClick={() => { setDatasetId(item.id); setProgress(0); }}><span className="dataset-icon"><Database size={icon.large} /></span><span><strong>{item.name}</strong><small>{item.cases.length} 条样本 · {item.description}</small></span>{itemDone ? <StatusBadge status="通过" /> : <span className="meta">{candidate.evaluatedDatasets.includes(item.id) ? '需重新运行' : '未运行'}</span>}</button>;
     })}</div>
+      {dataset.id === 'badcase' && candidate.evaluatedDatasets.includes('badcase') && !done && <p className="meta stale-note">上次评测后回归集新加入了 {regressionIds.filter(item => !candidate.evaluatedBadcases?.includes(item)).join('、')}，需要重新运行才算覆盖这些 bad case。</p>}
       <div className="dataset-cases">{dataset.cases.map(item => <span key={item.name}><FileCheck2 size={icon.small} />{item.name}</span>)}</div>
       <EvaluationRunner progress={done && !running ? 100 : progress} running={running} complete={done} disabledReason={disabledReason} datasetName={dataset.name} caseCount={dataset.cases.length} candidateVersion={candidate.id} onRun={run} /></Card>
     {done && !running && <><SectionHeading eyebrow="评测报告" title={baseline ? `${baseline} 与 ${candidate.id} 对比 · ${dataset.name}` : `${candidate.id} 首次评测 · ${dataset.name}`} description="逐条查看得分变化；删去的内容标红，新增的内容标绿。" />

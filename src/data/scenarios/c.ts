@@ -29,11 +29,17 @@ const pcTraces: TraceRecord[] = [
     ] },
   traceProfiles.c[0],
 ];
+/** 剧本 C：投诉 bc-4431 是影响最大的一类（同类 23 条、出在线上 v21）；其余沿用基础数据，价保类问题 bc-4415 不在剧本里出现 */
 const pcBadcases: BadCase[] = [
-  { id: 'bc-4431', source: '用户反馈', time: '2026-09-29 09:31', summary: '用户投诉：回答的是旧的退货规则', detail: '「客服说只能 7 天无理由，官网写的是 15 天」— 用户点踩并提交投诉。', traceId: 'tr_9f2b17', version: 'v21',
+  { id: 'bc-4431', source: '用户反馈', time: '2026-09-29 09:31', version: 'v21', traceId: 'tr_9f2b17', similar: 23,
+    summary: '用户投诉：回答的是旧的退货规则', detail: '「客服说只能 7 天无理由，官网写的是 15 天」— 用户点踩并提交投诉，同类投诉 23 条。',
+    input: '签收 10 天了还能无理由退货吗？', output: '您的订单已签收 10 天，超过 7 天无理由退货时限，无法申请。',
+    step: { kind: '检索', issue: '命中过期知识：条目缺少失效时间（应于 2026-08-31 失效）' },
+    suggest: { stage: '知识', evidence: '检索命中「七天无理由退货」（售后知识 v34）：9 月 1 日起已被十五天新规替代，但条目没有设置失效时间，仍在生效。' },
+    expected: '按 2026-09 新规：15 天内可无理由退货',
     evalCase: { name: '退货时限（来自 bc-4431）', input: '签收 10 天了还能无理由退货吗？', expected: '按 2026-09 新规：15 天内可无理由退货', oldScore: 35, newScore: 95,
       oldAnswer: '您的订单已签收 10 天，超过 7 天无理由退货时限，无法申请。', newAnswer: '依据《退货政策》2.1（2026-09-01 起生效），签收 15 天内可申请无理由退货，您的订单仍在时限内。' } },
-  badCaseProfiles.c[1], badCaseProfiles.c[2],
+  ...badCaseProfiles.c.filter(item => item.id !== 'bc-4415'),
 ];
 const pcAb: AbProfile = {
   experimentId: 'EXP-20260929-aftersale-v22', days: 1, sample: '按会话 ID 分桶 10%，共 1.2 万次会话',
